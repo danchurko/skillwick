@@ -21,6 +21,9 @@ run() {
 
 run init --yes --agent none --inventory filesystem
 run init --yes --agent none --inventory filesystem
+test -f "$temporary/cache/skillwick/index-v2.sqlite"
+test ! -e "$temporary/cache/skillwick/index-v2.sqlite-wal"
+test ! -e "$temporary/cache/skillwick/index-v2.sqlite-shm"
 run C++ | grep -q 'C++@'
 run 'deploy AgentCore runtime' | grep -q 'aws-agentcore@'
 ! run list --all | grep -q 'leak@'

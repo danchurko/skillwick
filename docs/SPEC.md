@@ -188,7 +188,7 @@ Suggested locations, with XDG overrides:
 
 ```text
 ~/.config/skillwick/config.toml        configuration
-~/.cache/skillwick/index.sqlite       disposable derived index
+~/.cache/skillwick/index-v2.sqlite    disposable derived index
 ~/.local/state/skillwick/             integration ownership journal
 ~/.agents/skills/skillwick/SKILL.md    owned router skill
 $CODEX_HOME/AGENTS.md                 managed block by default

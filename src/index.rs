@@ -1,5 +1,5 @@
 use crate::{search, sources::Skill};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, DatabaseName, OpenFlags, OptionalExtension};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path, time::Duration};
 
@@ -28,6 +28,35 @@ pub fn open(path: &Path) -> rusqlite::Result<Connection> {
     db.busy_timeout(Duration::from_millis(750))?;
     db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY, identity TEXT NOT NULL UNIQUE, name TEXT NOT NULL, description TEXT NOT NULL, keywords TEXT NOT NULL, degraded INTEGER NOT NULL, path TEXT NOT NULL, canonical TEXT NOT NULL, base TEXT NOT NULL, scope TEXT NOT NULL, source TEXT NOT NULL, source_kind TEXT NOT NULL, enabled INTEGER NOT NULL, plugin_id TEXT, hash TEXT NOT NULL); CREATE INDEX IF NOT EXISTS skills_kind_canonical ON skills(source_kind, canonical); CREATE VIRTUAL TABLE IF NOT EXISTS skills_fts USING fts5(id UNINDEXED, name, description, keywords); CREATE TABLE IF NOT EXISTS native_snapshots (cwd TEXT PRIMARY KEY, version TEXT NOT NULL, executable TEXT NOT NULL, codex_home TEXT NOT NULL, refreshed_at INTEGER NOT NULL);")?;
     Ok(db)
+}
+
+pub fn open_read_only(path: &Path) -> rusqlite::Result<Connection> {
+    Connection::open_with_flags(
+        immutable_uri(path),
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_URI,
+    )
+}
+
+fn immutable_uri(path: &Path) -> String {
+    #[cfg(unix)]
+    let bytes = {
+        use std::os::unix::ffi::OsStrExt;
+        path.as_os_str().as_bytes()
+    };
+    #[cfg(not(unix))]
+    let bytes = path.to_string_lossy().as_bytes();
+    let mut uri = String::from("file:");
+    for byte in bytes {
+        let byte = *byte;
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'-' | b'.' | b'_' | b'~') {
+            uri.push(byte as char);
+        } else {
+            use std::fmt::Write;
+            write!(uri, "%{byte:02X}").expect("writing to a string cannot fail");
+        }
+    }
+    uri.push_str("?immutable=1");
+    uri
 }
 
 pub fn refresh_kind(
@@ -120,6 +149,39 @@ pub fn record_snapshot(
 ) -> rusqlite::Result<()> {
     db.execute("INSERT INTO native_snapshots (cwd,version,executable,codex_home,refreshed_at) VALUES (?1,?2,?3,?4,unixepoch()) ON CONFLICT(cwd) DO UPDATE SET version=excluded.version,executable=excluded.executable,codex_home=excluded.codex_home,refreshed_at=excluded.refreshed_at", params![cwd.to_string_lossy(), version, executable.to_string_lossy(), codex_home.to_string_lossy()])?;
     Ok(())
+}
+
+pub fn publish(db: &Connection, path: &Path) -> rusqlite::Result<()> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| rusqlite::Error::InvalidPath(path.into()))?;
+    fs::create_dir_all(parent)
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(error.into()))?;
+    let temporary = parent.join(format!(
+        ".{}.skillwick-{}",
+        path.file_name()
+            .and_then(|value| value.to_str())
+            .unwrap_or("snapshot"),
+        std::process::id()
+    ));
+    let result = (|| {
+        db.backup(DatabaseName::Main, &temporary, None)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&temporary, fs::Permissions::from_mode(0o600))
+                .map_err(|error| rusqlite::Error::ToSqlConversionFailure(error.into()))?;
+        }
+        fs::File::open(&temporary)
+            .and_then(|file| file.sync_all())
+            .map_err(|error| rusqlite::Error::ToSqlConversionFailure(error.into()))?;
+        fs::rename(&temporary, path)
+            .map_err(|error| rusqlite::Error::ToSqlConversionFailure(error.into()))
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
+    }
+    result
 }
 
 pub fn has_snapshot(

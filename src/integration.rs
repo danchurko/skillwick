@@ -231,7 +231,7 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
 
 fn prime_index(settings: &Config, codex: &native::Codex, cwd: &Path) -> Result<(), String> {
     let scan = sources::scan(cwd, &settings.roots);
-    let mut db = index::open(&config::cache_path()).map_err(|error| error.to_string())?;
+    let mut db = index::open(Path::new(":memory:")).map_err(|error| error.to_string())?;
     index::refresh_kind(&mut db, "filesystem", &scan.skills, scan.complete)
         .map_err(|error| error.to_string())?;
     let mut has_specialist = scan
@@ -257,6 +257,7 @@ fn prime_index(settings: &Config, codex: &native::Codex, cwd: &Path) -> Result<(
     if !has_specialist {
         return Err("no non-router skill source could be indexed".into());
     }
+    index::publish(&db, &config::cache_path()).map_err(|error| error.to_string())?;
     Ok(())
 }
 

@@ -2,13 +2,14 @@ use crate::{
     config, doctor, evaluation, index, integration, metadata, native, output, search, sources,
 };
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
-use rusqlite::Connection;
+use rusqlite::{backup::Backup, Connection};
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashSet,
     env, fs,
     io::{self, Read, Write},
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 #[derive(Parser)]
@@ -209,7 +210,7 @@ pub fn run() -> Result<(), Failure> {
                 },
             )?;
             if !dry_run && initialized.agent == config::Agent::None {
-                let mut db = index::open(&config::cache_path())?;
+                let mut db = query_database()?;
                 refresh(&mut db, &initialized, &cwd, true)?;
             }
         }
@@ -234,7 +235,7 @@ pub fn run() -> Result<(), Failure> {
         Some(Command::Hook) => hook(),
         Some(command @ Command::Benchmark { native_only, .. }) => {
             let settings = config::load(&config_path)?;
-            let mut db = writable_database()?;
+            let mut db = query_database()?;
             if native_only && settings.inventory != config::Inventory::Codex {
                 return Err(Failure("--native-only requires Codex inventory".into(), 2));
             }
@@ -253,12 +254,12 @@ pub fn run() -> Result<(), Failure> {
         }
         Some(Command::Refresh { full }) => {
             let settings = config::load(&config_path)?;
-            let mut db = writable_database()?;
+            let mut db = query_database()?;
             refresh(&mut db, &settings, &cwd, full)?;
         }
         command => {
             let settings = config::load(&config_path)?;
-            let mut db = writable_database()?;
+            let mut db = query_database()?;
             prepare_index(&mut db, &settings, &cwd, true)?;
             dispatch(command, args.query, args.json, &mut db, &settings, &cwd)?;
         }
@@ -390,14 +391,24 @@ fn benchmark(db: &Connection, path: &Path, limit: usize, json: bool) -> Result<(
     }
 }
 
-fn writable_database() -> Result<Connection, Failure> {
-    match index::open(&config::cache_path()) {
+fn query_database() -> Result<Connection, Failure> {
+    let cache = config::cache_path();
+    match read_only_copy(&cache) {
         Ok(db) => Ok(db),
         Err(error) => {
-            eprintln!("warning: durable cache unavailable ({error}); using in-memory index");
+            if cache.exists() {
+                eprintln!("warning: durable cache unavailable ({error}); using empty memory");
+            }
             index::open(Path::new(":memory:")).map_err(Into::into)
         }
     }
+}
+
+fn read_only_copy(path: &Path) -> rusqlite::Result<Connection> {
+    let source = index::open_read_only(path)?;
+    let mut destination = index::open(Path::new(":memory:"))?;
+    Backup::new(&source, &mut destination)?.run_to_completion(100, Duration::ZERO, None)?;
+    Ok(destination)
 }
 
 fn refresh(
@@ -416,6 +427,7 @@ fn refresh(
         let codex = native::detect(settings)?;
         refresh_native(db, settings, cwd, &codex)?;
     }
+    index::publish(db, &config::cache_path())?;
     Ok(())
 }
 
@@ -625,5 +637,18 @@ mod tests {
         };
         assert_eq!(error.code(), 3);
         assert!(error.to_string().contains("run `skillwick refresh`"));
+    }
+
+    #[test]
+    fn read_only_copy_preserves_native_inventory() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("cache%?#.sqlite3");
+        let mut durable = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(&mut durable, "codex", &[codex_skill()], true).unwrap();
+        index::publish(&durable, &path).unwrap();
+
+        let copied = read_only_copy(&path).unwrap();
+        assert!(index::has_kind(&copied, "codex").unwrap());
+        assert_eq!(search::count(&copied).unwrap(), 1);
     }
 }

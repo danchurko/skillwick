@@ -1,5 +1,4 @@
 use crate::{config, native, sources};
-use rusqlite::{Connection, OpenFlags};
 use serde::Serialize;
 use std::{
     fs,
@@ -27,8 +26,7 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
     let scan = sources::scan(cwd, &settings.roots);
     let mut diagnostics = scan.diagnostics;
     let cache = config::cache_path();
-    let cache_readable =
-        Connection::open_with_flags(&cache, OpenFlags::SQLITE_OPEN_READ_ONLY).is_ok();
+    let cache_readable = crate::index::open_read_only(&cache).is_ok();
     if !cache_readable {
         diagnostics.push("readable cache unavailable; run skillwick refresh".into());
     }
@@ -37,21 +35,19 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
         .as_ref()
         .is_some_and(|codex| native::supports_native_catalog(&codex.version));
     let snapshot = match (&codex, cache_readable) {
-        (Some(codex), true) => {
-            Connection::open_with_flags(&cache, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        (Some(codex), true) => crate::index::open_read_only(&cache)
+            .ok()
+            .and_then(|db| {
+                crate::index::has_snapshot(
+                    &db,
+                    cwd,
+                    &codex.version,
+                    &codex.path,
+                    &config::codex_home(&settings),
+                )
                 .ok()
-                .and_then(|db| {
-                    crate::index::has_snapshot(
-                        &db,
-                        cwd,
-                        &codex.version,
-                        &codex.path,
-                        &config::codex_home(&settings),
-                    )
-                    .ok()
-                })
-                .unwrap_or(false)
-        }
+            })
+            .unwrap_or(false),
         _ => false,
     };
     let instructions = settings
