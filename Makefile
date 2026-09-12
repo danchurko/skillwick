@@ -1,4 +1,4 @@
-.PHONY: benchmark build check fmt lint test test-cli test-codex test-inference dist
+.PHONY: benchmark build check fmt hooks lint test test-cli test-codex test-inference dist
 
 benchmark:
 	cargo build --release --locked
@@ -9,6 +9,9 @@ build:
 
 fmt:
 	cargo fmt --check
+
+hooks:
+	git config core.hooksPath .githooks
 
 lint:
 	cargo clippy --all-targets --locked -- -D warnings

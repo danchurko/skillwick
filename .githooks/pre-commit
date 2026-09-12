@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+if command -v git-secrets >/dev/null 2>&1; then
+  git secrets --pre_commit_hook -- "$@"
+fi
+if ! git diff --quiet; then
+  echo "pre-commit: stage or stash tracked changes before committing." >&2
+  exit 1
+fi
+make check
+if command -v codex >/dev/null 2>&1; then
+  make test-codex
+fi

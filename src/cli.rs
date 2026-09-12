@@ -737,7 +737,7 @@ mod tests {
         fs::write(&path, body).unwrap();
         let mut skill = codex_skill();
         skill.path = path.clone();
-        skill.canonical = path;
+        skill.canonical = fs::canonicalize(&path).unwrap();
         skill.base = temp.path().to_path_buf();
         skill.metadata.hash = format!("{:x}", Sha256::digest(body));
         let mut db = index::open(Path::new(":memory:")).unwrap();
