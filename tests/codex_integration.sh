@@ -19,12 +19,12 @@ run() {
 }
 
 run init --yes --agent codex --catalog native --hooks suggest --codex-bin "$codex"
-test "$(run 'find relevant installed local skills' | grep -c '^skillwick@')" -eq 1
+test "$(run list | grep -c '^skillwick@')" -eq 1
 test "$(run 'requested working directory' | grep -c '^project-only@')" -eq 1
 run doctor --strict >/dev/null
 grep -q '<!-- skillwick:begin -->' "$codex_home/AGENTS.md"
-grep -q 'every instruction or request to use, find, select, or load' "$codex_home/AGENTS.md"
-grep -q 'Do not browse or read skill folders' "$codex_home/AGENTS.md"
+grep -q "$binary list" "$codex_home/AGENTS.md"
+grep -q 'Do not route' "$codex_home/AGENTS.md"
 grep -q 'include_instructions = false' "$codex_home/config.toml"
 grep -q 'Finding relevant skills with Skillwick' "$codex_home/hooks.json"
 grep -q 'caveman' "$codex_home/hooks.json"
