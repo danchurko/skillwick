@@ -19,6 +19,7 @@ pub struct Report {
     pub native_catalog_supported: bool,
     pub native_snapshot_current: bool,
     pub integration_present: bool,
+    pub suggestion_hook_present: bool,
 }
 
 pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
@@ -61,13 +62,31 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
         text.matches("<!-- skillwick:begin -->").count() == 1
             && text.matches("<!-- skillwick:end -->").count() == 1
     });
+    let suggestion_hook_present =
+        fs::read_to_string(config::codex_home(&settings).join("hooks.json"))
+            .ok()
+            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+            .is_some_and(|document| {
+                document
+                    .pointer("/hooks/UserPromptSubmit")
+                    .and_then(serde_json::Value::as_array)
+                    .is_some_and(|groups| {
+                        groups.iter().any(|group| {
+                            group
+                                .pointer("/hooks/0/statusMessage")
+                                .and_then(serde_json::Value::as_str)
+                                == Some("Finding relevant skills with Skillwick")
+                        })
+                    })
+            });
     let native_required = settings.inventory == config::Inventory::Codex;
     let integration_required = settings.agent == config::Agent::Codex;
     let healthy = scan.complete
         && !scan.skills.is_empty()
         && cache_readable
         && (!native_required || supported && snapshot)
-        && (!integration_required || integration_present);
+        && (!integration_required || integration_present)
+        && (settings.hooks != config::Hooks::Suggest || suggestion_hook_present);
     Ok(Report {
         version: 1,
         healthy,
@@ -79,12 +98,13 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
         native_catalog_supported: supported,
         native_snapshot_current: snapshot,
         integration_present,
+        suggestion_hook_present,
     })
 }
 
 pub fn text(report: &Report) -> io::Result<()> {
     let stdout = io::stdout();
-    writeln!(stdout.lock(), "healthy: {}\nsources: {}\ncache: {}\nintegration: {}\ncodex: {}\nnative catalogue: {}\nnative snapshot: {}", report.healthy, report.sources, report.cache, report.integration_present, report.codex_version.as_deref().unwrap_or("not found"), report.native_catalog_supported, report.native_snapshot_current)?;
+    writeln!(stdout.lock(), "healthy: {}\nsources: {}\ncache: {}\nintegration: {}\nsuggestion hook: {}\ncodex: {}\nnative catalogue: {}\nnative snapshot: {}", report.healthy, report.sources, report.cache, report.integration_present, report.suggestion_hook_present, report.codex_version.as_deref().unwrap_or("not found"), report.native_catalog_supported, report.native_snapshot_current)?;
     for diagnostic in &report.diagnostics {
         eprintln!("warning: {diagnostic}");
     }

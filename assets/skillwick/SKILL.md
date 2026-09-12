@@ -1,6 +1,6 @@
 ---
 name: skillwick
-description: Find relevant installed local skills without enumerating the full library. Use when specialist procedural guidance would materially improve a task.
+description: Route every request to use, find, select, or load an installed skill through bounded local search.
 ---
 
 # Skillwick

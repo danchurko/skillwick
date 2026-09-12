@@ -34,9 +34,8 @@ temporary homes only. No test changed live Codex configuration.
 - One bundled SQLite database with transactional metadata/FTS5 updates, bounded
   lock waits, safe incomplete-scan behavior, technical-token aliases, weighted
   BM25, exact-name and term-coverage ranking, and deterministic ties.
-- Search, `read`, `inspect`, `list`, `refresh`, `init`, `doctor`, `uninstall`,
-  JSON output, zsh completions, and a cached-only internal hook command. Hook
-  installation remains off because no compatible hook fixture was accepted.
+- Search, `read`, `inspect`, `list`, `refresh`, `benchmark`, `init`, `doctor`,
+  `uninstall`, JSON output, zsh completions, and a cached-only suggestion hook.
 - Short-lived Codex `skills/list` inventory with bounded newline-delimited JSON,
   interleaved-notification handling, request IDs, stderr capture, timeout, EOF,
   and child termination. Native enabled state suppresses filesystem aliases.
@@ -146,9 +145,30 @@ archive, verified its checksum, installed into a temporary prefix, and returned
 - Non-full refresh currently hashes every discovered metadata document. This is
   simpler and correct; stat-based hash skipping can be added if real libraries
   show refresh cost is material.
-- The optional suggestion-hook command is cached-only and failure-open, but setup
-  refuses `--hooks suggest` until a release-tagged hook configuration fixture is
-  added. Normal instruction-plus-CLI integration is complete.
+- The optional suggestion-hook command is cached-only and failure-open. Codex
+  still requires native review and trust before the installed handler runs.
 
 Commands, results, hardware, compatibility evidence, evaluation metrics, and
 remaining limits will be recorded here after each milestone passes.
+
+## Post-v0.1 benchmark and integration evidence
+
+On 12 September 2026, the production-path benchmark evaluated 65 labelled tasks
+against 418 enabled records from the maintainer's live Codex inventory. Native
+`skills/list` supplied 327 ECC skills, 15 other plugin skills, and 76 records
+without a plugin ID. Temporary Skillwick config, cache, and state kept the run
+isolated without hiding installed plugins. The optimized lexical runner measured
+Recall@5 0.869, MRR@5 0.812, nDCG@5 0.826, no-match accuracy 0.600, and warm
+in-process query latency of 0.163 ms p50 and 0.380 ms p95. Dataset SHA-256 begins
+`078bff04aa63`; corpus SHA-256 begins `6af61dadafa3`. Ten misses remain visible
+in JSON for future ranking comparisons. See [benchmark evidence](BENCHMARKS.md).
+
+The managed AGENTS block now routes every instruction to use, find, select, or
+load a skill through Skillwick before reading the chosen live document. The
+optional suggestion hook is one cached-only Codex `UserPromptSubmit` handler.
+Temporary-home integration evidence preserved an existing `caveman` handler,
+and Codex `hooks/list` returned both native definitions. The hook emitted valid
+additional context, then uninstall removed only Skillwick's handler. Codex's
+trust review remains unchanged. This matches the official
+[Codex hooks contract](https://learn.chatgpt.com/docs/hooks): matching hook
+sources coexist and non-managed hooks require review.

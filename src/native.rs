@@ -247,5 +247,9 @@ mod tests {
         let parsed: SkillsResponse = serde_json::from_value(response.result.unwrap()).unwrap();
         assert_eq!(parsed.data[0].skills.len(), 2);
         assert!(!parsed.data[0].skills[1].enabled);
+        assert_eq!(
+            parsed.data[0].skills[1].plugin_id.as_deref(),
+            Some("fixture")
+        );
     }
 }

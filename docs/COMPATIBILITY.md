@@ -37,3 +37,9 @@ terminates the short-lived child.
 Compatibility is based on the detected CLI executable. New Codex versions need
 a release-tagged fixture, source review, and real integration proof before
 Skillwick changes native catalogue policy.
+
+Codex 0.154.0 hook integration is also covered with a temporary `hooks.json`.
+The test keeps an existing `UserPromptSubmit` handler, adds Skillwick as a
+second handler, verifies Codex `hooks/list` returns both, validates Skillwick's
+JSON context, and removes only Skillwick on uninstall. Users still review and
+trust the installed handler through Codex.

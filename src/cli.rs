@@ -1,8 +1,11 @@
-use crate::{config, doctor, index, integration, metadata, native, output, search, sources};
+use crate::{
+    config, doctor, evaluation, index, integration, metadata, native, output, search, sources,
+};
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use rusqlite::Connection;
 use sha2::{Digest, Sha256};
 use std::{
+    collections::HashSet,
     env, fs,
     io::{self, Read, Write},
     path::{Path, PathBuf},
@@ -50,6 +53,14 @@ enum Command {
     Refresh {
         #[arg(long)]
         full: bool,
+    },
+    Benchmark {
+        #[arg(long)]
+        dataset: PathBuf,
+        #[arg(long, short, default_value_t = 5)]
+        limit: usize,
+        #[arg(long)]
+        native_only: bool,
     },
     Init {
         #[arg(long)]
@@ -213,26 +224,29 @@ pub fn run() -> Result<(), Failure> {
             &mut io::stdout(),
         ),
         Some(Command::Hook) => hook(),
+        Some(command @ Command::Benchmark { native_only, .. }) => {
+            let settings = config::load(&config_path)?;
+            let mut db = writable_database()?;
+            if native_only && settings.inventory != config::Inventory::Codex {
+                return Err(Failure("--native-only requires Codex inventory".into(), 2));
+            }
+            if native_only {
+                index::refresh_kind(&mut db, "filesystem", &[], true)?;
+            }
+            prepare_index(&mut db, &settings, &cwd, !native_only)?;
+            dispatch(
+                Some(command),
+                args.query,
+                args.json,
+                &mut db,
+                &settings,
+                &cwd,
+            )?;
+        }
         command => {
             let settings = config::load(&config_path)?;
             let mut db = writable_database()?;
-            let scan = sources::scan(&cwd, &settings.roots);
-            index::refresh_kind(&mut db, "filesystem", &scan.skills, scan.complete)?;
-            for diagnostic in scan.diagnostics {
-                eprintln!("warning: {diagnostic}");
-            }
-            if settings.inventory == config::Inventory::Codex {
-                let codex = native::detect(&settings)?;
-                if !index::has_snapshot(
-                    &db,
-                    &cwd,
-                    &codex.version,
-                    &codex.path,
-                    &config::codex_home(&settings),
-                )? {
-                    refresh_native(&mut db, &settings, &cwd, &codex)?;
-                }
-            }
+            prepare_index(&mut db, &settings, &cwd, true)?;
             dispatch(command, args.query, args.json, &mut db, &settings, &cwd)?;
         }
     }
@@ -280,9 +294,92 @@ fn dispatch(
         Some(Command::Refresh { full }) => {
             refresh(db, settings, cwd, full)?;
         }
+        Some(Command::Benchmark {
+            dataset,
+            limit,
+            native_only: _,
+        }) => benchmark(db, &dataset, search_limit(Some(limit))?, json)?,
         _ => unreachable!(),
     }
     Ok(())
+}
+
+fn prepare_index(
+    db: &mut Connection,
+    settings: &config::Config,
+    cwd: &Path,
+    filesystem: bool,
+) -> Result<(), Failure> {
+    if filesystem {
+        let scan = sources::scan(cwd, &settings.roots);
+        index::refresh_kind(db, "filesystem", &scan.skills, scan.complete)?;
+        for diagnostic in scan.diagnostics {
+            eprintln!("warning: {diagnostic}");
+        }
+    }
+    if settings.inventory == config::Inventory::Codex {
+        let codex = native::detect(settings)?;
+        if !index::has_snapshot(
+            db,
+            cwd,
+            &codex.version,
+            &codex.path,
+            &config::codex_home(settings),
+        )? {
+            refresh_native(db, settings, cwd, &codex)?;
+        }
+    }
+    Ok(())
+}
+
+fn benchmark(db: &Connection, path: &Path, limit: usize, json: bool) -> Result<(), Failure> {
+    let bytes =
+        fs::read(path).map_err(|error| Failure(format!("{}: {error}", path.display()), 1))?;
+    let dataset: evaluation::Dataset = serde_json::from_slice(&bytes)
+        .map_err(|error| Failure(format!("{}: {error}", path.display()), 2))?;
+    let rows = search::all(db, None)?;
+    let corpus_names: HashSet<_> = rows.iter().map(|row| row.name.clone()).collect();
+    let mut corpus_identity: Vec<_> = rows
+        .iter()
+        .map(|row| format!("{}:{}", row.name, row.hash))
+        .collect();
+    corpus_identity.sort();
+    let report = evaluation::evaluate(
+        &dataset,
+        &format!("{:x}", Sha256::digest(&bytes)),
+        &format!("{:x}", Sha256::digest(corpus_identity.join("\n"))),
+        &corpus_names,
+        rows.len(),
+        limit,
+        |query, limit| {
+            search::query(db, query, limit)
+                .map(|rows| rows.into_iter().map(|row| row.name).collect())
+                .map_err(|error| error.to_string())
+        },
+    )?;
+    if json {
+        write_text(&format!("{}\n", serde_json::to_string(&report).unwrap()))
+    } else {
+        write_text(&format!(
+            "dataset: {} ({})\ncorpus: {} skills ({})\nretriever: {}\nqueries: {} ({} judged, {} no-match)\nRecall@{limit}: {:.3}\nHitRate@{limit}: {:.3}\nMRR@{limit}: {:.3}\nnDCG@{limit}: {:.3}\nno-match accuracy: {:.3}\nquery latency: p50 {:.3} ms, p95 {:.3} ms\nmisses: {}\n",
+            report.dataset,
+            &report.dataset_sha256[..12],
+            report.corpus_skills,
+            &report.corpus_sha256[..12],
+            report.retriever,
+            report.queries,
+            report.judged_queries,
+            report.no_match_queries,
+            report.recall_at_k,
+            report.hit_rate_at_k,
+            report.mrr_at_k,
+            report.ndcg_at_k,
+            report.no_match_accuracy,
+            report.query_p50_ms,
+            report.query_p95_ms,
+            report.misses.len(),
+        ))
+    }
 }
 
 fn writable_database() -> Result<Connection, Failure> {
@@ -405,7 +502,25 @@ fn hook() {
     };
     if let Ok(rows) = search::query(&db, prompt, 3) {
         if !rows.is_empty() {
-            let _ = output::text(&rows);
+            let mut candidates = String::new();
+            for row in rows {
+                let description = output::clean(row.description.lines().next().unwrap_or(""));
+                let line = format!("{}: {}\n", output::clean(&row.id), description);
+                if candidates.len() + line.len() > 1_500 {
+                    break;
+                }
+                candidates.push_str(&line);
+            }
+            let context = format!(
+                "Skillwick found these candidates. Read each relevant ID with `skillwick read ID` before following it; selecting none is valid.\n{candidates}"
+            );
+            let value = serde_json::json!({
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": context
+                }
+            });
+            let _ = write_text(&format!("{value}\n"));
         }
     }
 }

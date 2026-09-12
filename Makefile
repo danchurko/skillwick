@@ -1,4 +1,8 @@
-.PHONY: build check fmt lint test test-cli test-codex test-inference dist
+.PHONY: benchmark build check fmt lint test test-cli test-codex test-inference dist
+
+benchmark:
+	cargo build --release --locked
+	sh scripts/benchmark-local.sh target/release/skillwick
 
 build:
 	cargo build --locked

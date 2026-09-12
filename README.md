@@ -19,6 +19,27 @@ Skillwick does not install, relocate, execute, or rewrite third-party skills.
 V1 has no MCP server, Codex fork, daemon, embeddings, remote registry, or
 telemetry.
 
+## Measured on a real skill library
+
+The checked-in benchmark uses 65 natural-language tasks against 418 enabled
+skills from the maintainer's live Codex inventory. The corpus includes 327 ECC
+skills, 15 other plugin skills, 76 native/user skills, and five prompts that
+should return no skill.
+
+```text
+Recall@5             0.869
+MRR@5                0.812
+nDCG@5               0.826
+No-match accuracy    0.600
+Warm query p95       0.380 ms
+```
+
+These are measured lexical results, including ten published misses. This is not
+a synthetic perfection claim. Dataset and corpus hashes make later embedding or
+reranker comparisons detect drift. Run the same evaluation with `make
+benchmark`; use `--json` for machine-readable results. See [benchmark method and
+full evidence](docs/BENCHMARKS.md).
+
 ## Install
 
 Build from source with stable Rust:
@@ -77,13 +98,19 @@ skillwick init --dry-run --yes --agent codex --catalog native --hooks off
 Apply setup when ready:
 
 ```sh
-skillwick init --yes --agent codex --catalog native --hooks off
+skillwick init --yes --agent codex --catalog native --hooks suggest
 skillwick doctor --strict
 ```
 
 Setup installs Skillwick's router skill, adds one marked global instruction
 block, indexes native inventory, then sets `skills.include_instructions = false`.
 Catalogue suppression occurs only after replacement discovery succeeds.
+
+`--hooks suggest` adds one bounded, cached-only `UserPromptSubmit` handler to
+Codex's existing `hooks.json`. Codex still runs every caveman, ponytail, plugin,
+project, and managed hook through its native lifecycle. Skillwick does not
+disable hooks or bypass Codex trust review. Use `/hooks` to review the new
+handler. Keep `--hooks off` when automatic suggestions are not wanted.
 
 `skillwick uninstall` removes only owned integration. `--purge-cache` also
 removes the disposable index. Conditional rollback preserves unrelated edits
@@ -114,6 +141,7 @@ Run `skillwick --help` for the complete interface. Key behaviors:
 
 ```sh
 make check
+make benchmark        # requires the labelled skills in current Codex inventory
 make test-codex       # requires Codex CLI 0.154.0
 make test-inference   # opt-in real gpt-5.6-luna turn by default
 ```
