@@ -109,6 +109,10 @@ load commands target macOS 11.0 for arm64 and 10.12 for x86_64; runtime executio
 was tested only on macOS 26.6.2. Installer and archive checksum smoke tests
 passed. Ruby formula syntax and shell syntax checks passed.
 
+GitHub Actions CI run
+[`34687019561`](https://github.com/danchurko/skillwick/actions/runs/34687019561)
+passed `make check` on commit `52c581d8b9d73e43cb02e39270d5dd61b2b273d7`.
+
 ## Compatibility and limits
 
 - Codex 0.154.0 accepted `skills.include_instructions = false`; its real
@@ -119,8 +123,8 @@ passed. Ruby formula syntax and shell syntax checks passed.
   `SKILL.md`, found the expected marker, and returned
   `SKILLWICK_INFERENCE_OK`. Skillwick was not installed or integrated into the
   live Codex configuration.
-- GitHub Actions execution, signing, notarization, and execution on an actual
-  Intel Mac or older macOS release remain unverified.
+- Signing, notarization, and execution on an actual Intel Mac or older macOS
+  release remain unverified.
 - Non-full refresh currently hashes every discovered metadata document. This is
   simpler and correct; stat-based hash skipping can be added if real libraries
   show refresh cost is material.
