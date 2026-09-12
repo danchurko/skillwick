@@ -24,7 +24,7 @@ test "$(run 'requested working directory' | grep -c '^project-only@')" -eq 1
 run doctor --strict >/dev/null
 grep -q '<!-- skillwick:begin -->' "$codex_home/AGENTS.md"
 grep -q "$binary list" "$codex_home/AGENTS.md"
-grep -q 'Do not route' "$codex_home/AGENTS.md"
+grep -q 'Simple requests do not' "$codex_home/AGENTS.md"
 grep -q 'include_instructions = false' "$codex_home/config.toml"
 grep -q 'Finding relevant skills with Skillwick' "$codex_home/hooks.json"
 grep -q 'caveman' "$codex_home/hooks.json"

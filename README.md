@@ -51,7 +51,7 @@ cargo build --release --locked
 ./target/release/skillwick --version
 ```
 
-After a GitHub release exists, use Homebrew:
+Install the published release with Homebrew:
 
 ```sh
 brew tap danchurko/skillwick https://github.com/danchurko/skillwick.git
@@ -61,8 +61,8 @@ brew install skillwick
 Or install an explicit version and prefix:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.1.0/scripts/install.sh
-sh install.sh --version 0.1.0 --prefix "$HOME/.local"
+curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.1.1/scripts/install.sh
+sh install.sh --version 0.1.1 --prefix "$HOME/.local"
 ```
 
 The installer verifies the release checksum and installs only the executable.

@@ -19,10 +19,10 @@ for their full guidance. An empty result or choosing no skill is valid.
 Search again when the task changes substantially; do not repeat the same search
 merely to satisfy a ritual.
 
-Simple direct requests do not need specialist routing. Do not reload or route
-already-active RTK, Caveman, or Ponytail instructions; they already cover
-command wrapping, communication, and implementation style. For inventory or
-count questions, use `skillwick list`; it is exhaustive and reports the total.
+Simple direct requests do not need specialist routing. Higher-level instructions
+own unrelated command wrapping, communication, and implementation behavior. For
+inventory or count questions, use `skillwick list`; it is exhaustive and reports
+the total.
 
 Resolve relative references and scripts against the base directory reported by
 `read`, not the current repository. Do not execute scripts or install dependencies
