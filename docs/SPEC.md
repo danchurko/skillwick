@@ -246,15 +246,22 @@ skillwick init
 The formula uses versioned GitHub release archives. Update its digests from the
 exact published artifacts before tagging a release.
 
-For an existing workstation pipeline, integrate after base instructions have been copied, all skills/plugins installed, and the final baseline config imported:
+For an existing workstation pipeline that already owns global instructions and
+Codex configuration, install the binary and a managed Skillwick config with
+`inventory = "codex"`, `agent = "none"`, and `hooks = "off"`. Then refresh after
+all skills and plugins are installed:
 
 ```sh
-skillwick init --yes --agent codex --catalog native --hooks off
 skillwick refresh
-skillwick doctor --strict
+skillwick --json list
 ```
 
-Run setup on every apply, not only when the binary is first installed. The sequence repairs a replaced instruction block and indexes the latest packages. Preserve inspect/dry-run behavior. Existing RTK and other integrations must survive unchanged. Keep one owner for each configuration key; do not have the workstation baseline and Skillwick fight over the same value.
+Do not run `skillwick init` from that pipeline. The workstation remains the sole
+owner of its instruction file and native Codex policy; Skillwick owns only its
+config, disposable index, and binary. Refresh on every apply, not only when the
+binary is first installed. Preserve inspect/dry-run behavior and initialize RTK
+through RTK's native lifecycle after installing the base instruction file. Keep
+one owner for each configuration key.
 
 Installer compatibility evidence: OpenAI's skill installer uses `--dest` for destination and `--path` for repository-internal source paths. Vercel skills documents agent/global/copy selection; custom destination flags must not be assumed. Existing isolated-HOME staging can remain in its established adapter, but do not apply that trick blindly to native plugin managers that also use HOME for credentials/state. With native catalogue suppression, destination redirection is normally unnecessary. [S16–S17]
 
