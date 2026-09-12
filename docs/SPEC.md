@@ -199,18 +199,9 @@ Use restrictive permissions for local state. Resolve the actual executable for d
 
 ### Managed Skillwick context
 
-Default context:
-
-```markdown
-# Skillwick
-
-Skillwick is a skill helper. It finds relevant installed skills and loads only
-the selected skill instructions.
-
-- Run `skillwick --json list --all` to inspect the complete current inventory and total.
-- Before using, finding, selecting, or loading a skill, run `skillwick "brief task and important technologies"`.
-- Read each relevant result with `skillwick read ID` before following it.
-```
+The canonical default context is [`assets/skillwick/SKILLWICK.md`](../assets/skillwick/SKILLWICK.md).
+It explains the helper before policy, gives copyable examples, lists every
+agent-facing command, and omits setup commands that an agent must not invoke.
 
 Patch the deployed global file, **not a workstation repository's source `AGENTS.md`**. Codex can prefer `AGENTS.override.md` to `AGENTS.md`; detect that condition and obtain an explicit active-file choice before claiming successful integration. [S9]
 

@@ -731,6 +731,19 @@ mod tests {
         assert_eq!(remove_reference(&source, reference, false).unwrap(), source);
     }
     #[test]
+    fn integration_detection_accepts_previous_and_current_context() {
+        let temporary = tempfile::tempdir().unwrap();
+        let codex_home = temporary.path();
+        let context = codex_home.join("SKILLWICK.md");
+        let instructions = codex_home.join("AGENTS.md");
+        fs::write(&instructions, format!("@{}\n", context.display())).unwrap();
+        let previous = "# Skillwick\n\nSkillwick is a skill helper.\n\n- Run `skillwick --json list --all` to inspect inventory.\n- Read each result with `skillwick read ID`.\n";
+        fs::write(&context, previous).unwrap();
+        assert!(integration_present(&instructions, codex_home));
+        fs::write(&context, CONTEXT).unwrap();
+        assert!(integration_present(&instructions, codex_home));
+    }
+    #[test]
     fn catalog_patch_preserves_unrelated_toml_and_restores_leaf() {
         let source = "model = \"x\"\n[skills]\nmax_context_tokens = 100\n";
         let (_, patched) = patch_catalog(source, false).unwrap();

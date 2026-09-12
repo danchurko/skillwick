@@ -61,8 +61,8 @@ brew install skillwick
 Or install an explicit version and prefix:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.1.2/scripts/install.sh
-sh install.sh --version 0.1.2 --prefix "$HOME/.local"
+curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.1.4/scripts/install.sh
+sh install.sh --version 0.1.4 --prefix "$HOME/.local"
 ```
 
 The installer verifies the release checksum and installs only the executable.
