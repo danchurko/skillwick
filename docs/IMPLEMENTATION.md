@@ -1,6 +1,6 @@
 # Skillwick v1 implementation record
 
-Status: release candidate. Verification used synthetic skill packages and
+Status: v0.1.0 published. Verification used synthetic skill packages and
 temporary homes only. No test changed live Codex configuration.
 
 ## Execution plan
@@ -112,6 +112,19 @@ passed. Ruby formula syntax and shell syntax checks passed.
 GitHub Actions CI run
 [`34687019561`](https://github.com/danchurko/skillwick/actions/runs/34687019561)
 passed `make check` on commit `52c581d8b9d73e43cb02e39270d5dd61b2b273d7`.
+The final main-branch run
+[`34687599560`](https://github.com/danchurko/skillwick/actions/runs/34687599560)
+also passed after the release workflow runner update.
+
+The public
+[`v0.1.0` release](https://github.com/danchurko/skillwick/releases/tag/v0.1.0)
+contains arm64 and x86_64 archives plus separate SHA-256 files. GitHub reports
+archive digests `86a24cd4d6653f752a44f00c5b4ff98081786404f372af539e3f1f3eec591506`
+and `dcc272ae3d486dc6e5d6ec0d18903095ab5f09879f6271e2fd2e25c747e9196b`,
+matching the formula and local build evidence. Fetching the installer from the
+immutable tag into an isolated temporary home downloaded the public arm64
+archive, verified its checksum, installed into a temporary prefix, and returned
+`skillwick 0.1.0`.
 
 ## Compatibility and limits
 
@@ -125,6 +138,11 @@ passed `make check` on commit `52c581d8b9d73e43cb02e39270d5dd61b2b273d7`.
   live Codex configuration.
 - Signing, notarization, and execution on an actual Intel Mac or older macOS
   release remain unverified.
+- The first tag-triggered cargo-dist run could not start because its generated
+  workflow selected retired `ubuntu-20.04` runners. The run was cancelled and
+  main now selects `ubuntu-24.04`; the v0.1.0 assets were published from the
+  exact locally verified cargo-dist archives. A later tag must prove the fixed
+  release workflow end to end.
 - Non-full refresh currently hashes every discovered metadata document. This is
   simpler and correct; stat-based hash skipping can be added if real libraries
   show refresh cost is material.
