@@ -1,0 +1,2 @@
+{"jsonrpc":"2.0","id":1,"result":{"userAgent":"codex-cli/0.154.0","codexHome":"/tmp/codex-home","platformFamily":"unix","platformOs":"macos"}}
+{"jsonrpc":"2.0","id":2,"error":{"code":-32603,"message":"fixture inventory failure"}}

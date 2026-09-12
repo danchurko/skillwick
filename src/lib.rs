@@ -1,0 +1,10 @@
+pub mod cli;
+pub mod config;
+pub mod doctor;
+pub mod index;
+pub mod integration;
+pub mod metadata;
+pub mod native;
+pub mod output;
+pub mod search;
+pub mod sources;

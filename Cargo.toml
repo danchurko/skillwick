@@ -1,0 +1,35 @@
+[package]
+name = "skillwick"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Find relevant installed local skills"
+repository = "https://github.com/danchurko/skillwick"
+homepage = "https://github.com/danchurko/skillwick"
+readme = "README.md"
+keywords = ["codex", "agent-skills", "search", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+rust-version = "1.88"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+inquire = "0.7"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde-saphyr = "0.0.11"
+sha2 = "0.10"
+toml_edit = { version = "0.22", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+strip = true
+lto = "thin"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
