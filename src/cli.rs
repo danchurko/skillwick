@@ -47,14 +47,14 @@ enum Command {
     },
     /// Show the current-scope skill inventory and total count.
     List {
-        #[arg(long, conflicts_with = "all")]
+        #[arg(long, hide = true, conflicts_with = "all")]
         limit: Option<usize>,
-        /// Print every inventory record instead of the bounded default.
-        #[arg(long)]
+        /// Compatibility flag; plain `list` is already exhaustive.
+        #[arg(long, hide = true)]
         all: bool,
     },
     Refresh {
-        #[arg(long)]
+        #[arg(long, hide = true)]
         full: bool,
     },
     Benchmark {
@@ -142,7 +142,12 @@ impl std::fmt::Display for Failure {
 }
 impl From<rusqlite::Error> for Failure {
     fn from(error: rusqlite::Error) -> Self {
-        Failure(format!("database error: {error}; run `skillwick refresh --full` to rebuild the disposable cache"), 1)
+        Failure(
+            format!(
+                "database error: {error}; run `skillwick refresh` to rebuild the disposable cache"
+            ),
+            1,
+        )
     }
 }
 impl From<String> for Failure {
@@ -246,6 +251,11 @@ pub fn run() -> Result<(), Failure> {
                 &cwd,
             )?;
         }
+        Some(Command::Refresh { full }) => {
+            let settings = config::load(&config_path)?;
+            let mut db = writable_database()?;
+            refresh(&mut db, &settings, &cwd, full)?;
+        }
         command => {
             let settings = config::load(&config_path)?;
             let mut db = writable_database()?;
@@ -280,12 +290,13 @@ fn dispatch(
             )?;
         }
         Some(Command::List { limit, all }) => {
-            let rows = search::all(db, if all { None } else { Some(list_limit(limit)?) })?;
+            let limit = list_limit(limit)?;
+            let rows = search::all(db, limit)?;
             let total = search::count(db)?;
             if json {
                 write_output(output::list_json(&rows, total))?;
             } else {
-                write_output(output::list_text(&rows, total, all))?;
+                write_output(output::list_text(&rows, total, all || limit.is_none()))?;
             }
         }
         Some(Command::Inspect { id }) => {
@@ -297,9 +308,6 @@ fn dispatch(
             }
         }
         Some(Command::Read { id }) => read(db, &id, settings, cwd)?,
-        Some(Command::Refresh { full }) => {
-            refresh(db, settings, cwd, full)?;
-        }
         Some(Command::Benchmark {
             dataset,
             limit,
@@ -323,17 +331,11 @@ fn prepare_index(
             eprintln!("warning: {diagnostic}");
         }
     }
-    if settings.inventory == config::Inventory::Codex {
-        let codex = native::detect(settings)?;
-        if !index::has_snapshot(
-            db,
-            cwd,
-            &codex.version,
-            &codex.path,
-            &config::codex_home(settings),
-        )? {
-            refresh_native(db, settings, cwd, &codex)?;
-        }
+    if settings.inventory == config::Inventory::Codex && !index::has_kind(db, "codex")? {
+        return Err(Failure(
+            "native inventory cache is empty; run `skillwick refresh`".into(),
+            3,
+        ));
     }
     Ok(())
 }
@@ -561,11 +563,67 @@ fn search_limit(limit: Option<usize>) -> Result<usize, Failure> {
     }
 }
 
-fn list_limit(limit: Option<usize>) -> Result<usize, Failure> {
-    let limit = limit.unwrap_or(20);
-    if limit > 0 {
-        Ok(limit)
-    } else {
-        Err(Failure("list limit must be greater than zero".into(), 2))
+fn list_limit(limit: Option<usize>) -> Result<Option<usize>, Failure> {
+    match limit {
+        Some(limit) if limit > 0 => Ok(Some(limit)),
+        Some(_) => Err(Failure("list limit must be greater than zero".into(), 2)),
+        None => Ok(None),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{index, metadata::Metadata, sources::Skill};
+    use std::path::PathBuf;
+
+    fn codex_skill() -> Skill {
+        Skill {
+            path: PathBuf::from("/skills/native/SKILL.md"),
+            canonical: PathBuf::from("/skills/native/SKILL.md"),
+            base: PathBuf::from("/skills/native"),
+            scope: "global".into(),
+            source: "codex:native".into(),
+            source_kind: "codex".into(),
+            enabled: true,
+            plugin_id: None,
+            metadata: Metadata {
+                name: "native".into(),
+                description: "Native skill".into(),
+                keywords: String::new(),
+                degraded: false,
+                hash: "hash".into(),
+            },
+        }
+    }
+
+    fn codex_settings() -> config::Config {
+        config::Config {
+            inventory: config::Inventory::Codex,
+            codex_bin: Some(PathBuf::from("/does/not/exist")),
+            ..config::Config::default()
+        }
+    }
+
+    #[test]
+    fn cached_queries_do_not_detect_codex() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(&mut db, "codex", &[codex_skill()], true).unwrap();
+
+        assert!(prepare_index(&mut db, &codex_settings(), temp.path(), false).is_ok());
+    }
+
+    #[test]
+    fn empty_native_cache_requires_explicit_refresh() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+
+        let error = match prepare_index(&mut db, &codex_settings(), temp.path(), false) {
+            Ok(()) => panic!("empty native cache unexpectedly passed"),
+            Err(error) => error,
+        };
+        assert_eq!(error.code(), 3);
+        assert!(error.to_string().contains("run `skillwick refresh`"));
     }
 }

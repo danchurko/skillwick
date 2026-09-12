@@ -79,7 +79,6 @@ skillwick search "SQLite full text ranking" --limit 3
 skillwick read aws-agentcore@7d92ac
 skillwick inspect aws-agentcore@7d92ac
 skillwick list
-skillwick list --all
 skillwick refresh
 ```
 
@@ -133,8 +132,10 @@ $CODEX_HOME/config.toml
 Run `skillwick --help` for the complete interface. Key behaviors:
 
 - Default search returns zero to five compact results.
-- `list` reports the full current-scope inventory count and shows up to 20 compact records;
-  use `list --all` to print every record.
+- `list` reports the full current-scope inventory count and prints every compact record.
+  The old `--all` and `--limit N` flags remain hidden compatibility options.
+- With Codex inventory enabled, search, list, and inspect use the cached native
+  records without starting Codex; an empty cache tells you to run `skillwick refresh`.
 - `--json` emits a versioned machine-readable envelope.
 - `skillwick -- init hooks` searches those literal words.
 - Exit codes: `0` success/no matches, `1` operational failure, `2` usage or

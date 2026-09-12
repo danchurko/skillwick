@@ -57,7 +57,7 @@ pub fn list_text(rows: &[ResultRow], total: usize, all: bool) -> io::Result<()> 
     if !all && rows.len() < total {
         writeln!(
             output,
-            "Showing up to {} records; use `skillwick list --all` for every record.",
+            "Showing up to {} records; plain `skillwick list` prints every record.",
             rows.len()
         )?;
     }

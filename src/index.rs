@@ -136,6 +136,14 @@ pub fn has_snapshot(
     )
 }
 
+pub fn has_kind(db: &Connection, kind: &str) -> rusqlite::Result<bool> {
+    db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM skills WHERE source_kind=?1)",
+        [kind],
+        |row| row.get(0),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -196,5 +204,15 @@ mod tests {
                 .unwrap(),
             1
         );
+    }
+
+    #[test]
+    fn reports_cached_source_kinds() {
+        let mut db = open(Path::new(":memory:")).unwrap();
+        assert!(!has_kind(&db, "codex").unwrap());
+        let mut native = skill("/skills/native/SKILL.md", "native");
+        native.source_kind = "codex".into();
+        refresh_kind(&mut db, "codex", &[native], true).unwrap();
+        assert!(has_kind(&db, "codex").unwrap());
     }
 }

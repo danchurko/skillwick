@@ -25,7 +25,8 @@ run C++ | grep -q 'C++@'
 run 'deploy AgentCore runtime' | grep -q 'aws-agentcore@'
 ! run list --all | grep -q 'leak@'
 run list | grep -q '^2 skills in the current inventory\.$'
-run list --limit 1 | grep -q 'use `skillwick list --all` for every record'
+test "$(run list | grep -c '@')" -eq 2
+run list --limit 1 | grep -q 'plain `skillwick list` prints every record'
 run --json list --limit 1 | grep -q '"total":2'
 test "$(run list --all | grep -c '@')" -eq 2
 identifier=$(run list --all | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
