@@ -2,7 +2,7 @@
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
-version=0.1.1
+version=0.1.2
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 home=$tmp/home
@@ -16,10 +16,15 @@ if [ "\${1:-}" = "--version" ]; then echo "skillwick $version"; exit 0; fi
 exit 0
 EOF
 chmod 755 "$tmp/skillwick"
-archive="skillwick-aarch64-apple-darwin.tar.xz"
-mkdir -p "$tmp/skillwick-aarch64-apple-darwin"
-mv "$tmp/skillwick" "$tmp/skillwick-aarch64-apple-darwin/skillwick"
-tar -cJf "$server/$archive" -C "$tmp" skillwick-aarch64-apple-darwin
+case "$(uname -s):$(uname -m)" in
+  Darwin:arm64) target=aarch64-apple-darwin ;;
+  Darwin:x86_64) target=x86_64-apple-darwin ;;
+  *) echo "unsupported test platform" >&2; exit 1 ;;
+esac
+archive="skillwick-$target.tar.xz"
+mkdir -p "$tmp/skillwick-$target"
+mv "$tmp/skillwick" "$tmp/skillwick-$target/skillwick"
+tar -cJf "$server/$archive" -C "$tmp" "skillwick-$target"
 (cd "$server" && shasum -a 256 "$archive" > "$archive.sha256")
 
 before=$(find "$root" -type f -print | sort | shasum -a 256)

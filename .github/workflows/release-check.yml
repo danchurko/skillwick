@@ -1,0 +1,8 @@
+- name: Install verification toolchain
+  uses: dtolnay/rust-toolchain@stable
+  with:
+    components: clippy,rustfmt
+- name: Cache verification build
+  uses: Swatinem/rust-cache@v2
+- name: Verify source
+  run: make check
