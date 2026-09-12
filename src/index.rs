@@ -147,6 +147,7 @@ pub fn record_snapshot(
     executable: &Path,
     codex_home: &Path,
 ) -> rusqlite::Result<()> {
+    db.execute("DELETE FROM native_snapshots", [])?;
     db.execute("INSERT INTO native_snapshots (cwd,version,executable,codex_home,refreshed_at) VALUES (?1,?2,?3,?4,unixepoch()) ON CONFLICT(cwd) DO UPDATE SET version=excluded.version,executable=excluded.executable,codex_home=excluded.codex_home,refreshed_at=excluded.refreshed_at", params![cwd.to_string_lossy(), version, executable.to_string_lossy(), codex_home.to_string_lossy()])?;
     Ok(())
 }
@@ -196,6 +197,39 @@ pub fn has_snapshot(
         params![cwd.to_string_lossy(), version, executable.to_string_lossy(), codex_home.to_string_lossy()],
         |row| row.get(0),
     )
+}
+
+pub fn has_workspace_snapshot(
+    db: &Connection,
+    cwd: &Path,
+    codex_home: &Path,
+) -> rusqlite::Result<bool> {
+    db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM native_snapshots WHERE cwd=?1 AND codex_home=?2)",
+        params![cwd.to_string_lossy(), codex_home.to_string_lossy()],
+        |row| row.get(0),
+    )
+}
+
+pub fn has_codex_home_snapshot(db: &Connection, codex_home: &Path) -> rusqlite::Result<bool> {
+    db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM native_snapshots WHERE codex_home=?1)",
+        [codex_home.to_string_lossy()],
+        |row| row.get(0),
+    )
+}
+
+pub fn remove_workspace_native(db: &mut Connection) -> rusqlite::Result<()> {
+    let transaction = db.transaction()?;
+    transaction.execute(
+        "DELETE FROM skills_fts WHERE id IN (SELECT id FROM skills WHERE source_kind='codex' AND scope NOT IN ('global','system','user'))",
+        [],
+    )?;
+    transaction.execute(
+        "DELETE FROM skills WHERE source_kind='codex' AND scope NOT IN ('global','system','user')",
+        [],
+    )?;
+    transaction.commit()
 }
 
 pub fn has_kind(db: &Connection, kind: &str) -> rusqlite::Result<bool> {

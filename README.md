@@ -134,8 +134,9 @@ Run `skillwick --help` for the complete interface. Key behaviors:
 - Default search returns zero to five compact results.
 - `list` reports the full current-scope inventory count and prints every compact record.
   The old `--all` and `--limit N` flags remain hidden compatibility options.
-- With Codex inventory enabled, search, list, and inspect use the cached native
-  records without starting Codex; an empty cache tells you to run `skillwick refresh`.
+- With Codex inventory enabled, search, list, inspect, and read use the published
+  native records without starting Codex; an empty cache tells you to run
+  `skillwick refresh`. Read still verifies the selected path and content hash.
 - `--json` emits a versioned machine-readable envelope.
 - `skillwick -- init hooks` searches those literal words.
 - Exit codes: `0` success/no matches, `1` operational failure, `2` usage or

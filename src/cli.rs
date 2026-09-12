@@ -243,14 +243,7 @@ pub fn run() -> Result<(), Failure> {
                 index::refresh_kind(&mut db, "filesystem", &[], true)?;
             }
             prepare_index(&mut db, &settings, &cwd, !native_only)?;
-            dispatch(
-                Some(command),
-                args.query,
-                args.json,
-                &mut db,
-                &settings,
-                &cwd,
-            )?;
+            dispatch(Some(command), args.query, args.json, &mut db)?;
         }
         Some(Command::Refresh { full }) => {
             let settings = config::load(&config_path)?;
@@ -261,7 +254,7 @@ pub fn run() -> Result<(), Failure> {
             let settings = config::load(&config_path)?;
             let mut db = query_database()?;
             prepare_index(&mut db, &settings, &cwd, true)?;
-            dispatch(command, args.query, args.json, &mut db, &settings, &cwd)?;
+            dispatch(command, args.query, args.json, &mut db)?;
         }
     }
     Ok(())
@@ -272,8 +265,6 @@ fn dispatch(
     trailing: Vec<String>,
     json: bool,
     db: &mut Connection,
-    settings: &config::Config,
-    cwd: &Path,
 ) -> Result<(), Failure> {
     match command {
         None => {
@@ -308,7 +299,7 @@ fn dispatch(
                 write_text(&format!("id: {}\nname: {}\nscope: {}\nsource: {}\nenabled: {}\nplugin: {}\npath: {}\ncanonical: {}\nbase: {}\nhash: {}\ndegraded: {}\ndescription: {}\n", output::clean(&row.id), output::clean(&row.name), output::clean(&row.scope), output::clean(&row.source), row.enabled, row.plugin_id.as_deref().map(output::clean).unwrap_or_default(), row.path, row.canonical, row.base, row.hash, row.degraded, output::clean(&row.description)))?;
             }
         }
-        Some(Command::Read { id }) => read(db, &id, settings, cwd)?,
+        Some(Command::Read { id }) => read(db, &id)?,
         Some(Command::Benchmark {
             dataset,
             limit,
@@ -332,11 +323,23 @@ fn prepare_index(
             eprintln!("warning: {diagnostic}");
         }
     }
-    if settings.inventory == config::Inventory::Codex && !index::has_kind(db, "codex")? {
-        return Err(Failure(
-            "native inventory cache is empty; run `skillwick refresh`".into(),
-            3,
-        ));
+    if settings.inventory == config::Inventory::Codex {
+        if !index::has_kind(db, "codex")? {
+            return Err(Failure(
+                "native inventory cache is empty; run `skillwick refresh`".into(),
+                3,
+            ));
+        }
+        let codex_home = config::codex_home(settings);
+        if !index::has_codex_home_snapshot(db, &codex_home)? {
+            return Err(Failure(
+                "native inventory belongs to another Codex home; run `skillwick refresh`".into(),
+                3,
+            ));
+        }
+        if !index::has_workspace_snapshot(db, cwd, &codex_home)? {
+            index::remove_workspace_native(db)?;
+        }
     }
     Ok(())
 }
@@ -460,20 +463,10 @@ fn find(db: &Connection, id: &str) -> Result<search::ResultRow, Failure> {
     search::find(db, id)?.ok_or_else(|| Failure("skill not found".into(), 3))
 }
 
-fn read(
-    db: &mut Connection,
-    id: &str,
-    settings: &config::Config,
-    cwd: &Path,
-) -> Result<(), Failure> {
-    let mut row = find(db, id)?;
-    if row.source_kind == "codex" {
-        let codex = native::detect(settings)?;
-        refresh_native(db, settings, cwd, &codex)?;
-        row = find(db, id)?;
-        if !row.enabled {
-            return Err(Failure("skill is disabled by Codex".into(), 3));
-        }
+fn read(db: &Connection, id: &str) -> Result<(), Failure> {
+    let row = find(db, id)?;
+    if !row.enabled {
+        return Err(Failure("skill is disabled by Codex".into(), 3));
     }
     let current = fs::canonicalize(&row.path)
         .map_err(|_| Failure("skill source is unavailable".into(), 3))?;
@@ -622,8 +615,92 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let mut db = index::open(Path::new(":memory:")).unwrap();
         index::refresh_kind(&mut db, "codex", &[codex_skill()], true).unwrap();
+        index::record_snapshot(
+            &db,
+            temp.path(),
+            "test",
+            Path::new("/does/not/exist"),
+            &config::codex_home(&codex_settings()),
+        )
+        .unwrap();
 
         assert!(prepare_index(&mut db, &codex_settings(), temp.path(), false).is_ok());
+    }
+
+    #[test]
+    fn cached_queries_drop_another_workspaces_native_skills() {
+        let workspace_a = tempfile::tempdir().unwrap();
+        let workspace_b = tempfile::tempdir().unwrap();
+        let mut skill = codex_skill();
+        skill.scope = "project".into();
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(&mut db, "codex", &[skill], true).unwrap();
+        index::record_snapshot(
+            &db,
+            workspace_a.path(),
+            "test",
+            Path::new("/does/not/exist"),
+            &config::codex_home(&codex_settings()),
+        )
+        .unwrap();
+
+        assert!(prepare_index(&mut db, &codex_settings(), workspace_b.path(), false).is_ok());
+        assert_eq!(search::count(&db).unwrap(), 0);
+    }
+
+    #[test]
+    fn latest_workspace_marker_owns_the_published_native_corpus() {
+        let workspace_a = tempfile::tempdir().unwrap();
+        let workspace_b = tempfile::tempdir().unwrap();
+        let settings = codex_settings();
+        let codex_home = config::codex_home(&settings);
+        let mut skill = codex_skill();
+        skill.scope = "project".into();
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(&mut db, "codex", &[skill], true).unwrap();
+        index::record_snapshot(
+            &db,
+            workspace_a.path(),
+            "test",
+            Path::new("/does/not/exist"),
+            &codex_home,
+        )
+        .unwrap();
+        index::record_snapshot(
+            &db,
+            workspace_b.path(),
+            "test",
+            Path::new("/does/not/exist"),
+            &codex_home,
+        )
+        .unwrap();
+
+        assert!(prepare_index(&mut db, &settings, workspace_a.path(), false).is_ok());
+        assert_eq!(search::count(&db).unwrap(), 0);
+    }
+
+    #[test]
+    fn another_codex_home_requires_refresh() {
+        let workspace = tempfile::tempdir().unwrap();
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(&mut db, "codex", &[codex_skill()], true).unwrap();
+        index::record_snapshot(
+            &db,
+            workspace.path(),
+            "test",
+            Path::new("/does/not/exist"),
+            Path::new("/codex-home-a"),
+        )
+        .unwrap();
+        let settings = config::Config {
+            inventory: config::Inventory::Codex,
+            codex_home: Some(PathBuf::from("/codex-home-b")),
+            ..config::Config::default()
+        };
+
+        let error = prepare_index(&mut db, &settings, workspace.path(), false).unwrap_err();
+        assert_eq!(error.code(), 3);
+        assert!(error.to_string().contains("another Codex home"));
     }
 
     #[test]
@@ -650,5 +727,23 @@ mod tests {
         let copied = read_only_copy(&path).unwrap();
         assert!(index::has_kind(&copied, "codex").unwrap());
         assert_eq!(search::count(&copied).unwrap(), 1);
+    }
+
+    #[test]
+    fn read_uses_published_native_policy_without_starting_codex() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("SKILL.md");
+        let body = b"---\nname: native\ndescription: Native skill\n---\n";
+        fs::write(&path, body).unwrap();
+        let mut skill = codex_skill();
+        skill.path = path.clone();
+        skill.canonical = path;
+        skill.base = temp.path().to_path_buf();
+        skill.metadata.hash = format!("{:x}", Sha256::digest(body));
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(&mut db, "codex", &[skill], true).unwrap();
+        let id = search::all(&db, None).unwrap().remove(0).id;
+
+        assert!(read(&db, &id).is_ok());
     }
 }
