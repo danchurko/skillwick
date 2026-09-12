@@ -146,7 +146,7 @@ All examples below describe the **intended implemented interface**, not a curren
 | `skillwick search "query"` | Explicit alias; useful when the query begins with a reserved command |
 | `skillwick read ID` | Read the current selected instruction file, with source/base path |
 | `skillwick inspect ID` | Metadata, origin, enablement, dependencies, hashes, and paths; no full body |
-| `skillwick list` | Current-scope inventory, default limit 20; supports `--limit N`; `--all` is explicit |
+| `skillwick list` | Current-scope inventory and total count, default limit 20; supports `--limit N`; `--all` is explicit and exhaustive |
 | `skillwick refresh` | Refresh local index and configured native inventory; never update/install packages |
 | `skillwick refresh --full` | Rehash all metadata and refresh authoritative inventory |
 | `skillwick benchmark --dataset PATH` | Evaluate current production ranking with labelled relevance judgments |
@@ -164,7 +164,7 @@ aws-agentcore@7d92ac [global] Deploy and debug AgentCore runtimes and MCP endpoi
 mcp-typescript@51b408 [plugin:mcp] Build MCP servers using the TypeScript SDK.
 ```
 
-No banner, echoed query, pretty JSON, confidence number, install command, repeated full paths, or decorative table. Use one bounded description line per candidate; target a default output cap of 2,000 UTF-8 bytes, with complete IDs and valid UTF-8. Do not truncate an ID or print half a record. Result count may be below five. Empty output is `No matching skills.`
+Search has no banner, echoed query, pretty JSON, confidence number, install command, repeated full paths, or decorative table. Use one bounded description line per candidate; target a default output cap of 2,000 UTF-8 bytes, with complete IDs and valid UTF-8. Do not truncate an ID or print half a record. Result count may be below five. Empty search output is `No matching skills.` List reports the authoritative current-scope count, emits compact IDs and scopes, discloses a bounded result set, and prints every record only with explicit `--all`.
 
 `read` prints a small header containing the live document path and base directory, then the full instruction document. Relative references resolve against that base, not the shell cwd. Reading does not `cd`, execute a script, auto-install dependencies, or activate plugin tools. For oversized documents, fail clearly or require explicit line-range reading; never silently present a truncated body as complete.
 

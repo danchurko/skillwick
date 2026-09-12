@@ -134,6 +134,14 @@ pub fn all(db: &Connection, limit: Option<usize>) -> rusqlite::Result<Vec<Result
     }
 }
 
+pub fn count(db: &Connection) -> rusqlite::Result<usize> {
+    db.query_row(
+        "SELECT count(*) FROM skills s WHERE NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical))",
+        [],
+        |row| row.get(0),
+    )
+}
+
 pub fn find(db: &Connection, id: &str) -> rusqlite::Result<Option<ResultRow>> {
     let mut statement = db.prepare("SELECT id,name,description,scope,path,canonical,base,source,source_kind,enabled,plugin_id,degraded,hash FROM skills WHERE id=?1")?;
     let mut rows = statement.query([id])?;
@@ -218,5 +226,6 @@ mod tests {
             second.iter().map(|row| &row.id).collect::<Vec<_>>()
         );
         assert!(query(&db, "quoted \" text", 5).is_ok());
+        assert_eq!(count(&db).unwrap(), 2);
     }
 }

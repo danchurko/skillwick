@@ -32,6 +32,7 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Find relevant skills for a task.
     Search {
         #[arg(required = true)]
         query: Vec<String>,
@@ -44,9 +45,11 @@ enum Command {
     Inspect {
         id: String,
     },
+    /// Show the current-scope skill inventory and total count.
     List {
         #[arg(long, conflicts_with = "all")]
         limit: Option<usize>,
+        /// Print every inventory record instead of the bounded default.
         #[arg(long)]
         all: bool,
     },
@@ -277,10 +280,13 @@ fn dispatch(
             )?;
         }
         Some(Command::List { limit, all }) => {
-            emit(
-                &search::all(db, if all { None } else { Some(list_limit(limit)?) })?,
-                json,
-            )?;
+            let rows = search::all(db, if all { None } else { Some(list_limit(limit)?) })?;
+            let total = search::count(db)?;
+            if json {
+                write_output(output::list_json(&rows, total))?;
+            } else {
+                write_output(output::list_text(&rows, total, all))?;
+            }
         }
         Some(Command::Inspect { id }) => {
             let row = find(db, &id)?;

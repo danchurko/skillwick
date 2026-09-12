@@ -47,6 +47,60 @@ pub fn json(rows: &[ResultRow]) -> io::Result<()> {
     )
 }
 
+pub fn list_text(rows: &[ResultRow], total: usize, all: bool) -> io::Result<()> {
+    let stdout = io::stdout();
+    let mut output = stdout.lock();
+    writeln!(output, "{total} skills in the current inventory.")?;
+    if total == 0 {
+        return Ok(());
+    }
+    if !all && rows.len() < total {
+        writeln!(
+            output,
+            "Showing up to {} records; use `skillwick list --all` for every record.",
+            rows.len()
+        )?;
+    }
+    for row in rows {
+        writeln!(output, "{}", list_line(row))?;
+    }
+    Ok(())
+}
+
+fn list_line(row: &ResultRow) -> String {
+    let scope = if let Some(plugin) = &row.plugin_id {
+        format!("plugin:{}", clean(plugin))
+    } else {
+        clean(&row.scope)
+    };
+    format!(
+        "{} [{}]{}",
+        clean(&row.id),
+        scope,
+        if row.enabled { "" } else { " (disabled)" }
+    )
+}
+
+pub fn list_json(rows: &[ResultRow], total: usize) -> io::Result<()> {
+    let rows: Vec<_> = rows.iter().cloned().map(clean_row).collect();
+    #[derive(Serialize)]
+    struct Envelope<'a> {
+        version: u8,
+        total: usize,
+        results: &'a [ResultRow],
+    }
+    writeln!(
+        io::stdout().lock(),
+        "{}",
+        serde_json::to_string(&Envelope {
+            version: 1,
+            total,
+            results: &rows,
+        })
+        .expect("serializable output")
+    )
+}
+
 fn clean_row(mut row: ResultRow) -> ResultRow {
     row.id = clean(&row.id);
     row.name = clean(&row.name);
@@ -111,5 +165,8 @@ mod tests {
         let serialized = serde_json::to_string(&cleaned).unwrap();
         assert!(!serialized.contains("\\u001b"));
         assert!(!serialized.contains("\\n"));
+        let mut disabled = cleaned;
+        disabled.enabled = false;
+        assert!(list_line(&disabled).ends_with(" (disabled)"));
     }
 }

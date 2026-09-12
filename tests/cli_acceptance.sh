@@ -24,7 +24,10 @@ run init --yes --agent none --inventory filesystem
 run C++ | grep -q 'C++@'
 run 'deploy AgentCore runtime' | grep -q 'aws-agentcore@'
 ! run list --all | grep -q 'leak@'
-run --json list --all | grep -q '"version":1'
+run list | grep -q '^2 skills in the current inventory\.$'
+run list --limit 1 | grep -q 'use `skillwick list --all` for every record'
+run --json list --limit 1 | grep -q '"total":2'
+test "$(run list --all | grep -c '@')" -eq 2
 identifier=$(run list --all | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
 run read "$identifier" | grep -q "base: $home/.agents/skills/cpp"
 run -- init hooks | grep -q 'No matching skills.'

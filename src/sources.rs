@@ -49,6 +49,10 @@ pub fn roots(cwd: &Path, extra: &[PathBuf]) -> Vec<(PathBuf, String)> {
 
 pub fn scan(cwd: &Path, extra: &[PathBuf]) -> ScanReport {
     let configured: HashSet<_> = extra.iter().collect();
+    let configured_targets: Vec<_> = extra
+        .iter()
+        .filter_map(|root| fs::canonicalize(root).ok())
+        .collect();
     let mut seen = HashSet::new();
     let mut skills = Vec::new();
     let mut diagnostics = Vec::new();
@@ -88,7 +92,11 @@ pub fn scan(cwd: &Path, extra: &[PathBuf]) -> ScanReport {
                     continue;
                 }
             };
-            if !canonical_directory.starts_with(&authorized_root) {
+            if !canonical_directory.starts_with(&authorized_root)
+                && !configured_targets
+                    .iter()
+                    .any(|target| canonical_directory.starts_with(target))
+            {
                 diagnostics.push(format!("symlink escape: {}", directory.display()));
                 complete = false;
                 continue;
@@ -137,7 +145,11 @@ pub fn scan(cwd: &Path, extra: &[PathBuf]) -> ScanReport {
                         continue;
                     }
                 };
-                if !canonical.starts_with(&authorized_root) {
+                if !canonical.starts_with(&authorized_root)
+                    && !configured_targets
+                        .iter()
+                        .any(|target| canonical.starts_with(target))
+                {
                     diagnostics.push(format!("symlink escape: {}", path.display()));
                     complete = false;
                     continue;
@@ -237,6 +249,40 @@ mod tests {
             .diagnostics
             .iter()
             .any(|item| item.contains("symlink escape")));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn follows_symlinks_into_an_explicitly_configured_root() {
+        use std::os::unix::fs::symlink;
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path().join("home");
+        let managed = temp.path().join("managed");
+        fs::create_dir_all(home.join(".agents/skills")).unwrap();
+        fs::create_dir_all(managed.join("reviewed")).unwrap();
+        fs::write(
+            managed.join("reviewed/SKILL.md"),
+            "---\nname: reviewed\ndescription: managed skill\n---\n",
+        )
+        .unwrap();
+        symlink(
+            managed.join("reviewed"),
+            home.join(".agents/skills/reviewed"),
+        )
+        .unwrap();
+        let report = scan(&home, &[home.join(".agents/skills"), managed.clone()]);
+        assert!(!report
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.contains("reviewed")));
+        assert_eq!(
+            report
+                .skills
+                .iter()
+                .filter(|skill| skill.metadata.name == "reviewed")
+                .count(),
+            1
+        );
     }
 
     #[test]
