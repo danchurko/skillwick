@@ -34,6 +34,7 @@ run --json list --limit 1 | grep -q '"total":2'
 test "$(run list --all | grep -c '@')" -eq 2
 identifier=$(run list --all | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
 run read "$identifier" | grep -q "base: $home/.agents/skills/cpp"
+run "read $identifier" | grep -q "base: $home/.agents/skills/cpp"
 run -- init hooks | grep -q 'No matching skills.'
 run | grep -q 'Usage:'
 if run search test --limit 6 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi

@@ -271,6 +271,11 @@ fn dispatch(
             let query = trailing.join(" ");
             if query.is_empty() {
                 write_text(&Args::command().render_help().to_string())?;
+            } else if let Some(id) = query
+                .strip_prefix("read ")
+                .filter(|id| id.contains('@') && !id.contains(char::is_whitespace))
+            {
+                read(db, id)?;
             } else {
                 emit(&search::query(db, &query, 5)?, json)?;
             }

@@ -13,8 +13,8 @@ task text ── lexical rank ── 0–5 candidates ── read selected file
 
 - Existing installers own skill packages and updates.
 - Codex owns native discovery, enablement, plugins, and permissions.
-- Skillwick owns its derived index, config, router skill, marked instruction
-  block, and integration journal.
+- Skillwick owns its derived index, config, SKILLWICK.md context file, AGENTS
+  reference, and integration journal.
 - Users and agents decide which returned instructions to load and execute.
 
 ## Modules

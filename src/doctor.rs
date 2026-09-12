@@ -1,4 +1,4 @@
-use crate::{config, native, sources};
+use crate::{config, integration, native, sources};
 use serde::Serialize;
 use std::{
     fs,
@@ -54,10 +54,8 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
         .instructions_file
         .clone()
         .unwrap_or_else(|| config::codex_home(&settings).join("AGENTS.md"));
-    let integration_present = fs::read_to_string(instructions).is_ok_and(|text| {
-        text.matches("<!-- skillwick:begin -->").count() == 1
-            && text.matches("<!-- skillwick:end -->").count() == 1
-    });
+    let integration_present =
+        integration::integration_present(&instructions, &config::codex_home(&settings));
     let suggestion_hook_present =
         fs::read_to_string(config::codex_home(&settings).join("hooks.json"))
             .ok()

@@ -102,15 +102,18 @@ skillwick init --yes --agent codex --catalog native --hooks suggest
 skillwick doctor --strict
 ```
 
-Setup installs Skillwick's router skill, adds one marked global instruction
-block, indexes native inventory, then sets `skills.include_instructions = false`.
-Catalogue suppression occurs only after replacement discovery succeeds.
+Setup writes one owned `$CODEX_HOME/SKILLWICK.md` context file and adds one
+absolute `@...` reference to the selected AGENTS file, indexes native
+inventory, then sets `skills.include_instructions = false`. Catalogue
+suppression occurs only after replacement discovery succeeds.
 
 `--hooks suggest` adds one bounded, cached-only `UserPromptSubmit` handler to
 Codex's existing `hooks.json`. Codex still runs every caveman, ponytail, plugin,
 project, and managed hook through its native lifecycle. Skillwick does not
 disable hooks or bypass Codex trust review. Use `/hooks` to review the new
-handler. Keep `--hooks off` when automatic suggestions are not wanted.
+handler. `--hooks off` disables or removes only Skillwick's optional suggestion
+hook; it never disables other Codex hooks. Keep it off when automatic
+suggestions are not wanted.
 
 `skillwick uninstall` removes only owned integration. `--purge-cache` also
 removes the disposable index. Conditional rollback preserves unrelated edits
@@ -122,7 +125,7 @@ Skillwick honors `HOME`, `CODEX_HOME`, and XDG overrides:
 $XDG_CONFIG_HOME/skillwick/config.toml
 $XDG_CACHE_HOME/skillwick/index.sqlite
 $XDG_STATE_HOME/skillwick/integration.json
-$HOME/.agents/skills/skillwick/SKILL.md
+$CODEX_HOME/SKILLWICK.md
 $CODEX_HOME/AGENTS.md
 $CODEX_HOME/config.toml
 ```

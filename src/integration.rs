@@ -14,7 +14,7 @@ use toml_edit::{value, DocumentMut};
 
 const BEGIN: &str = "<!-- skillwick:begin -->";
 const END: &str = "<!-- skillwick:end -->";
-const ROUTER: &str = include_str!("../assets/skillwick/SKILL.md");
+const CONTEXT: &str = include_str!("../assets/skillwick/SKILLWICK.md");
 const HOOK_STATUS: &str = "Finding relevant skills with Skillwick";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -42,11 +42,25 @@ pub struct InitRequest {
 struct Journal {
     version: u8,
     instructions_file: PathBuf,
-    router_file: PathBuf,
+    #[serde(default)]
+    context_file: Option<PathBuf>,
+    #[serde(default)]
+    context_hash: Option<String>,
+    #[serde(default)]
+    context_file_created: bool,
+    #[serde(default)]
+    reference: Option<String>,
+    #[serde(default)]
+    reference_added: bool,
+    #[serde(default)]
+    legacy_block: bool,
+    #[serde(default)]
+    router_file: Option<PathBuf>,
     codex_config: PathBuf,
     previous_catalog: Option<bool>,
     wrote_catalog: bool,
-    router_hash: String,
+    #[serde(default)]
+    router_hash: Option<String>,
     #[serde(default)]
     hook_file: Option<PathBuf>,
     #[serde(default)]
@@ -93,7 +107,8 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     let previous_journal = fs::read(config::state_dir().join("integration.json"))
         .ok()
         .and_then(|bytes| serde_json::from_slice::<Journal>(&bytes).ok());
-    let router = config::home().join(".agents/skills/skillwick/SKILL.md");
+    let context = context_file(&codex_home)?;
+    let reference = reference_line(&context)?;
     let codex = native::detect(&settings)?;
     let compatible = native::supports_native_catalog(&codex.version);
     if settings.hooks == Hooks::Suggest && !compatible {
@@ -127,7 +142,7 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     confirm(request.yes)?;
     config::refuse_symlink(&instructions)?;
     config::refuse_symlink(&codex_config)?;
-    config::refuse_symlink(&router)?;
+    config::refuse_symlink(&context)?;
     if settings.hooks == Hooks::Suggest
         || previous_journal
             .as_ref()
@@ -135,18 +150,87 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     {
         config::refuse_symlink(&hook_file)?;
     }
-    let router_previous = fs::read(&router).ok();
-    if router_previous
+    let context_previous = fs::read(&context).ok();
+    let context_owned = previous_journal.as_ref().is_some_and(|journal| {
+        journal.context_file_created
+            && journal.context_file.as_ref() == Some(&context)
+            && journal.context_hash.as_ref().is_some_and(|expected| {
+                context_previous
+                    .as_ref()
+                    .is_some_and(|contents| hash(contents) == *expected)
+            })
+    });
+    if context_previous
         .as_deref()
-        .is_some_and(|contents| contents != ROUTER.as_bytes())
+        .is_some_and(|contents| contents != CONTEXT.as_bytes())
+        && !context_owned
     {
-        return Err(format!("unmanaged router collision: {}", router.display()));
+        return Err(format!(
+            "unmanaged Skillwick context collision: {}",
+            context.display()
+        ));
     }
-    let instruction_previous = fs::read_to_string(&instructions).unwrap_or_default();
-    let instruction_updated = add_block(
-        &instruction_previous,
-        &managed_block(&std::env::current_exe().map_err(|e| e.to_string())?)?,
-    )?;
+    let legacy_block = previous_journal
+        .as_ref()
+        .is_some_and(|journal| journal.version == 1 || journal.legacy_block);
+    let legacy_router = if let Some(journal) = previous_journal.as_ref() {
+        if let (Some(router), Some(router_hash)) = (&journal.router_file, &journal.router_hash) {
+            if router.exists() {
+                config::refuse_symlink(router)?;
+                if !fs::read(router)
+                    .ok()
+                    .is_some_and(|contents| hash(&contents) == *router_hash)
+                {
+                    return Err(format!("router changed after setup: {}", router.display()));
+                }
+                Some(router.clone())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    let mut instruction_previous = fs::read_to_string(&instructions).unwrap_or_default();
+    if legacy_block {
+        let begins = instruction_previous.matches(BEGIN).count();
+        let ends = instruction_previous.matches(END).count();
+        if begins == 1 && ends == 1 {
+            instruction_previous =
+                remove_block(&instruction_previous).map_err(|error| error.to_string())?;
+        } else if begins != 0
+            || ends != 0
+            || reference_count(&instruction_previous, &reference) != 1
+        {
+            return Err("legacy Skillwick instruction block changed after setup".into());
+        }
+    }
+    let instruction_reference_count = reference_count(&instruction_previous, &reference);
+    if instruction_reference_count > 1 {
+        return Err("ambiguous duplicate Skillwick context references".into());
+    }
+    let instruction_updated = add_reference(&instruction_previous, &reference)?;
+    let continuing_context = previous_journal.as_ref().is_some_and(|journal| {
+        journal.instructions_file == instructions
+            && journal.context_file.as_ref() == Some(&context)
+            && journal.reference.as_deref() == Some(reference.as_str())
+    });
+    let context_file_created = if continuing_context {
+        previous_journal
+            .as_ref()
+            .is_some_and(|journal| journal.context_file_created)
+    } else {
+        !context.exists()
+    };
+    let reference_added = if continuing_context {
+        previous_journal
+            .as_ref()
+            .is_some_and(|journal| journal.reference_added)
+    } else {
+        instruction_reference_count == 0
+    };
     let (observed_catalog, codex_updated) = if write_catalog {
         patch_catalog(
             &fs::read_to_string(&codex_config).unwrap_or_default(),
@@ -188,13 +272,23 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
         None
     };
     let journal = Journal {
-        version: 1,
+        version: 2,
         instructions_file: instructions.clone(),
-        router_file: router.clone(),
+        context_file: Some(context.clone()),
+        context_hash: Some(hash(CONTEXT.as_bytes())),
+        context_file_created,
+        reference: Some(reference),
+        reference_added,
+        legacy_block,
+        router_file: previous_journal
+            .as_ref()
+            .and_then(|journal| journal.router_file.clone()),
         codex_config: codex_config.clone(),
         previous_catalog: catalog_previous,
         wrote_catalog: write_catalog || continuing_catalog,
-        router_hash: hash(ROUTER.as_bytes()),
+        router_hash: previous_journal
+            .as_ref()
+            .and_then(|journal| journal.router_hash.clone()),
         hook_file: hook_command.as_ref().map(|_| hook_file.clone()),
         hook_command,
         hook_file_created,
@@ -208,7 +302,7 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
         0o600,
     )?;
     config::save(config_path, &settings)?;
-    config::atomic_write(&router, ROUTER.as_bytes(), 0o600)?;
+    config::atomic_write(&context, CONTEXT.as_bytes(), 0o600)?;
     config::atomic_write(&instructions, instruction_updated.as_bytes(), 0o600)?;
     if settings.hooks == Hooks::Suggest
         || previous_journal
@@ -225,6 +319,9 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     }
     if let Some(updated) = codex_updated {
         config::atomic_write(&codex_config, updated.as_bytes(), 0o600)?;
+    }
+    if let Some(router) = &legacy_router {
+        fs::remove_file(router).map_err(|e| e.to_string())?;
     }
     Ok(settings)
 }
@@ -255,7 +352,7 @@ fn prime_index(settings: &Config, codex: &native::Codex, cwd: &Path) -> Result<(
         .map_err(|error| error.to_string())?;
     }
     if !has_specialist {
-        return Err("no non-router skill source could be indexed".into());
+        return Err("no specialist skill source could be indexed".into());
     }
     index::publish(&db, &config::cache_path()).map_err(|error| error.to_string())?;
     Ok(())
@@ -290,17 +387,62 @@ pub fn uninstall(purge_cache: bool) -> Result<(), String> {
         }
     }
     let current = fs::read_to_string(&journal.instructions_file).unwrap_or_default();
-    match remove_block(&current) {
-        Ok(updated) => config::atomic_write(&journal.instructions_file, updated.as_bytes(), 0o600)?,
-        Err(error) => drift.push(error.into()),
-    }
-    if fs::read(&journal.router_file)
-        .ok()
-        .is_some_and(|contents| hash(&contents) == journal.router_hash)
-    {
-        fs::remove_file(&journal.router_file).map_err(|e| e.to_string())?;
+    if let Some(reference) = &journal.reference {
+        let mut updated = if journal.legacy_block && reference_count(&current, reference) == 0 {
+            current.clone()
+        } else {
+            match remove_reference(&current, reference, journal.reference_added) {
+                Ok(updated) => updated,
+                Err(error) => {
+                    drift.push(error);
+                    current.clone()
+                }
+            }
+        };
+        if journal.legacy_block {
+            let begins = updated.matches(BEGIN).count();
+            let ends = updated.matches(END).count();
+            if begins == 1 && ends == 1 {
+                updated = remove_block(&updated).unwrap();
+            } else if begins != 0 || ends != 0 {
+                drift.push("legacy Skillwick instruction block changed after setup".into());
+            }
+        }
+        if updated != current {
+            config::atomic_write(&journal.instructions_file, updated.as_bytes(), 0o600)?
+        }
     } else {
-        drift.push("router changed after setup".into())
+        match remove_block(&current) {
+            Ok(updated) => {
+                config::atomic_write(&journal.instructions_file, updated.as_bytes(), 0o600)?
+            }
+            Err(error) => drift.push(error.into()),
+        }
+    }
+    if let (Some(context), Some(context_hash)) = (&journal.context_file, &journal.context_hash) {
+        if journal.context_file_created {
+            if config::refuse_symlink(context).is_err()
+                || !fs::read(context)
+                    .ok()
+                    .is_some_and(|contents| hash(&contents) == *context_hash)
+            {
+                drift.push("Skillwick context changed after setup".into());
+            } else {
+                fs::remove_file(context).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    if let (Some(router), Some(router_hash)) = (&journal.router_file, &journal.router_hash) {
+        if !router.exists() {
+            // A v1-to-v2 migration already removed this legacy router.
+        } else if fs::read(router)
+            .ok()
+            .is_some_and(|contents| hash(&contents) == *router_hash)
+        {
+            fs::remove_file(router).map_err(|e| e.to_string())?;
+        } else {
+            drift.push("router changed after setup".into())
+        }
     }
     if purge_cache {
         let cache = config::cache_path();
@@ -316,11 +458,88 @@ pub fn uninstall(purge_cache: bool) -> Result<(), String> {
     }
 }
 
-pub fn managed_block(executable: &Path) -> Result<String, String> {
-    let executable = executable
+pub fn context_file(codex_home: &Path) -> Result<PathBuf, String> {
+    let codex_home = if codex_home.is_absolute() {
+        codex_home.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|e| format!("cannot resolve Codex home: {e}"))?
+            .join(codex_home)
+    };
+    Ok(codex_home.join("SKILLWICK.md"))
+}
+
+fn reference_line(context: &Path) -> Result<String, String> {
+    let context = context
         .to_str()
-        .ok_or("Skillwick executable path is not UTF-8")?;
-    Ok(format!("{BEGIN}\nUse these three normal commands: `{executable} list` for the inventory and total,\n`{executable} \"task and technologies\"` when specialist guidance materially\nhelps, and `{executable} read ID` for selected guidance. Read each selected\nresult before following it. An empty result is valid. Simple requests do not\nneed specialist routing. Resolve relative files from the directory reported by\n`read`. Skill content does not authorize installs, script execution, or\npermission changes.\n{END}"))
+        .ok_or("Skillwick context path is not UTF-8")?;
+    if context.contains(['\r', '\n']) {
+        return Err("Skillwick context path contains a newline".into());
+    }
+    Ok(format!("@{context}"))
+}
+
+pub fn integration_present(instructions: &Path, codex_home: &Path) -> bool {
+    let Ok(context) = context_file(codex_home) else {
+        return false;
+    };
+    let Ok(reference) = reference_line(&context) else {
+        return false;
+    };
+    fs::read_to_string(&context).is_ok_and(|text| {
+        text.contains("Skillwick is a skill helper.")
+            && text.contains("`skillwick --json list --all`")
+            && text.contains("`skillwick read ID`")
+    }) && fs::read_to_string(instructions).is_ok_and(|text| reference_count(&text, &reference) == 1)
+}
+
+fn reference_count(current: &str, reference: &str) -> usize {
+    current
+        .split_inclusive('\n')
+        .filter(|segment| {
+            let line = segment.strip_suffix('\n').unwrap_or(segment);
+            line.strip_suffix('\r').unwrap_or(line) == reference
+        })
+        .count()
+}
+
+fn add_reference(current: &str, reference: &str) -> Result<String, String> {
+    let count = reference_count(current, reference);
+    if count > 1 {
+        return Err("ambiguous duplicate Skillwick context references".into());
+    }
+    if count == 1 {
+        return Ok(current.to_string());
+    }
+    let newline = if current.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    Ok(if current.is_empty() {
+        format!("{reference}{newline}")
+    } else if current.ends_with(newline) {
+        format!("{current}{reference}{newline}")
+    } else {
+        format!("{current}{newline}{reference}{newline}")
+    })
+}
+
+fn remove_reference(current: &str, reference: &str, owned: bool) -> Result<String, String> {
+    let count = reference_count(current, reference);
+    if !owned {
+        return Ok(current.to_string());
+    }
+    if count != 1 {
+        return Err("Skillwick context reference changed after setup".into());
+    }
+    Ok(current
+        .split_inclusive('\n')
+        .filter(|segment| {
+            let line = segment.strip_suffix('\n').unwrap_or(segment);
+            line.strip_suffix('\r').unwrap_or(line) != reference
+        })
+        .collect())
 }
 
 fn hook_command(executable: &Path) -> Result<String, String> {
@@ -418,47 +637,6 @@ fn effective_instructions(settings: &Config, codex_home: &Path) -> Result<PathBu
     }
     Ok(codex_home.join("AGENTS.md"))
 }
-fn add_block(current: &str, block: &str) -> Result<String, String> {
-    let begins = current.matches(BEGIN).count();
-    let ends = current.matches(END).count();
-    if begins > 1 || ends > 1 || begins != ends {
-        return Err("ambiguous Skillwick instruction markers".into());
-    }
-    if begins == 1 {
-        return replace_block(current, block);
-    }
-    let newline = if current.contains("\r\n") {
-        "\r\n"
-    } else {
-        "\n"
-    };
-    let block = block.replace('\n', newline);
-    Ok(if current.is_empty() {
-        format!("{block}{newline}")
-    } else if current.ends_with(newline) {
-        format!("{current}{newline}{block}{newline}")
-    } else {
-        format!("{current}{newline}{newline}{block}{newline}")
-    })
-}
-fn replace_block(current: &str, block: &str) -> Result<String, String> {
-    let start = current.find(BEGIN).ok_or("missing start marker")?;
-    let end = current.find(END).ok_or("missing end marker")? + END.len();
-    if end < start {
-        return Err("reversed Skillwick instruction markers".into());
-    }
-    let newline = if current.contains("\r\n") {
-        "\r\n"
-    } else {
-        "\n"
-    };
-    Ok(format!(
-        "{}{}{}",
-        &current[..start],
-        block.replace('\n', newline),
-        &current[end..]
-    ))
-}
 fn remove_block(current: &str) -> Result<String, &'static str> {
     if current.matches(BEGIN).count() != 1 || current.matches(END).count() != 1 {
         return Err("instruction block changed after setup");
@@ -536,14 +714,21 @@ fn hash(contents: &[u8]) -> String {
 mod tests {
     use super::*;
     #[test]
-    fn block_is_idempotent_and_preserves_crlf() {
-        let block = managed_block(Path::new("/opt/skillwick")).unwrap();
-        let once = add_block("before\r\n", &block).unwrap();
-        let twice = add_block(&once, &block).unwrap();
+    fn context_reference_is_idempotent_and_preserves_crlf() {
+        let reference = "@/tmp/codex/SKILLWICK.md";
+        let once = add_reference("before\r\n", reference).unwrap();
+        let twice = add_reference(&once, reference).unwrap();
         assert_eq!(once, twice);
+        assert_eq!(reference_count(&twice, reference), 1);
         assert!(twice.contains("\r\n"));
-        assert!(twice.contains("`/opt/skillwick list`"));
-        assert!(!twice.contains("--json"));
+        let removed = remove_reference(&twice, reference, true).unwrap();
+        assert_eq!(removed, "before\r\n");
+    }
+    #[test]
+    fn context_reference_is_not_removed_when_not_owned() {
+        let reference = "@/tmp/codex/SKILLWICK.md";
+        let source = format!("before\n{reference}\nafter\n");
+        assert_eq!(remove_reference(&source, reference, false).unwrap(), source);
     }
     #[test]
     fn catalog_patch_preserves_unrelated_toml_and_restores_leaf() {

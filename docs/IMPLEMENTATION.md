@@ -39,9 +39,9 @@ temporary homes only. No test changed live Codex configuration.
 - Short-lived Codex `skills/list` inventory with bounded newline-delimited JSON,
   interleaved-notification handling, request IDs, stderr capture, timeout, EOF,
   and child termination. Native enabled state suppresses filesystem aliases.
-- Reversible instruction/router/TOML integration with atomic writes, restrictive
-  permissions, an ownership journal, override/collision checks, and conditional
-  leaf rollback.
+- Reversible SKILLWICK.md context/reference and TOML integration with atomic
+  writes, restrictive permissions, an ownership journal, override/collision
+  checks, and conditional leaf rollback.
 - cargo-dist configuration and generated GitHub release workflow, native Mac
   archives/checksums, a Homebrew formula template, and an explicit version/prefix
   installer that does not edit a home directory.
@@ -93,11 +93,11 @@ exit codes, deletion, dry-run, and clean broken-pipe behavior.
 `HOME`, `CODEX_HOME`, and XDG tree. It proved the requested working-directory
 scope, one native-precedence result, strict doctor health, inventory before
 catalogue suppression, no managed writes after an inventory failure, the owned
-instruction/config changes, prompt-input catalogue suppression, router
+context/reference config changes, prompt-input catalogue suppression, context
 visibility, uninstall, and preservation of later unrelated edits. Prompt-input
 size was 11,421 bytes with the catalogue hidden and 14,299 bytes with native
 catalogue injection enabled. The hidden request had
-one router marker, one user prompt, and no skills-catalogue marker.
+one SKILLWICK.md reference, one user prompt, and no skills-catalogue marker.
 
 Pinned cargo-dist 0.28.0 generated the GitHub workflow. `dist plan`
 selected only `aarch64-apple-darwin` and `x86_64-apple-darwin`. `dist build`
