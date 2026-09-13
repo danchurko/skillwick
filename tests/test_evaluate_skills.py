@@ -359,12 +359,17 @@ class EvaluationArtifactTests(unittest.TestCase):
         evidence = self._evidence(manifest, dataset)
         loaded = json.loads(evidence.read_text(encoding="utf-8"))
         loaded["status"] = "partial"
+        loaded["bounded_pilot_status"] = "complete"
+        loaded["provenance"] = {"root_model": "test-model"}
+        loaded["comparison_token_fields"] = ["input_tokens", "output_tokens"]
         loaded["failures"] = [{"stage": "native", "reason": "not authorized"}]
         for section in ("query_results", "workflows", "adjudication"):
             loaded[section]["direct"].pop("case-heldout")
             loaded[section]["delegated"].pop("case-heldout")
             loaded[section]["native"] = {}
         loaded["query_results"]["direct"]["case-positive"][0]["wall_ms"] = None
+        for record in loaded["workflows"]["direct"].values():
+            record["wall_ms"] = 2.5
         evaluate_skills.write_json(evidence, loaded)
 
         loaded_manifest = evaluate_skills.load_manifest(manifest)
@@ -373,6 +378,9 @@ class EvaluationArtifactTests(unittest.TestCase):
         report = evaluate_skills.score_evidence(normalized, loaded_manifest, cases)
 
         self.assertEqual(report["status"], "partial")
+        self.assertEqual(report["bounded_pilot_status"], "complete")
+        self.assertEqual(report["provenance"], loaded["provenance"])
+        self.assertEqual(report["comparison_token_fields"], ["input_tokens", "output_tokens"])
         self.assertEqual(report["case_count"], 3)
         self.assertEqual(report["recorded_case_count"], {"direct": 2, "delegated": 2, "native": 0})
         self.assertEqual(report["frozen"]["direct"]["selection"]["positive_cases"], 1)
@@ -380,6 +388,7 @@ class EvaluationArtifactTests(unittest.TestCase):
         self.assertIsNone(report["usage"]["native"])
         self.assertIsNone(report["latency"]["native"])
         self.assertEqual(report["latency"]["direct"], {"known_queries": 5, "total_ms": 6.25})
+        self.assertEqual(report["workflow_latency"]["direct"], {"known_calls": 2, "total_ms": 5.0})
         self.assertEqual(report["failures"], loaded["failures"])
 
     def test_complete_evidence_rejects_missing_cells(self) -> None:
@@ -396,6 +405,18 @@ class EvaluationArtifactTests(unittest.TestCase):
         loaded_manifest = evaluate_skills.load_manifest(manifest)
         _, dataset_sha256, cases = evaluate_skills.validate_dataset(dataset, loaded_manifest)
         with self.assertRaisesRegex(evaluate_skills.EvaluationError, "complete evidence"):
+            evaluate_skills.validate_evidence(evidence, loaded_manifest, dataset_sha256, cases)
+
+    def test_workflow_latency_rejects_negative_values(self) -> None:
+        manifest = self._manifest()
+        dataset = self._dataset(manifest)
+        evidence = self._evidence(manifest, dataset)
+        loaded = json.loads(evidence.read_text(encoding="utf-8"))
+        loaded["workflows"]["direct"]["case-positive"]["wall_ms"] = -1
+        evaluate_skills.write_json(evidence, loaded)
+        loaded_manifest = evaluate_skills.load_manifest(manifest)
+        _, dataset_sha256, cases = evaluate_skills.validate_dataset(dataset, loaded_manifest)
+        with self.assertRaisesRegex(evaluate_skills.EvaluationError, "workflow wall_ms"):
             evaluate_skills.validate_evidence(evidence, loaded_manifest, dataset_sha256, cases)
 
     def test_retrieval_scores_each_adaptive_query_at_its_actual_rank(self) -> None:

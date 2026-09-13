@@ -230,15 +230,20 @@ searching, authenticating, building prompts, sequencing agents, or resuming runs
 Semantic and reranking backends remain unmeasured until implemented.
 
 The 13 September 2026 authenticated observational pilot records four cases for
-the direct and delegated lexical paths. It reused the live authentication scope,
-so it is explicitly partial and not clean-profile evidence; native discovery was
-not run. Both paths selected all frozen relevant skills and abstained on both
-no-skill cases. Delegation reduced Terra root input from 114,483 to 56,456 tokens,
-but increased total input to 234,398 tokens after the Luna researcher was
-included, versus 114,483 direct. Linear extrapolation to all 167 cases is about
-4.78 million direct input tokens, 2.36 million delegated root tokens, and 9.79
-million delegated total input tokens. Four cases are too few for a general
-savings claim, cached input is not additive, and no currency estimate is made.
+the direct, delegated lexical, and native paths using Luna throughout. It reused
+the live authentication scope, so the bounded pilot is complete but the dataset
+artifact remains partial and is not clean-profile evidence. Every path selected
+all frozen relevant skills and abstained on both no-skill cases. Delegation
+reduced root input from 151,994 to 48,736 tokens, but increased total input to
+226,678 tokens after the Luna researcher was included. Native discovery used
+72,913 input tokens. Linear extrapolation to all 167 cases is about 6.35 million
+direct, 2.03 million delegated-root, 9.46 million delegated-total, and 3.04
+million native input tokens. Corresponding output estimates are about 61,289,
+7,557, 77,989, and 13,819 tokens. Cached-input counts are retained only as raw
+provider provenance and are not added to or subtracted from these comparisons.
+Codex shortened native descriptions to fit its context budget; that arm saw the
+530-record rendered catalogue rather than a full-description baseline. Four
+cases are too few for a general savings claim, and no currency estimate is made.
 See the portable [evidence](../benchmarks/results/observational-pilot-2026-09-13.evidence.json)
 and [offline report](../benchmarks/results/observational-pilot-2026-09-13.report.json).
 

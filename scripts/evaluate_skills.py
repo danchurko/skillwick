@@ -380,6 +380,11 @@ def validate_evidence(
             if not set(selected) <= candidates:
                 raise EvaluationError(f"{workflow}/{case_id}: selected IDs are outside recorded candidates")
             usage = require_mapping(record.get("usage"), "usage")
+            wall_ms = record.get("wall_ms")
+            if wall_ms is not None and (
+                not isinstance(wall_ms, (int, float)) or isinstance(wall_ms, bool) or wall_ms < 0
+            ):
+                raise EvaluationError(f"{workflow}/{case_id}: workflow wall_ms must be non-negative or null")
             root_usage = _usage(usage.get("root"), "usage.root")
             total_usage = _usage(usage.get("total"), "usage.total")
             if any(
@@ -482,6 +487,7 @@ def score_evidence(
     combined_total_calls = []
     usage_by_workflow: dict[str, Any] = {}
     latency_by_workflow: dict[str, Any] = {}
+    workflow_latency: dict[str, Any] = {}
     recorded_case_count: dict[str, int] = {}
     for workflow in WORKFLOWS:
         workflow_case_ids = set(workflows[workflow])
@@ -517,6 +523,11 @@ def score_evidence(
             "known_queries": len(latencies),
             "total_ms": sum(latencies) if latencies else None,
         } if workflow_cases else None
+        call_latencies = [record["wall_ms"] for record in workflows[workflow].values() if record.get("wall_ms") is not None]
+        workflow_latency[workflow] = {
+            "known_calls": len(call_latencies),
+            "total_ms": sum(call_latencies) if call_latencies else None,
+        } if workflow_cases else None
         combined_root_calls.extend(root_calls)
         combined_total_calls.extend(total_calls)
     usage_by_workflow["combined"] = {
@@ -527,6 +538,9 @@ def score_evidence(
         "version": REPORT_VERSION,
         "kind": "skillwick-evaluation-report",
         "status": evidence["status"],
+        "bounded_pilot_status": evidence.get("bounded_pilot_status"),
+        "comparison_token_fields": evidence.get("comparison_token_fields"),
+        "provenance": evidence.get("provenance"),
         "case_count": len(cases),
         "recorded_case_count": recorded_case_count,
         "failures": evidence.get("failures", []),
@@ -537,6 +551,7 @@ def score_evidence(
         "adjudicated": adjudicated,
         "usage": usage_by_workflow,
         "latency": latency_by_workflow,
+        "workflow_latency": workflow_latency,
     }
 
 
