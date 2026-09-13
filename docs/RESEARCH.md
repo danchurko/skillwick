@@ -100,4 +100,4 @@ A GitHub repository-name search for `skillwick` returned no matches during this 
 
 ## What was not verified
 
-No project was installed, benchmarked, fuzzed, or tested on the user's Mac. No supply-chain audit, maintainer-response study, issue-triage benchmark, or exhaustive security audit was performed. No claim of “most production-ready” is justified from this inspection alone. The proposed dependencies and acceptance tests are a build recommendation; only the implementing agent can report which tests and platform builds actually pass.
+No reviewed implementation was installed, benchmarked, fuzzed, or executed during this source review. It did not assess supply-chain security, maintenance responsiveness, or production readiness. The dependency and acceptance-test recommendations require implementation evidence before they become support claims.

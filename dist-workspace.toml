@@ -7,15 +7,15 @@ members = ["cargo:."]
 cargo-dist-version = "0.33.0"
 # CI backends to support
 ci = "github"
+# The release workflow keeps a deliberate publication allowlist for GitHub assets.
+allow-dirty = ["ci"]
 # Extra setup steps to run before every release build.
 github-build-setup = "../release-check.yml"
-# The installers to generate for each app
-installers = ["shell"]
+# Keep the repository-owned scripts/install.sh as the supported installer.
+installers = []
+# Release source archives are not distribution artifacts; source remains on GitHub.
+source-tarball = false
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 # Which actions to run on pull requests
 pr-run-mode = "plan"
-# Path that installers should place binaries in
-install-path = "CARGO_HOME"
-# Whether to install an updater program
-install-updater = false

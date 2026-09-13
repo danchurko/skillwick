@@ -8,12 +8,14 @@ trap 'rm -rf "$temporary"' EXIT HUP INT TERM
 home="$temporary/home with spaces"
 project="$temporary/project/child"
 sibling="$temporary/sibling"
-mkdir -p "$home/.agents/skills/cpp/references" "$project/.agents/skills/agentcore" "$sibling/.agents/skills/leak" "$temporary/config" "$temporary/cache" "$temporary/state"
+mkdir -p "$home/.agents/skills/cpp/references" "$home/.agents/skills/cpp/scripts" "$project/.agents/skills/agentcore" "$sibling/.agents/skills/leak" "$temporary/config" "$temporary/cache" "$temporary/state"
 
 printf '%s\n' '---' 'name: C++' 'description: Build native C++ command line tools.' 'keywords: [cpp, C#, .NET, Node.js]' '---' 'Read references/guide.md.' > "$home/.agents/skills/cpp/SKILL.md"
 printf '%s\n' 'relative reference' > "$home/.agents/skills/cpp/references/guide.md"
+printf '%s\n' '#!/bin/sh' "touch '$temporary/support-script-ran'" > "$home/.agents/skills/cpp/scripts/check.sh"
 printf '%s\n' '---' 'name: aws-agentcore' 'description: Deploy and debug AgentCore runtimes.' '---' > "$project/.agents/skills/agentcore/SKILL.md"
 printf '%s\n' '---' 'name: leak' 'description: Never cross project boundaries.' '---' > "$sibling/.agents/skills/leak/SKILL.md"
+ln -s "$sibling/.agents/skills/leak" "$home/.agents/skills/cpp/references/escape"
 
 run() {
   env HOME="$home" XDG_CONFIG_HOME="$temporary/config" XDG_CACHE_HOME="$temporary/cache" XDG_STATE_HOME="$temporary/state" "$binary" --cwd "$project" "$@"
@@ -35,6 +37,27 @@ test "$(run list --all | grep -c '@')" -eq 2
 identifier=$(run list --all | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
 run read "$identifier" | grep -q "base: $home/.agents/skills/cpp"
 run "read $identifier" | grep -q "base: $home/.agents/skills/cpp"
+run inspect "$identifier" | grep -q '^description: Build native C++ command line tools\.'
+! run inspect "$identifier" | grep -q '^package:'
+run inspect "$identifier" --files | grep -Fq -- '- references/guide.md [markdown; file, .md]'
+run inspect "$identifier" --files | grep -Fq -- '- scripts/check.sh [non-markdown; file, .sh]'
+! run inspect "$identifier" --files | grep -q 'support-script-ran'
+test ! -e "$temporary/support-script-ran"
+run inspect "$identifier" --files | grep -Fq -- '- references/escape [non-markdown; symlink]'
+! run inspect "$identifier" --files | grep -q 'escape/SKILL.md'
+run inspect "$identifier" --files | grep -q '^counts: complete$'
+run inspect "$identifier" --files | grep -q '^regular files: 3$'
+run inspect "$identifier" --files | grep -q '^additional regular files: 2$'
+run --json inspect "$identifier" --files | grep -q '"package"'
+run --json inspect "$identifier" --files | grep -q '"counts_scope":"complete"'
+run --json inspect "$identifier" --files | grep -q '"classification":"markdown"'
+mkdir -p "$home/.agents/skills/cpp/flood"
+i=0
+while [ "$i" -le 256 ]; do
+  printf '%s\n' "$i" > "$home/.agents/skills/cpp/flood/file-$i.txt"
+  i=$((i + 1))
+done
+run inspect "$identifier" --files | grep -q 'truncated; max 256 entries'
 run -- init hooks | grep -q 'No matching skills.'
 run | grep -q 'Usage:'
 if run search test --limit 6 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi

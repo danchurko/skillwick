@@ -145,7 +145,8 @@ All examples below describe the **intended implemented interface**, not a curren
 | `skillwick "query"` | Default lexical search; limit 5, compact text |
 | `skillwick search "query"` | Explicit alias; useful when the query begins with a reserved command |
 | `skillwick read ID` | Read the current selected instruction file, with source/base path |
-| `skillwick inspect ID` | Metadata, origin, enablement, dependencies, hashes, and paths; no full body |
+| `skillwick inspect ID` | Metadata, origin, enablement, hashes, and paths; no full body |
+| `skillwick inspect ID --files` | Validated live package listing with relative paths, types, counts, and explicit limits; no reference contents or execution |
 | `skillwick list` | Exhaustive current-scope inventory and total count; hidden `--limit N` and `--all` compatibility flags remain accepted |
 | `skillwick refresh` | Refresh local index and configured native inventory; never update/install packages |
 | `skillwick refresh --full` | Hidden compatibility alias for `refresh` |
@@ -200,8 +201,11 @@ Use restrictive permissions for local state. Resolve the actual executable for d
 ### Managed Skillwick context
 
 The canonical default context is [`assets/skillwick/SKILLWICK.md`](../assets/skillwick/SKILLWICK.md).
-It explains the helper before policy, gives copyable examples, lists every
-agent-facing command, and omits setup commands that an agent must not invoke.
+It gives the search/select/read sequence, concise command pointers, and a bounded
+discovery contract. When the normal agent workflow uses delegation, one
+researcher tries up to three task perspectives and returns at most five
+deduplicated candidates. The root reads selected instructions. Detailed package
+and evaluation guidance stays in the relevant user guide.
 
 Patch the deployed global file, **not a workstation repository's source `AGENTS.md`**. Codex can prefer `AGENTS.override.md` to `AGENTS.md`; detect that condition and obtain an explicit active-file choice before claiming successful integration. [S9]
 
@@ -234,7 +238,10 @@ skillwick init
 ```
 
 The formula uses versioned GitHub release archives. Update its digests from the
-exact published artifacts before tagging a release.
+exact published artifacts after a release is available. Publish only the two
+architecture archives and their per-file checksums. The repository-owned
+`scripts/install.sh` is the single script installer; build manifests remain CI
+artifacts rather than release downloads.
 
 For an existing workstation pipeline that already owns global instructions and
 Codex configuration, install the binary and a managed Skillwick config with
@@ -249,9 +256,8 @@ skillwick --json list
 Do not run `skillwick init` from that pipeline. The workstation remains the sole
 owner of its instruction file and native Codex policy; Skillwick owns only its
 config, disposable index, and binary. Refresh on every apply, not only when the
-binary is first installed. Preserve inspect/dry-run behavior and initialize RTK
-through RTK's native lifecycle after installing the base instruction file. Keep
-one owner for each configuration key.
+binary is first installed. Preserve inspect/dry-run behaviour and keep one owner
+for each configuration key.
 
 Installer compatibility evidence: OpenAI's skill installer uses `--dest` for destination and `--path` for repository-internal source paths. Vercel skills documents agent/global/copy selection; custom destination flags must not be assumed. Existing isolated-HOME staging can remain in its established adapter, but do not apply that trick blindly to native plugin managers that also use HOME for credentials/state. With native catalogue suppression, destination redirection is normally unnecessary. [S16–S17]
 

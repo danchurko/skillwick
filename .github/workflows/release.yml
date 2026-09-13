@@ -272,8 +272,14 @@ jobs:
           merge-multiple: true
       - name: Cleanup
         run: |
-          # Remove the granular manifests
-          rm -f artifacts/*-dist-manifest.json
+          # Publish only platform archives and their per-file checksums.
+          find artifacts -type f \
+            ! \( \
+              -name 'skillwick-aarch64-apple-darwin.tar.xz' -o \
+              -name 'skillwick-aarch64-apple-darwin.tar.xz.sha256' -o \
+              -name 'skillwick-x86_64-apple-darwin.tar.xz' -o \
+              -name 'skillwick-x86_64-apple-darwin.tar.xz.sha256' \
+            \) -delete
       - name: Create GitHub Release
         env:
           PRERELEASE_FLAG: "${{ fromJson(steps.host.outputs.manifest).announcement_is_prerelease && '--prerelease' || '' }}"

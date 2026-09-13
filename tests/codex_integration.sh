@@ -23,9 +23,10 @@ test "$(run list | grep -c '^skillwick@' || true)" -eq 0
 test "$(run 'requested working directory' | grep -c '^project-only@')" -eq 1
 run doctor --strict >/dev/null
 grep -Fxq "@$codex_home/SKILLWICK.md" "$codex_home/AGENTS.md"
-grep -q 'Skillwick is a skill helper.' "$codex_home/SKILLWICK.md"
-grep -Fq '`skillwick --json list --all`' "$codex_home/SKILLWICK.md"
-grep -Fq "skillwick --json list --all | jq -r '.total'" "$codex_home/SKILLWICK.md"
+grep -q 'Skillwick finds relevant installed skills.' "$codex_home/SKILLWICK.md"
+grep -Fq '`skillwick --json list`' "$codex_home/SKILLWICK.md"
+grep -Fq 'skillwick inspect ID --files' "$codex_home/SKILLWICK.md"
+grep -Fq 'delegate one discovery pass' "$codex_home/SKILLWICK.md"
 grep -q 'skillwick search.*--limit 3' "$codex_home/SKILLWICK.md"
 grep -q 'skillwick read ID' "$codex_home/SKILLWICK.md"
 grep -q 'skillwick inspect ID' "$codex_home/SKILLWICK.md"
@@ -40,7 +41,7 @@ jq --arg hash "$older_hash" '.context_hash = $hash' \
   "$temporary/state/skillwick/integration.json" >"$temporary/older-journal.json"
 mv "$temporary/older-journal.json" "$temporary/state/skillwick/integration.json"
 run init --yes --agent codex --catalog native --hooks suggest --codex-bin "$codex"
-grep -q 'Skillwick is a skill helper.' "$codex_home/SKILLWICK.md"
+grep -q 'Skillwick finds relevant installed skills.' "$codex_home/SKILLWICK.md"
 grep -q 'include_instructions = false' "$codex_home/config.toml"
 grep -q 'Finding relevant skills with Skillwick' "$codex_home/hooks.json"
 grep -q 'caveman' "$codex_home/hooks.json"

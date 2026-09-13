@@ -7,5 +7,6 @@ pub mod integration;
 pub mod metadata;
 pub mod native;
 pub mod output;
+pub mod package;
 pub mod search;
 pub mod sources;

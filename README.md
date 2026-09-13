@@ -3,165 +3,115 @@
 [![CI](https://github.com/danchurko/skillwick/actions/workflows/ci.yml/badge.svg)](https://github.com/danchurko/skillwick/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/danchurko/skillwick?display_name=tag)](https://github.com/danchurko/skillwick/releases)
 
-Find the skill. Load only what matters.
+**Find the skill. Load only what matters.**
 
-> [!IMPORTANT]
-> Skillwick v1 supports Codex CLI 0.154.0 on macOS only. Claude Code,
-> OpenCode, Cursor, other coding agents, Linux, and Windows are not supported.
-> See [compatibility](docs/COMPATIBILITY.md) for exact test coverage.
+Skillwick helps coding agents find relevant skills in large installed libraries
+without carrying the entire skill catalogue in context. Describe the task, get
+up to five candidates, and load the instructions you need.
 
-Skillwick is a native CLI for ranked lexical search over installed Agent Skills.
-It indexes bounded `SKILL.md` metadata in SQLite FTS5, returns at most five
-compact candidates, and reads selected instructions from their live package
-directory. Existing installers keep ownership of every skill package.
-
-Skillwick does not install, relocate, execute, or rewrite third-party skills.
-V1 has no MCP server, Codex fork, daemon, embeddings, remote registry, or
-telemetry.
-
-## Measured on a real skill library
-
-The checked-in benchmark uses 65 natural-language tasks against 418 enabled
-skills from the maintainer's live Codex inventory. The corpus includes 327 ECC
-skills, 15 other plugin skills, 76 native/user skills, and five prompts that
-should return no skill.
-
-```text
-Recall@5             0.869
-MRR@5                0.812
-nDCG@5               0.826
-No-match accuracy    0.600
-Warm query p95       0.380 ms
+```sh
+skillwick "deploy an AgentCore MCP server with TypeScript"
+skillwick read ID   # use an ID returned by the search
 ```
 
-These are measured lexical results, including ten published misses. This is not
-a synthetic perfection claim. Dataset and corpus hashes make later embedding or
-reranker comparisons detect drift. Run the same evaluation with `make
-benchmark`; use `--json` for machine-readable results. See [benchmark method and
-full evidence](docs/BENCHMARKS.md).
+It runs locally as one Rust binary, searches with SQLite FTS5, and leaves skill
+packages with their existing installers. No daemon, registry, or telemetry.
+
+**Supported:** Codex CLI 0.154.0 on macOS. See [compatibility](docs/COMPATIBILITY.md)
+for tested versions and platform limits.
+
+## Less discovery context
+
+On a 555-skill inventory, Skillwick used an estimated **658 discovery tokens
+per task**, compared with **13,303 tokens** for the complete native catalogue:
+about **95% less discovery text** across 65 single-search tasks.
+
+The estimate includes Skillwick's instructions, query, and returned candidates.
+Codex rendered 530 of the 555 indexed skills in that catalogue. Against a
+smaller, configured catalogue containing 172 entries, the reduction was about
+84%. These are tokenizer estimates, not total workflow or billing savings.
+They exclude selected skill bodies and model reasoning; delegation has a
+separate comparison below.
+See [method, limitations, and saved results](docs/BENCHMARKS.md).
+
+## Retrieval quality
+
+The recorded lexical benchmark evaluated 65 tasks against a 418-skill Codex
+inventory, including native and plugin skills:
+
+| Metric | Result |
+| --- | ---: |
+| Recall@5 | 0.869 |
+| MRR@5 | 0.812 |
+| nDCG@5 | 0.826 |
+| No-match accuracy | 0.600 |
+| Warm query p95 | 0.380 ms |
+
+This is a dated evaluation corpus, not a universal accuracy claim. Warm latency
+excludes process startup and agent reasoning. The dataset, misses, and comparison
+rules are documented in [benchmarks](docs/BENCHMARKS.md).
 
 ## Install
 
-Build from source with stable Rust:
-
-```sh
-git clone https://github.com/danchurko/skillwick.git
-cd skillwick
-cargo build --release --locked
-./target/release/skillwick --version
-```
-
-Install the published release with Homebrew:
+With Homebrew:
 
 ```sh
 brew tap danchurko/skillwick https://github.com/danchurko/skillwick.git
 brew install skillwick
 ```
 
-Or install an explicit version and prefix:
+Or install a specific version with a verified checksum:
 
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.1.4/scripts/install.sh
 sh install.sh --version 0.1.4 --prefix "$HOME/.local"
 ```
 
-The installer verifies the release checksum and installs only the executable.
-It does not edit your home directory or Codex configuration. Release binaries
-are unsigned and not notarized.
-
-## Use
-
-Search works before integration:
-
-```sh
-skillwick "deploy an AgentCore MCP server with TypeScript"
-skillwick search "SQLite full text ranking" --limit 3
-skillwick read aws-agentcore@7d92ac
-skillwick inspect aws-agentcore@7d92ac
-skillwick list
-skillwick refresh
-```
-
-Default discovery covers `$HOME/.agents/skills` and applicable
-`.agents/skills` directories from `--cwd` through its ancestors. Add other
-authorized roots with repeatable `--root PATH` during setup. Symlink escapes
-are rejected.
+The installer installs only the executable. Release binaries are unsigned and
+not notarized. To try unreleased changes, [build from source](CONTRIBUTING.md).
 
 ## Connect Codex
 
-Review the plan without writing files:
+Preview the integration, then apply it:
 
 ```sh
 skillwick init --dry-run --yes --agent codex --catalog native --hooks off
-```
-
-Apply setup when ready:
-
-```sh
-skillwick init --yes --agent codex --catalog native --hooks suggest
+skillwick init --yes --agent codex --catalog native --hooks off
 skillwick doctor --strict
 ```
 
-Setup writes one owned `$CODEX_HOME/SKILLWICK.md` context file and adds one
-absolute `@...` reference to the selected AGENTS file, indexes native
-inventory, then sets `skills.include_instructions = false`. Catalogue
-suppression occurs only after replacement discovery succeeds.
+Skillwick indexes Codex's native inventory before hiding its automatic catalogue.
+It adds one short instruction file and preserves installed skills, plugin hooks,
+and unrelated configuration. Optional prompt suggestions are available through
+`--hooks suggest`.
 
-`--hooks suggest` adds one bounded, cached-only `UserPromptSubmit` handler to
-Codex's existing `hooks.json`. Codex still runs every caveman, ponytail, plugin,
-project, and managed hook through its native lifecycle. Skillwick does not
-disable hooks or bypass Codex trust review. Use `/hooks` to review the new
-handler. `--hooks off` disables or removes only Skillwick's optional suggestion
-hook; it never disables other Codex hooks. Keep it off when automatic
-suggestions are not wanted.
+The source version's instructions support bounded delegated discovery when your
+agent already uses sub-agents. It also adds `skillwick inspect ID --files` to
+list package references, scripts, and assets without loading their contents.
+These additions are not in v0.1.4.
 
-`skillwick uninstall` removes only owned integration. `--purge-cache` also
-removes the disposable index. Conditional rollback preserves unrelated edits
-and reports drift.
+See [usage and configuration](docs/USAGE.md) for package boundaries, refresh,
+JSON output, and reversible uninstall.
 
-Skillwick honors `HOME`, `CODEX_HOME`, and XDG overrides:
+## Evaluate your own library
 
-```text
-$XDG_CONFIG_HOME/skillwick/config.toml
-$XDG_CACHE_HOME/skillwick/index.sqlite
-$XDG_STATE_HOME/skillwick/integration.json
-$CODEX_HOME/SKILLWICK.md
-$CODEX_HOME/AGENTS.md
-$CODEX_HOME/config.toml
-```
+Use the [evaluation guide](docs/BENCHMARKS.md) and its
+[copyable coding-agent prompt](docs/prompts/evaluate-skills.md) to prepare a
+dataset covering 30% of your distinct skills by default. Coverage is adjustable;
+the full library stays searchable.
 
-## Commands
+The comparison matrix separates retrieval backends from direct and delegated
+discovery. Semantic retrieval and reranking remain unimplemented and unmeasured.
 
-Run `skillwick --help` for the complete interface. Key behaviors:
+A 12-task pilot reduced root input by 9.5% through delegation, but used 74% more
+total input and took 2.26× the model-call time. Both workflows found every
+labelled relevant skill, with additional unlabelled selections. See the
+[pilot results and limits](docs/BENCHMARKS.md#direct-versus-delegated-pilot).
+That historical run did not verify isolation from local Codex customizations.
 
-- Default search returns zero to five compact results.
-- `list` reports the full current-scope inventory count and prints every compact record.
-  The old `--all` and `--limit N` flags remain hidden compatibility options.
-- With Codex inventory enabled, search, list, inspect, and read use the published
-  native records without starting Codex; an empty cache tells you to run
-  `skillwick refresh`. Read still verifies the selected path and content hash.
-- `--json` emits a versioned machine-readable envelope.
-- `skillwick -- init hooks` searches those literal words.
-- Exit codes: `0` success/no matches, `1` operational failure, `2` usage or
-  configuration error, `3` stale, disabled, conflicting, or incomplete state.
+## Contribute
 
-## Develop
-
-```sh
-make check
-make benchmark        # requires the labelled skills in current Codex inventory
-make test-codex       # requires Codex CLI 0.154.0
-make test-inference   # opt-in real gpt-5.6-luna turn by default
-```
-
-All setup and installer tests use temporary homes. The inference test uses your
-existing Codex authentication but only a temporary fixture skill; it does not
-install Skillwick or change Codex configuration.
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md), [architecture](docs/ARCHITECTURE.md),
-[design contract](docs/SPEC.md), and [verification evidence](docs/IMPLEMENTATION.md)
-before changing lifecycle or integration behavior.
-
-## License
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). The [documentation map](docs/README.md)
+links user guides, evaluation evidence, architecture, and research.
 
 Licensed under either Apache License 2.0 or MIT, at your option.

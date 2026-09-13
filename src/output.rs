@@ -101,7 +101,7 @@ pub fn list_json(rows: &[ResultRow], total: usize) -> io::Result<()> {
     )
 }
 
-fn clean_row(mut row: ResultRow) -> ResultRow {
+pub(crate) fn clean_row(mut row: ResultRow) -> ResultRow {
     row.id = clean(&row.id);
     row.name = clean(&row.name);
     row.description = clean(&row.description);

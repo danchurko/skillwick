@@ -1,5 +1,6 @@
 use crate::{
-    config, doctor, evaluation, index, integration, metadata, native, output, search, sources,
+    config, doctor, evaluation, index, integration, metadata, native, output, package, search,
+    sources,
 };
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use rusqlite::{backup::Backup, Connection};
@@ -45,6 +46,9 @@ enum Command {
     },
     Inspect {
         id: String,
+        /// List bounded package entries without reading or executing them.
+        #[arg(long)]
+        files: bool,
     },
     /// Show the current-scope skill inventory and total count.
     List {
@@ -296,12 +300,14 @@ fn dispatch(
                 write_output(output::list_text(&rows, total, all || limit.is_none()))?;
             }
         }
-        Some(Command::Inspect { id }) => {
+        Some(Command::Inspect { id, files }) => {
             let row = find(db, &id)?;
-            if json {
+            if files {
+                inspect_files(&row, json)?;
+            } else if json {
                 write_output(output::json(std::slice::from_ref(&row)))?;
             } else {
-                write_text(&format!("id: {}\nname: {}\nscope: {}\nsource: {}\nenabled: {}\nplugin: {}\npath: {}\ncanonical: {}\nbase: {}\nhash: {}\ndegraded: {}\ndescription: {}\n", output::clean(&row.id), output::clean(&row.name), output::clean(&row.scope), output::clean(&row.source), row.enabled, row.plugin_id.as_deref().map(output::clean).unwrap_or_default(), row.path, row.canonical, row.base, row.hash, row.degraded, output::clean(&row.description)))?;
+                write_text(&inspect_text(&row))?;
             }
         }
         Some(Command::Read { id }) => read(db, &id)?,
@@ -468,8 +474,12 @@ fn find(db: &Connection, id: &str) -> Result<search::ResultRow, Failure> {
     search::find(db, id)?.ok_or_else(|| Failure("skill not found".into(), 3))
 }
 
-fn read(db: &Connection, id: &str) -> Result<(), Failure> {
-    let row = find(db, id)?;
+struct ValidatedSource {
+    path: PathBuf,
+    bytes: Vec<u8>,
+}
+
+fn validate_source(row: &search::ResultRow) -> Result<ValidatedSource, Failure> {
     if !row.enabled {
         return Err(Failure("skill is disabled by Codex".into(), 3));
     }
@@ -491,11 +501,122 @@ fn read(db: &Connection, id: &str) -> Result<(), Failure> {
             3,
         ));
     }
-    let body =
-        String::from_utf8(bytes).map_err(|_| Failure("instruction file is not UTF-8".into(), 3))?;
+    Ok(ValidatedSource {
+        path: current,
+        bytes,
+    })
+}
+
+fn inspect_text(row: &search::ResultRow) -> String {
+    format!("id: {}\nname: {}\nscope: {}\nsource: {}\nenabled: {}\nplugin: {}\npath: {}\ncanonical: {}\nbase: {}\nhash: {}\ndegraded: {}\ndescription: {}\n", output::clean(&row.id), output::clean(&row.name), output::clean(&row.scope), output::clean(&row.source), row.enabled, row.plugin_id.as_deref().map(output::clean).unwrap_or_default(), output::clean(&row.path), output::clean(&row.canonical), output::clean(&row.base), output::clean(&row.hash), row.degraded, output::clean(&row.description))
+}
+
+fn inspect_files(row: &search::ResultRow, json: bool) -> Result<(), Failure> {
+    let _source = validate_source(row)?;
+    let report = package::inspect(Path::new(&row.base))
+        .map_err(|error| Failure(format!("skill package is unavailable: {error}"), 3))?;
+    if json {
+        let entries: Vec<_> = report
+            .entries
+            .iter()
+            .map(|entry| {
+                serde_json::json!({
+                    "path": output::clean(&entry.path),
+                    "file_type": entry.file_type,
+                    "classification": entry.classification,
+                    "extension": entry.extension.as_deref().map(output::clean),
+                })
+            })
+            .collect();
+        let result =
+            serde_json::to_value(output::clean_row(row.clone())).expect("serializable result");
+        let value = serde_json::json!({
+            "version": 1,
+            "results": [result],
+            "package": {
+                "base": output::clean(&row.base),
+                "entries": entries,
+                "truncated": report.truncated,
+                "counts_scope": if report.truncated {
+                    "shown_subset"
+                } else {
+                    "complete"
+                },
+                "counts": {
+                    "total_entries": report.counts.total_entries,
+                    "regular_files": report.counts.regular_files,
+                    "additional_files": report.counts.additional_files,
+                    "markdown_files": report.counts.markdown_files,
+                    "non_markdown_files": report.counts.non_markdown_files,
+                    "directories": report.counts.directories,
+                    "symlinks": report.counts.symlinks,
+                    "other": report.counts.other,
+                },
+                "limits": {
+                    "max_entries": package::MAX_ENTRIES,
+                    "max_depth": package::MAX_DEPTH,
+                    "max_path_bytes": package::MAX_PATH_BYTES,
+                },
+            },
+        });
+        write_text(&format!("{value}\n"))
+    } else {
+        let mut text = inspect_text(row);
+        text.push_str(&format!("package: {}\n", output::clean(&row.base)));
+        text.push_str(&format!(
+            "counts: {}\n",
+            if report.truncated {
+                "shown subset"
+            } else {
+                "complete"
+            }
+        ));
+        text.push_str(&format!(
+            "entries: {}\nregular files: {}\nadditional regular files: {}\nmarkdown regular files: {}\nnon-markdown regular files: {}\ndirectories: {}\nsymlinks: {}\nother entries: {}\n",
+            report.counts.total_entries,
+            report.counts.regular_files,
+            report.counts.additional_files,
+            report.counts.markdown_files,
+            report.counts.non_markdown_files,
+            report.counts.directories,
+            report.counts.symlinks,
+            report.counts.other,
+        ));
+        if report.truncated {
+            text.push_str(&format!(
+                "listing: {} entries shown (truncated; max {} entries)\n",
+                report.counts.total_entries,
+                package::MAX_ENTRIES
+            ));
+        } else {
+            text.push_str("listing: complete\n");
+        }
+        for entry in report.entries {
+            let extension = entry
+                .extension
+                .as_deref()
+                .map(|extension| format!(", .{}", output::clean(extension)))
+                .unwrap_or_default();
+            text.push_str(&format!(
+                "- {} [{}; {}{}]\n",
+                output::clean(&entry.path),
+                output::clean(&entry.classification),
+                output::clean(&entry.file_type),
+                extension
+            ));
+        }
+        write_text(&text)
+    }
+}
+
+fn read(db: &Connection, id: &str) -> Result<(), Failure> {
+    let row = find(db, id)?;
+    let source = validate_source(&row)?;
+    let body = String::from_utf8(source.bytes)
+        .map_err(|_| Failure("instruction file is not UTF-8".into(), 3))?;
     write_text(&format!(
         "path: {}\nbase: {}\n\n{}",
-        current.display(),
+        source.path.display(),
         row.base,
         body
     ))
@@ -750,5 +871,34 @@ mod tests {
         let id = search::all(&db, None).unwrap().remove(0).id;
 
         assert!(read(&db, &id).is_ok());
+    }
+
+    #[test]
+    fn inspect_text_sanitizes_provenance_fields() {
+        let unsafe_text = "safe\u{1b}[31m\n".to_owned();
+        let row = search::ResultRow {
+            id: "id".into(),
+            name: "name".into(),
+            description: "description".into(),
+            scope: "scope".into(),
+            path: unsafe_text.clone(),
+            canonical: unsafe_text.clone(),
+            base: unsafe_text.clone(),
+            source: "source".into(),
+            source_kind: "filesystem".into(),
+            enabled: true,
+            plugin_id: None,
+            degraded: false,
+            hash: unsafe_text,
+        };
+
+        let rendered = inspect_text(&row);
+        assert!(!rendered.contains('\u{1b}'));
+        for prefix in ["path:", "canonical:", "base:", "hash:"] {
+            assert!(rendered
+                .lines()
+                .find(|line| line.starts_with(prefix))
+                .is_some_and(|line| !line.contains('\u{1b}')));
+        }
     }
 }

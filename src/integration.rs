@@ -487,8 +487,8 @@ pub fn integration_present(instructions: &Path, codex_home: &Path) -> bool {
         return false;
     };
     fs::read_to_string(&context).is_ok_and(|text| {
-        text.contains("Skillwick is a skill helper.")
-            && text.contains("`skillwick --json list --all`")
+        text.starts_with("# Skillwick\n")
+            && text.contains("skillwick --json list")
             && text.contains("`skillwick read ID`")
     }) && fs::read_to_string(instructions).is_ok_and(|text| reference_count(&text, &reference) == 1)
 }

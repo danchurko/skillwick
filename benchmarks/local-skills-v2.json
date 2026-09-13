@@ -1,0 +1,4225 @@
+{
+  "version": 2,
+  "corpus_sha256": "b450b9340fda4f2011c82c37f1cf4b2cd90001f09242b100b6f6f8b818410ae4",
+  "sample_sha256": "d3861fe0afeaa4129343bb2662058737338242539689b3efdf3480e6a7b16517",
+  "population": {
+    "method": "ceil(coverage * corpus_total) distinct task cases; no-skill cases count toward the total",
+    "coverage": 0.3,
+    "corpus_total": 555,
+    "total_cases": 167,
+    "positive_cases": 157,
+    "no_skill_cases": 10
+  },
+  "skill_coverage": {
+    "method": "seeded_stratified_sample",
+    "sampled_skill_count": 167,
+    "corpus_total": 555,
+    "sampled_proportion": 0.3,
+    "distinct_relevant_skill_count": 169,
+    "sampled_skills_all_labeled": true,
+    "note": "Skill coverage is separate from task-case population; multiple sampled skills may share one positive case, and labels may include other full-corpus skills."
+  },
+  "perspectives": [
+    "outcome",
+    "mechanism",
+    "constraints"
+  ],
+  "labeling": {
+    "method": "independent_review",
+    "search_results_used": false,
+    "reviewed": true,
+    "provenance": "Agent-authored labels from the exported corpus descriptions before any benchmark retrieval run; no search results or model selections were used.",
+    "relevance_policy": "Directly applicable workflows and explicit task aspects; generic style or process advice alone is not a positive judgment.",
+    "reviewers": [
+      "codex-evaluation-author",
+      "codex-independent-metadata-reviewer",
+      "codex-root-reviewer"
+    ],
+    "limitations": [
+      "Agent-authored tasks are derived from skill descriptions, not a sample of real user traffic.",
+      "Metadata judgments are not exhaustive human relevance judgments.",
+      "Related skill families can occur in both splits; this does not establish out-of-domain generalization."
+    ],
+    "split_method": "Connected positive relevance labels assigned together by SHA256(seed plus sorted IDs), 20 percent held-out threshold; negative cases preassigned independently.",
+    "labels_frozen": true,
+    "task_authoring": "agent_authored_before_retrieval"
+  },
+  "cases": [
+    {
+      "id": "positive-001",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Inspect our Agent Platform RAG corpora and use retrieved context to answer a question with grounding.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Retrieve grounded context from an Agent Platform RAG corpus for a question."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the Google GenAI SDK to list RAG corpora or files, inspect one, and retrieve contexts for generation."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the workflow on Agent Platform RAG Engine and avoid generic SQL database guidance."
+        }
+      ],
+      "relevant": [
+        "agent-platform-rag-engine-management@0205de"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by agent-platform-rag-engine-management; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-002",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Register an agent capability and search the Gemini Enterprise Agent Platform Skill Registry for available capabilities.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create and discover skills in the Gemini Enterprise Agent Platform registry."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Work through the registry operations and its client or API interface for skill creation and search."
+        },
+        {
+          "perspective": "constraints",
+          "query": "This is registry management and discovery, rather than invoking an unrelated agent workflow."
+        }
+      ],
+      "relevant": [
+        "agent-platform-skill-registry@3faa4f"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by agent-platform-skill-registry; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-003",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Before I implement a new workflow, help me find an existing skill, assess whether it fits, and choose the right path.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Find and recommend an existing skill for an unclear request."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Search available skills and repository patterns before choosing or creating a workflow."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Do discovery first; recommend a fit or say no suitable skill exists rather than implementing the task."
+        }
+      ],
+      "relevant": [
+        "ask-matt@968767",
+        "ecc:skill-scout@7bbedc",
+        "ecc:search-first@407ab7"
+      ],
+      "reviewed": true,
+      "rationale": "Independent review marked ask-matt, ecc:skill-scout, and ecc:search-first as directly applicable to choosing an existing workflow before implementation; labels were frozen before retrieval evaluation."
+    },
+    {
+      "id": "positive-004",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Build and deploy an AWS infrastructure stack in TypeScript CDK, then diagnose any CloudFormation issue without replacing resources unnecessarily.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Author and deploy a reliable AWS CDK stack in TypeScript."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use CDK constructs, synth or diff, deployment, and CloudFormation troubleshooting patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Stay within AWS CDK and preserve existing resources while resolving drift or deployment errors."
+        }
+      ],
+      "relevant": [
+        "aws-cdk@aae8b0"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by aws-cdk; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-005",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Create an AWS service role with a least-privilege policy and verify the trust conditions for a Lambda execution path.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Generate a correct AWS IAM service role and policy."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Reason through IAM policy evaluation, trust policies, STS behavior, and SourceAccount or SourceArn conditions."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cover AWS authorization and service roles; do not substitute Cognito or application-level RBAC advice."
+        }
+      ],
+      "relevant": [
+        "aws-iam@aa350e"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by aws-iam; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-006",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review AWS security findings across GuardDuty, Inspector, and Security Hub and define a posture summary with follow-up automation.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Assess AWS security posture and prioritize findings across security services."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use Security Hub OCSF or ASFF findings, GuardDuty, Inspector, Macie, Detective, and Security Lake workflows."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the analysis in AWS security services and account for the relevant findings format or connector."
+        }
+      ],
+      "relevant": [
+        "aws-security@fcabba"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by aws-security; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-007",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Write BigQuery SQL that finds anomalous transactions, performs semantic similarity, and summarizes the suspicious records.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Use BigQuery SQL for machine learning and generative analytics."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply BigQuery forecasting, anomaly detection, vector or semantic search, and AI functions in SQL."
+        },
+        {
+          "perspective": "constraints",
+          "query": "The request is for BigQuery built-in ML or GenAI, not ordinary dataset or job administration."
+        }
+      ],
+      "relevant": [
+        "bigquery-ai-ml@1fe861"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by bigquery-ai-ml; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-008",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Create a Python notebook workflow that uses pandas-style transformations and a scikit-learn model over BigQuery data.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Analyze BigQuery data with the Python BigFrames API."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Generate BigQuery DataFrames code using the pandas and scikit-learn style interface."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use BigFrames for the notebook workflow rather than SQL-first code or the low-level BigQuery client."
+        }
+      ],
+      "relevant": [
+        "bigquery-bigframes@b69fb4"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by bigquery-bigframes; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-009",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Rewrite a technical explanation in an extremely concise style while keeping the important instructions accurate.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Reduce an answer to a compact, technically accurate form."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply the compressed communication mode at an appropriate lite, full, or ultra level."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve technical meaning while minimizing output tokens and use the requested concise voice."
+        }
+      ],
+      "relevant": [
+        "caveman@2da1da"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by caveman; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-010",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Move this long-running task to a background agent so the main session can continue with other work.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Hand a task off to a background agent."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the Claude handoff workflow to package the task context and dispatch it asynchronously."
+        },
+        {
+          "perspective": "constraints",
+          "query": "The requested operation is delegation to a background agent, not a synchronous implementation."
+        }
+      ],
+      "relevant": [
+        "claude-handoff@37a630"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by claude-handoff; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-011",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Set up a simple Google Cloud Build trigger and explain how to run it manually from the Build History page.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create and manually run a basic Google Cloud Build trigger."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Follow the Cloud Build enablement, trigger creation, and Build History workflow."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the pipeline basic; private pools and complex multi-stage architectures are outside this request."
+        }
+      ],
+      "relevant": [
+        "cloud-build-basics@0ece2e"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by cloud-build-basics; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-012",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Help me choose and create the right Google Cloud database for a new application from its workload requirements.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Choose an appropriate Google Cloud database for a new application."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Discover requirements and apply the Google Cloud database recommendation matrix before creation."
+        },
+        {
+          "perspective": "constraints",
+          "query": "This is new database selection and onboarding, not maintenance of an existing database or a migration."
+        }
+      ],
+      "relevant": [
+        "cloud-databases-onboarding@e1e132"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by cloud-databases-onboarding; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-013",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Turn a resolved PromQL result into a Google Cloud Monitoring dashboard widget textproto with useful labels and plot settings.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Generate a valid Cloud Monitoring chart widget from a resolved query."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Compose Widget and XyChart or PrometheusQuery protocol buffer text using the dashboard API schema."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Start with a resolved query; do not perform metric discovery or invent a PromQL query."
+        }
+      ],
+      "relevant": [
+        "cloud-monitoring-chart-generation@569917"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by cloud-monitoring-chart-generation; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-014",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Build the JSON ListTimeSeries request and aggregation for a latency metric on a specified monitored resource.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Generate a Google Cloud Monitoring ListTimeSeries request."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Format the metric filter, resource parameters, aligner, and reducer aggregation for the Monitoring API."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use known metric descriptors and resource parameters; this is not metric discovery or selection."
+        }
+      ],
+      "relevant": [
+        "cloud-monitoring-list-time-series-request@f6f3c1"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by cloud-monitoring-list-time-series-request; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-015",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Write a PromQL query that calculates the five-minute error rate for a named Cloud Monitoring resource.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Generate a valid PromQL aggregation for a Cloud Monitoring metric."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Translate the metric descriptor and resource filters into a Cloud Monitoring PromQL string."
+        },
+        {
+          "perspective": "constraints",
+          "query": "The metric is already identified; do not turn the request into raw metric discovery or chart generation."
+        }
+      ],
+      "relevant": [
+        "cloud-monitoring-promql-query@e518ea"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by cloud-monitoring-promql-query; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-016",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Upload a new Customer Match audience, remove a set of obsolete members, and support clearing the audience if required.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Manage audience membership with the Google Data Manager API."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the Data Manager API client library operations for adding, removing, and clearing audience members."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Handle audience records only; event and conversion ingestion belong to a different workflow."
+        }
+      ],
+      "relevant": [
+        "data-manager-api-audience-ingestion@b8b2f9"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by data-manager-api-audience-ingestion; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-017",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Set up a local developer environment for the Data Manager API, including the client library and authentication.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Install and authenticate a Data Manager API client."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Follow the library setup, credentials, and authenticated client initialization steps."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Stop at environment setup; do not implement audience or event ingestion logic."
+        }
+      ],
+      "relevant": [
+        "data-manager-api-setup@086855"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by data-manager-api-setup; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-018",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Summarize the upstream and downstream Google Cloud Data Lineage graph for a BigQuery table so the data-quality issue is understandable.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Produce an intuitive summary of a Google Cloud Data Lineage graph."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Traverse the lineage relationships for BigQuery or Cloud Storage assets and render a Markdown provenance report."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Summarize existing lineage only; do not edit relationships or perform downstream blast-radius analysis."
+        }
+      ],
+      "relevant": [
+        "datalineage-summary@63ea80"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by datalineage-summary; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-019",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Reserve a remote Android device on Developer Device Platform, open a tunnel, and extend the lease while testing.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Manage a remote Android device session on DDP."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the DDP reservation, connection tunnel, status, lease extension, and cancellation operations."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target remote Android devices; local hardware and iOS device requests are outside scope."
+        }
+      ],
+      "relevant": [
+        "developer-device-platform-basics@e6ae2c"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by developer-device-platform-basics; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-021",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Create a polished project brief in Google Docs or Word and revise its sections and formatting.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create and edit a Word or Google Docs document."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use document creation and editing operations for structured text, sections, and formatting."
+        },
+        {
+          "perspective": "constraints",
+          "query": "The output is a document file; do not treat this as a spreadsheet, slide deck, or PDF-only workflow."
+        }
+      ],
+      "relevant": [
+        "documents:documents@df00c6"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by documents:documents; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-023",
+      "split": "dev",
+      "kind": "positive",
+      "task": "An AI agent failed in a repeatable way; capture the failure, diagnose it, recover safely, and write an introspection report.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Investigate and explain a reproducible AI agent failure."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply capture, diagnosis, contained recovery, and introspection-report steps."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use evidence from the failed run and avoid an unstructured retry that loses the failure state."
+        }
+      ],
+      "relevant": [
+        "ecc:agent-introspection-debugging@6e2e66"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:agent-introspection-debugging; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-024",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Define engineering review gates and ownership rules for a team whose code is largely produced by AI agents.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Set an operating model for AI-assisted software engineering."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Establish process, review gates, and ownership patterns suited to an agent-heavy codebase."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Address team process and accountability rather than a specific framework implementation."
+        }
+      ],
+      "relevant": [
+        "ecc:ai-first-engineering@bb8c63"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:ai-first-engineering; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-025",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Design a production REST endpoint for paginated resources with filtering, errors, and a versioning policy.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Design a robust production REST API surface."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply resource naming, status codes, pagination, filtering, error responses, versioning, and rate limiting patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the guidance on API contract design rather than service implementation or database schema details."
+        }
+      ],
+      "relevant": [
+        "ecc:api-design@0af4f9"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:api-design; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-026",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review an existing Claude Code pipeline based on older autonomous-loop guidance and plan its move to a continuous loop with quality gates and recovery.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Improve an existing autonomous agent pipeline and plan its transition to a continuous loop."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Compare sequential multi-agent pipelines with continuous execution using evaluation gates and failure recovery."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Account for the older guidance used by the existing pipeline while recommending the current approach."
+        }
+      ],
+      "relevant": [
+        "ecc:autonomous-loops@e42871",
+        "ecc:continuous-agent-loop@ebf22a"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:autonomous-loops; the label was assigned from the corpus description before retrieval evaluation. Independent metadata review also identified directly applicable complementary workflows; those IDs are included in the judgment."
+    },
+    {
+      "id": "positive-027",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Try several implementations of this hot path and select the fastest one using measured latency, throughput, and cost.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Optimize a system through repeated measured benchmarks."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Run a benchmark and optimization loop across variants, tracking latency, throughput, and token or infrastructure cost."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Choose from measured results and preserve a reproducible comparison rather than relying on intuition."
+        }
+      ],
+      "relevant": [
+        "ecc:benchmark-optimization-loop@f1b859"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:benchmark-optimization-loop; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-028",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Lead a structured interview to clarify our brand purpose, audience, personality, and narrative and produce a reusable brandbook.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Discover and articulate a brand identity."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Run the multi-session laddering and Five Whys modules and persist the synthesis in a master brandbook."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cover brand discovery across sessions, not just a one-off copy edit or campaign execution."
+        }
+      ],
+      "relevant": [
+        "ecc:brand-discovery@ac0e8c"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:brand-discovery; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-029",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Users report that a button appears to work but leaves the UI in the wrong final state; trace every click path to find the interaction bug.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Audit a user-facing interaction from click to final state."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Trace each handler, shared-state transition, cancellation, and resulting UI state across the full click path."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use this for systematic state-sequence debugging after a refactor, not isolated function tests alone."
+        }
+      ],
+      "relevant": [
+        "ecc:click-path-audit@e24735"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:click-path-audit; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-030",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "A ClickHouse analytical query is too slow; review its schema and query patterns and propose a faster design.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Optimize a ClickHouse analytical workload."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply ClickHouse schema, query-planning, and data-engineering patterns for high-performance analytics."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the workload analytical and ClickHouse-specific rather than general SQL tuning."
+        }
+      ],
+      "relevant": [
+        "ecc:clickhouse-io@1f3fd8"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:clickhouse-io; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-031",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Create a persona-targeted onboarding walkthrough of this subsystem with real file and line anchors.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Produce a step-by-step CodeTour for a codebase."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Generate a .tour file with anchored steps for an onboarding, architecture, or review walkthrough."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Include actual file and line references and keep the deliverable a CodeTour rather than prose documentation alone."
+        }
+      ],
+      "relevant": [
+        "ecc:code-tour@2ae99e"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:code-tour; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-032",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review the structural code-health score before and after this change and gate the work if it degrades the codebase.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Measure and enforce structural code health around a change."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use CodeScene MCP checks before edits and verify the score delta after the change."
+        },
+        {
+          "perspective": "constraints",
+          "query": "The workflow needs real-time structural review and gating, not a generic style lint."
+        }
+      ],
+      "relevant": [
+        "ecc:codehealth-mcp@d4c6a4"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:codehealth-mcp; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-033",
+      "split": "dev",
+      "kind": "positive",
+      "task": "After the internal model council reaches a draft decision on a high-stakes question, obtain one optional independent critique and record disagreement.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Add a bounded external critique to a multi-model decision."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Send the compact decision draft and disagreement to a separate model only after the council synthesis."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Require explicit consent, label same-provider review honestly, and mark the critique absent if unavailable."
+        }
+      ],
+      "relevant": [
+        "ecc:council-multi-model@f3afbd"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:council-multi-model; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-034",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Adapt one product announcement for X, LinkedIn, Threads, and Bluesky so each version fits its platform.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Distribute content across several social platforms."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Create platform-specific copy and sequencing for X, LinkedIn, Threads, and Bluesky."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Do not post identical text everywhere; preserve each platform's native format and audience."
+        }
+      ],
+      "relevant": [
+        "ecc:crosspost@072a18"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:crosspost; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-035",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Plan a zero-downtime schema migration with a rollback path for a live service.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Plan and implement a safe production database migration."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply expand-and-contract, data migration, rollback, and deployment sequencing patterns across common databases and ORMs."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve availability and compatibility while the old and new schema versions overlap."
+        }
+      ],
+      "relevant": [
+        "ecc:database-migrations@2d79de"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:database-migrations; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-036",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review a Django REST backend and improve its ORM access, service boundaries, caching, and request validation.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build or review a production Django application."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use Django and DRF patterns for architecture, ORM, services, middleware, caching, and API behavior."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the request on Django application structure; security-specific review is a separate concern."
+        }
+      ],
+      "relevant": [
+        "ecc:django-patterns@42ae2c"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:django-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-037",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Audit a Django login and form flow for authentication, CSRF, injection, XSS, and secure deployment settings.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Harden a Django application against common web threats."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply Django security patterns for auth, authorization, CSRF, SQL injection, XSS, and deployment configuration."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Focus on Django security controls rather than general framework architecture or product functionality."
+        }
+      ],
+      "relevant": [
+        "ecc:django-security@08ae87"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:django-security; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-038",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Harden the Docker Compose setup for a multi-service app and test its installer across supported operating systems.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create a secure, portable Docker and Compose workflow."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use container, networking, volumes, Compose orchestration, and installer-harness patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Account for native macOS and Windows validation and avoid assuming Linux-only behavior."
+        }
+      ],
+      "relevant": [
+        "ecc:docker-patterns@df0475"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:docker-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-039",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Refactor this C# service to use idiomatic dependency injection and async code with maintainable conventions.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Improve the design of a C# and .NET application."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply idiomatic .NET structure, dependency injection, async or await, and coding conventions."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the implementation in C# or .NET rather than general backend advice."
+        }
+      ],
+      "relevant": [
+        "ecc:dotnet-patterns@9b994b"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:dotnet-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-041",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Explain which ECC agents, skills, commands, hooks, and install profile apply to onboarding this repository.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Guide a user through the current ECC catalogue and setup."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Read the live ECC repository surface and map its agents, skills, commands, hooks, rules, and onboarding steps."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Base the answer on the current repository surface instead of an outdated generic list."
+        }
+      ],
+      "relevant": [
+        "ecc:ecc-guide@b4780e"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:ecc-guide; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-042",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Investigate an ECC Tools repository where duplicate jobs and premium models may be causing unexpected billing.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Audit ECC Tools for cost and quota leaks."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Trace PR creation, quota bypass, model selection, duplicate jobs, and GitHub App billing evidence."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use an evidence-first audit of ECC Tools rather than a general cloud cost review."
+        }
+      ],
+      "relevant": [
+        "ecc:ecc-tools-cost-audit@f834b6"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:ecc-tools-cost-audit; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-043",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Compare tariffs and hedging options for several facilities and recommend an electricity procurement strategy with renewable targets.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Optimize commercial energy procurement across facilities."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Analyze load profiles, market structure, hedging, demand charges, PPAs, and sustainability reporting."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Treat this as electricity and gas procurement for multiple facilities, not household energy advice."
+        }
+      ],
+      "relevant": [
+        "ecc:energy-procurement@1276dd"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:energy-procurement; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-044",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "A bot reports token balances that are off by orders of magnitude across two EVM chains; fix the amount normalization safely.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Prevent token decimal mismatches across EVM chains."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Look up decimals at runtime, cache them by chain and token, and normalize amounts without precision drift."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Handle bridged tokens and chain identity explicitly; never assume one global decimal value."
+        }
+      ],
+      "relevant": [
+        "ecc:evm-token-decimals@669644"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:evm-token-decimals; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-045",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Research competitors and find relevant code examples and company information using a neural web search service.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Conduct neural web, code, and company research."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use Exa MCP search to retrieve sources for web, code, people, or company intelligence."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use this for external research and source retrieval, not local filesystem search."
+        }
+      ],
+      "relevant": [
+        "ecc:exa-search@a06b2b"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:exa-search; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-046",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Generate a product image, a short video variant, and a voiceover using the fal.ai media models.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create image, video, or audio assets with fal.ai."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use fal.ai MCP workflows for text or image-to-video, text-to-image, text-to-speech, and video-to-audio generation."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Match each requested asset to a supported media modality and model."
+        }
+      ],
+      "relevant": [
+        "ecc:fal-ai-media@bd7262"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:fal-ai-media; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-047",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Reconcile a sales snapshot, compare pricing plans, and investigate a possible duplicate team charge from code-backed records.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Audit revenue and billing operations with evidence."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Trace pricing, refunds, team billing, duplicate charges, and billing-model behavior to source records and code."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Prefer verifiable billing reality over generic payment recommendations."
+        }
+      ],
+      "relevant": [
+        "ecc:finance-billing-ops@a2c6e1"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:finance-billing-ops; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-049",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Before allowing an agent to edit this codebase, force it to inspect importers, data schemas, and user instructions.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Add an investigation gate before agent edits."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the Gateguard workflow to block edit, write, and shell actions until required facts are collected."
+        },
+        {
+          "perspective": "constraints",
+          "query": "The gate must cover Edit, Write, Bash, and MultiEdit and demand concrete evidence first."
+        }
+      ],
+      "relevant": [
+        "ecc:gateguard@7b1ebc"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:gateguard; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-050",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Look up a gene sequence, run a BLAST-style search, and record reproducible enrichment evidence from genomic databases.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Perform quick reproducible bioinformatics lookups."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the gget CLI or Python package for sequence retrieval, BLAST-like queries, and enrichment checks."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the workflow focused on genomic reference databases and preserve evidence logs."
+        }
+      ],
+      "relevant": [
+        "ecc:gget@71344b"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:gget; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-051",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Choose a team branching strategy, define commit conventions, and resolve a merge conflict without losing work.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Establish and apply collaborative Git workflow practices."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use branching, commit, merge or rebase, and conflict-resolution patterns for a shared repository."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve collaborators' work and make the selected history strategy explicit."
+        }
+      ],
+      "relevant": [
+        "ecc:git-workflow@a1b3f1"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:git-workflow; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-053",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Find a project tracker in Drive, update its Sheets rows, revise the related Doc, and summarize the changes in a deck.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Operate across Google Drive, Docs, Sheets, and Slides as one workflow."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Coordinate search, edit, migration, and cleanup operations across Google Workspace assets."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the work within the Workspace surface and preserve the relationships between the assets."
+        }
+      ],
+      "relevant": [
+        "ecc:google-workspace-ops@045995"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:google-workspace-ops; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-054",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "After a failed multi-step implementation, record the reusable lesson and process improvement as a growth log.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Extract reusable engineering lessons after a complex task or failure."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Distill the event into repeatable patterns, causes, and actions in a growth log."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Write a reusable learning record rather than a chronological personal diary."
+        }
+      ],
+      "relevant": [
+        "ecc:growth-log@e3b76a"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:growth-log; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-055",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Implement a clinical decision support check for drug interactions, dose validation, and NEWS2 alert severity.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build a safe clinical decision support workflow."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply patterns for drug interactions, dose checks, clinical scores, alert severity, and EMR integration."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep clinical alerts evidence-based and distinguish severity from ordinary application notifications."
+        }
+      ],
+      "relevant": [
+        "ecc:healthcare-cdss-patterns@4ed21c"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:healthcare-cdss-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-056",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Refactor a service whose domain logic is tangled with I/O into testable Ports and Adapters layers.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Introduce a maintainable Ports and Adapters architecture."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Define domain boundaries, dependency inversion, ports, adapters, and use-case orchestration."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep domain logic independent of external I/O across the supported service languages."
+        }
+      ],
+      "relevant": [
+        "ecc:hexagonal-architecture@da623c"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:hexagonal-architecture; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-057",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Install Pi-hole on my home network, configure DNS-over-HTTPS and DHCP, and add a local DNS record.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Set up and troubleshoot Pi-hole DNS at home."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Configure Pi-hole installation, blocklists, DoH, DHCP, local records, and DNS troubleshooting."
+        },
+        {
+          "perspective": "constraints",
+          "query": "The network must explicitly use Pi-hole; do not substitute generic DNS or enterprise networking advice."
+        }
+      ],
+      "relevant": [
+        "ecc:homelab-pihole-dns@22109f"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:homelab-pihole-dns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-058",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Split my home network into trusted, server, guest, and IoT VLANs with matching Wi-Fi and firewall rules.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Segment a home network into secure VLANs."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Configure switch trunks, firewall rules, and SSID mappings on UniFi, pfSense, OPNsense, or MikroTik."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cover home-network segmentation and its four traffic classes rather than generic subnet planning."
+        }
+      ],
+      "relevant": [
+        "ecc:homelab-vlan-segmentation@54b19a"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:homelab-vlan-segmentation; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-059",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Create a hookify rule that rejects a risky command pattern before it reaches the project shell.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Configure a hookify rule for a repository."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use hookify rule syntax and matching patterns to intercept the selected command."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Address hookify configuration specifically rather than writing a generic shell hook."
+        }
+      ],
+      "relevant": [
+        "ecc:hookify-rules@4c0f5a"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:hookify-rules; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-060",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Generate a complete iOS app icon PNG imageset from an Apple SF Symbol and add it to the Xcode asset catalogue.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create iOS app icon assets for Xcode."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Generate PNG imagesets from SF Symbols or Iconify and package them for an asset catalogue."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target iOS icon sizes and asset-catalogue structure; do not create a general illustration."
+        }
+      ],
+      "relevant": [
+        "ecc:ios-icon-gen@5751e4"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:ios-icon-gen; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-061",
+      "split": "dev",
+      "kind": "positive",
+      "task": "A completed Itô compute booking has GPU nodes; inspect whether ML training is available and prepare a confirmed handoff manifest.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Check training readiness after an Itô GPU booking."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Inspect the booking, determine ML training availability, and hand off an explicitly confirmed manifest."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use the canonical training backend when available and do not invent a training stack."
+        }
+      ],
+      "relevant": [
+        "ecc:ito-training@b79ce3"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:ito-training; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-062",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Deduplicate and synchronize a knowledge base spread across local files, memory, vector stores, and Git repositories.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Manage and retrieve knowledge across multiple storage layers."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Ingest, organize, sync, deduplicate, and search local, MCP, vector, and Git knowledge sources."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve provenance across stores and treat synchronization as a knowledge-operations workflow."
+        }
+      ],
+      "relevant": [
+        "ecc:knowledge-ops@1fc494"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:knowledge-ops; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-063",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Fix cancellation and error handling in an Android Kotlin Flow pipeline and add focused tests for its StateFlow.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Implement reliable Kotlin Coroutines and Flow behavior."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use structured concurrency, Flow operators, StateFlow, cancellation, error handling, and testing patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target Android or Kotlin Multiplatform code and preserve structured cancellation semantics."
+        }
+      ],
+      "relevant": [
+        "ecc:kotlin-coroutines-flows@4e1add"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:kotlin-coroutines-flows; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-064",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review a Laravel API and improve its controllers, Eloquent access, service layer, queues, events, and caching.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build or refactor a production Laravel application."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply Laravel patterns for routing, controllers, Eloquent, services, queues, events, caching, and API resources."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the solution in Laravel and its application layers rather than generic PHP advice."
+        }
+      ],
+      "relevant": [
+        "ecc:laravel-patterns@edb066"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:laravel-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-065",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Reduce p95 latency and stale data in a real-time market dashboard that uses streaming queues and caches.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Design a latency-sensitive system around freshness and p95 goals."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Analyze real-time dashboards, market data, streaming agents, queues, and caches with latency-focused patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Make p95 latency and data freshness explicit success criteria for the design."
+        }
+      ],
+      "relevant": [
+        "ecc:latency-critical-systems@ba6a13"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:latency-critical-systems; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-066",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Find and qualify high-value leads, discover warm introductions, and prepare channel-specific outreach for email and LinkedIn.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Run an AI-native lead intelligence and outreach workflow."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Score signals, rank mutual connections, discover warm paths, model source-derived voice, and adapt outreach by channel."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target high-value contacts and keep email, LinkedIn, and X outreach distinct."
+        }
+      ],
+      "relevant": [
+        "ecc:lead-intelligence@461c48"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:lead-intelligence; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-067",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Design an iOS 26 settings screen using interactive Liquid Glass materials in SwiftUI and a matching WidgetKit component.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build an iOS 26 Liquid Glass interface."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use dynamic glass material, blur, reflection, and interactive morphing in SwiftUI, UIKit, or WidgetKit."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target the iOS 26 Liquid Glass system and account for the chosen UI framework."
+        }
+      ],
+      "relevant": [
+        "ecc:liquid-glass-design@e91bab"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:liquid-glass-design; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-068",
+      "split": "dev",
+      "kind": "positive",
+      "task": "A shipment is delayed and damaged in transit; manage the carrier claim, escalation, and customer resolution.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Handle a freight exception and carrier dispute."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply exception triage, escalation protocols, carrier-specific behavior, claims procedures, and operational judgment."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cover shipment delays, damage, loss, or delivery issues with a documented claims path."
+        }
+      ],
+      "relevant": [
+        "ecc:logistics-exception-management@d7434b"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:logistics-exception-management; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-069",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Create a clean animated Manim explainer showing how this algorithm and its graph change step by step.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build a reusable Manim technical explainer."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Compose Manim animations for concepts, graphs, system diagrams, or product walkthroughs."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Produce an animated explainer rather than a talking-head script or unrelated video edit."
+        }
+      ],
+      "relevant": [
+        "ecc:manim-video@eb1ec2"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:manim-video; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-070",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Compare competitors, size the market, and assess an investment opportunity with source-attributed recommendations.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Conduct decision-oriented market and competitive research."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Gather attributed evidence for market sizing, competitor comparisons, investor diligence, and industry intelligence."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cite sources and tie the research to a business decision rather than producing an ungrounded overview."
+        }
+      ],
+      "relevant": [
+        "ecc:market-research@f425cd"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:market-research; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-071",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Plan and execute a multi-channel product launch with positioning, landing-page copy, email, social, ads, and a content calendar.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Run an end-to-end multi-channel marketing campaign."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Coordinate audience research, positioning, campaign angles, landing pages, email sequences, social posts, and short video scripts."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use one orchestration workflow for the launch while adapting content to each channel."
+        }
+      ],
+      "relevant": [
+        "ecc:marketing-campaign@79b1a1"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:marketing-campaign; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-072",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Inspect a specific text thread, recover a recent one-time code, and verify which message source was actually checked before replying.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Operate on live messages with source evidence."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Read messages or DMs, recover a recent code, inspect the thread, and record the checked source before responding."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Prove the source that was inspected and avoid replying from an unverified message context."
+        }
+      ],
+      "relevant": [
+        "ecc:messages-ops@5fb010"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:messages-ops; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-073",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Add a first machine-learning capability to an existing non-ML codebase, starting with problem framing and data readiness.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Adopt machine learning in a previously non-ML codebase."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Work through problem framing, data readiness, architecture decoupling, and baseline model integration."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cover the path from framing to a baseline rather than assuming a mature ML platform exists."
+        }
+      ],
+      "relevant": [
+        "ecc:ml-adoption-playbook@a4af2a"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:ml-adoption-playbook; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-074",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Harden our production ML system with data contracts, reproducible training, evaluation, deployment, monitoring, and rollback.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build a production machine-learning engineering workflow."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply data contracts, reproducible training, model evaluation, deployment, monitoring, and rollback practices."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Treat this as a production system beyond a one-off notebook and preserve rollback evidence."
+        }
+      ],
+      "relevant": [
+        "ecc:mle-workflow@28caf5"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:mle-workflow; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-075",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review a NestJS backend and improve its modules, providers, DTO validation, guards, interceptors, and configuration.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build or review a production NestJS backend."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use NestJS module, controller, provider, DTO, guard, interceptor, and config patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the design TypeScript and NestJS-specific rather than generic Node.js guidance."
+        }
+      ],
+      "relevant": [
+        "ecc:nestjs-patterns@efe171"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:nestjs-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-076",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Automate read-only collection from a fleet of network devices with Netmiko, bounded concurrency, TextFSM parsing, and timeouts.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build safe Python Netmiko network automation."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use bounded SSH batches, read-only collection, TextFSM parsing, guarded config changes, and error handling."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Bound timeouts and changes; preserve a safe path if a future request pushes configuration."
+        }
+      ],
+      "relevant": [
+        "ecc:netmiko-ssh-automation@1d6362"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:netmiko-ssh-automation; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-077",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Check a router and switch configuration for dangerous commands, duplicate addresses, subnet overlaps, stale references, and management risk before deployment.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Validate network device configuration before deployment."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Run pre-deployment checks for addresses, overlaps, references, management-plane exposure, and IOS-style security hygiene."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Review the configuration without deploying it and surface dangerous commands explicitly."
+        }
+      ],
+      "relevant": [
+        "ecc:network-config-validation@9f7a05"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:network-config-validation; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-078",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Use the Nutrient DWS API to OCR a PDF, redact sensitive text, fill a form, and sign the resulting document.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Process and transform documents through the Nutrient DWS API."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use Nutrient operations for conversion, OCR, extraction, redaction, signing, and form filling."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Support the requested PDF workflow and keep document handling within the DWS API."
+        }
+      ],
+      "relevant": [
+        "ecc:nutrient-document-processing@37a778"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:nutrient-document-processing; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-079",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Fix a Nuxt 4 hydration mismatch and make its server-side data fetching safe and lazy.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build and debug a Nuxt 4 application."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply Nuxt 4 hydration safety, route rules, lazy loading, useFetch, and useAsyncData patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep data fetching SSR-safe and address hydration behavior rather than generic Vue code."
+        }
+      ],
+      "relevant": [
+        "ecc:nuxt4-patterns@d9acc6"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:nuxt4-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-080",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Prepare a private project for a public release by forking it, removing secrets and private assets, and packaging the clean result.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Sanitize and package a private project for open source."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Run the fork, sanitizer, and packager stages of the open-source pipeline."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Strip private material and secrets before producing a public package."
+        }
+      ],
+      "relevant": [
+        "ecc:opensource-pipeline@dca001"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:opensource-pipeline; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-081",
+      "split": "dev",
+      "kind": "positive",
+      "task": "A regression appeared after a recent change; orchestrate reproduction, a failing test, the narrow fix, review, and a gated commit.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Take a regression from reproduction through a verified fix."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Combine systematic diagnosis, a regression test, implementation, review, and gated commit phases."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve evidence of the cause and require the regression test and quality gate before completion."
+        }
+      ],
+      "relevant": [
+        "ecc:orch-fix-defect@c46b24",
+        "diagnosing-bugs@0d5f21"
+      ],
+      "reviewed": true,
+      "rationale": "Independent review marked ecc:orch-fix-defect and diagnosing-bugs as directly applicable to reproducing, diagnosing, testing, and safely fixing the regression; labels were frozen before retrieval evaluation."
+    },
+    {
+      "id": "positive-082",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Turn this multi-step plan into ready-to-paste orchestration prompts with an agent chain for every step.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Decompose a plan into an executable agent orchestration."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Read the plan, assign a per-step ECC agent chain, and emit /orchestrate prompts."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Generate the prompts only; do not invoke orchestration during this planning request."
+        }
+      ],
+      "relevant": [
+        "ecc:plan-orchestrate@54cd4f"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:plan-orchestrate; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-084",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review a prediction-market trading workflow before it handles venue credentials, portfolio data, and automated execution.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Assess compliance and execution risk in a trading agent."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Review venue authentication, privacy, data quality, safety, basket or oracle logic, and execution controls."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Run the risk review before trade planning or execution and protect keys and portfolio data."
+        }
+      ],
+      "relevant": [
+        "ecc:prediction-market-risk-review@1ddc03"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:prediction-market-risk-review; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-085",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Pressure-test the product idea and clarify its user problem and value before turning the request into an implementation contract.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Validate product direction before building."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Run product diagnostics against the why, user problem, value, and proposed scope."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Stay at product reasoning and decision quality rather than implementing the feature prematurely."
+        }
+      ],
+      "relevant": [
+        "ecc:product-lens@f5d9f0"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:product-lens; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-086",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Audit a merged application before launch and identify what could break in production using evidence from the local repository.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Perform a local-evidence production readiness audit."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Inspect shipped behavior, pre-launch checks, and post-merge risks without sending repository data to an external service."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use local evidence and frame findings as production readiness risks, not a generic code review."
+        }
+      ],
+      "relevant": [
+        "ecc:production-audit@8f8d80"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:production-audit; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-088",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Investigate a supplier non-conformance, identify its root cause, define CAPA actions, and review the supporting SPC data.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Manage a regulated manufacturing quality non-conformance."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply NCR lifecycle, root-cause analysis, CAPA, SPC interpretation, and supplier-quality audit methods."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Account for regulated manufacturing evidence and distinguish corrective action from a quick workaround."
+        }
+      ],
+      "relevant": [
+        "ecc:quality-nonconformance@4c1762"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:quality-nonconformance; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-089",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Add a feature to a Quarkus 3 service using tests for its REST endpoint, event flow, mocks, and coverage.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Use test-driven development for a Quarkus service."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply JUnit 5, Mockito, REST Assured, Camel testing, and JaCoCo patterns in Quarkus 3.x LTS."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the workflow event-aware and require tests before implementation is accepted."
+        }
+      ],
+      "relevant": [
+        "ecc:quarkus-tdd@65c882"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:quarkus-tdd; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-090",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Run an RFC-driven multi-agent implementation with a task-local harness, adaptive work units, quality gates, and a merge queue.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Coordinate an RFC-driven implementation that adapts its work units."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Combine a task-local evaluation harness with delegated work units, dependencies, quality gates, and merge-queue progression."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Retain explicit gates and reusable outputs; do not allow ad hoc parallel changes."
+        }
+      ],
+      "relevant": [
+        "ecc:ralphinho-rfc-pipeline@f2bd7b",
+        "ecc:dynamic-workflow-mode@6e2f75"
+      ],
+      "reviewed": true,
+      "rationale": "Independent review marked ecc:ralphinho-rfc-pipeline and ecc:dynamic-workflow-mode as directly applicable to an RFC-controlled adaptive multi-agent workflow; labels were frozen before retrieval evaluation."
+    },
+    {
+      "id": "positive-091",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review a React 19 feature for correct hooks, server/client boundaries, Suspense, data fetching, forms, state, and accessibility.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build a robust React application feature."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply React 18 or 19 patterns for hooks, server and client components, Suspense, error boundaries, forms, data, and state."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the component accessible and respect the framework boundary between server and client code."
+        }
+      ],
+      "relevant": [
+        "ecc:react-patterns@b72f29",
+        "ecc:frontend-a11y@41d754"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:react-patterns; the label was assigned from the corpus description before retrieval evaluation. Independent metadata review also identified directly applicable complementary workflows; those IDs are included in the judgment."
+    },
+    {
+      "id": "positive-092",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Add Redis caching and a distributed lock around a rate-limited API while keeping connections and pub/sub behavior safe.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Design production Redis data and caching behavior."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use Redis structures, cache invalidation, distributed locks, rate limiting, pub/sub, and connection-management patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Handle contention and connection lifecycle explicitly for a production application."
+        }
+      ],
+      "relevant": [
+        "ecc:redis-patterns@84d384"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:redis-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-093",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Install the pinned repo-scan pointer so we can run its cross-stack source-code asset audit.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Bootstrap the repo-scan audit capability."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Install the external repo-scan skill from its pinned, reviewable commit before invoking the audit."
+        },
+        {
+          "perspective": "constraints",
+          "query": "This pointer only prepares the audit skill; do not claim that the source audit itself has run."
+        }
+      ],
+      "relevant": [
+        "ecc:repo-scan@381fc0"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:repo-scan; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-094",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Several skills repeat the same principle; scan them and distill that principle into a shared rule file.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Extract cross-cutting principles into reusable rules."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Scan skills, identify recurring guidance, and append, revise, or create a rule file."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Only promote principles that recur across skills and preserve existing rule ownership."
+        }
+      ],
+      "relevant": [
+        "ecc:rules-distill@5233c0"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:rules-distill; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-095",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Put a guard in front of an autonomous production workflow so destructive operations are prevented or held for review.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Prevent unsafe destructive operations in an autonomous workflow."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply the safety-guard checks before production actions and autonomous agent execution."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Prioritize prevention and explicit control around destructive operations."
+        }
+      ],
+      "relevant": [
+        "ecc:safety-guard@81a703"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:safety-guard; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-098",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Rank possible warm introductions to a target contact using mutual connections and identify gaps in our network.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Rank warm paths through a professional social graph."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Calculate weighted bridge and connection scores across X and LinkedIn and surface network gaps."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Focus on the graph-ranking engine itself rather than broad outreach or network maintenance."
+        }
+      ],
+      "relevant": [
+        "ecc:social-graph-ranker@7bd8ec"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:social-graph-ranker; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-099",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Claim the coordination state for this epic issue, record local ownership, and synchronize it with the source repository.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Claim and synchronize an epic issue for coordinated work."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the source-command workflow to stamp the epic and sync its local ownership state."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Operate on the epic coordination record and preserve the repository's source of truth."
+        }
+      ],
+      "relevant": [
+        "ecc:source-command-epic-claim@0b52a0"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:source-command-epic-claim; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-100",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Break this epic into task issues with clear children and dependencies without creating task branches.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Decompose an epic into task children."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the source command to create and structure child tasks from the epic."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Do not create task branches during decomposition; keep the issue hierarchy explicit."
+        }
+      ],
+      "relevant": [
+        "ecc:source-command-epic-decompose@d092cc"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:source-command-epic-decompose; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-101",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Run a comprehensive review of a Go service for idioms, concurrency safety, errors, and security, using a specialist reviewer.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Review Go code for correctness and maintainability."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the source command to invoke the Go reviewer across idioms, concurrency, error handling, and security."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cover the full Go review surface rather than only formatting or compilation."
+        }
+      ],
+      "relevant": [
+        "ecc:source-command-go-review@dfa814",
+        "ecc:golang-patterns@78fdd9"
+      ],
+      "reviewed": true,
+      "rationale": "Independent review marked ecc:source-command-go-review and ecc:golang-patterns as directly applicable to a comprehensive Go review; labels were frozen before retrieval evaluation."
+    },
+    {
+      "id": "positive-102",
+      "split": "dev",
+      "kind": "positive",
+      "task": "An Android Kotlin Multiplatform Gradle build fails; diagnose the build output and make it pass.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Fix a Gradle build failure in Android or KMP."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the Gradle build troubleshooting command and inspect the project's build configuration and errors."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target Android or Kotlin Multiplatform Gradle failures and verify a successful build."
+        }
+      ],
+      "relevant": [
+        "ecc:source-command-gradle-build@164525"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:source-command-gradle-build; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-103",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "List the known projects and show the instinct statistics recorded for each one.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Inspect known projects and their instinct statistics."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the source command that enumerates projects and reports their associated instinct data."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Return project inventory and statistics rather than changing project state."
+        }
+      ],
+      "relevant": [
+        "ecc:source-command-projects@b4a1b5"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:source-command-projects; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-104",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Promote the useful project-scoped instincts from this repository to the global scope.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Promote project-specific instincts to global scope."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the source command to identify and promote eligible instincts from project scope."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Only promote project-scoped knowledge and preserve the distinction between local and global scope."
+        }
+      ],
+      "relevant": [
+        "ecc:source-command-promote@fae1d6"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:source-command-promote; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-105",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Configure the repository to use pnpm as its preferred package manager and update the relevant project settings.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Set a preferred JavaScript package manager for a project."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the setup package-manager command to configure npm, pnpm, yarn, or bun preference."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Choose one supported package manager and update project configuration consistently."
+        }
+      ],
+      "relevant": [
+        "ecc:source-command-setup-pm@df1554"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:source-command-setup-pm; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-106",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Analyze the current test coverage, identify missing behavior, and generate tests until the project reaches its target threshold.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Improve a project toward its target test coverage."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the coverage command to find gaps and generate focused missing tests."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target uncovered behavior and the declared threshold instead of adding duplicate implementation-shaped tests."
+        }
+      ],
+      "relevant": [
+        "ecc:source-command-test-coverage@9a240d"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:source-command-test-coverage; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-107",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Scan this repository and regenerate compact architecture codemaps that an agent can use during future work.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Generate token-lean architecture codemaps."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the update-codemaps command to scan project structure and emit codemap files."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the maps concise and derived from the current project structure."
+        }
+      ],
+      "relevant": [
+        "ecc:source-command-update-codemaps@e178cf"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:source-command-update-codemaps; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-108",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review a Spring Boot backend and improve its REST layer, services, data access, caching, async work, and logging.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build or refactor a production Spring Boot backend."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply Spring Boot patterns for layered architecture, REST, data access, caching, asynchronous processing, and logging."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the service in Java and Spring Boot and cover the backend layers coherently."
+        }
+      ],
+      "relevant": [
+        "ecc:springboot-patterns@ee6f49"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:springboot-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-109",
+      "split": "dev",
+      "kind": "positive",
+      "task": "The task is approaching the context limit; identify a logical phase boundary and suggest a manual compaction point.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Preserve useful context through deliberate compaction."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Detect a natural task phase and recommend a manual context compaction checkpoint."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Compact at a logical boundary rather than arbitrarily interrupting an active phase."
+        }
+      ],
+      "relevant": [
+        "ecc:strategic-compact@70da15"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:strategic-compact; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-110",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Update this Swift 6.2 app so main-actor code stays isolated and expensive work moves explicitly to a concurrent context.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Adopt approachable Swift 6.2 concurrency patterns."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use single-threaded-by-default isolation and @concurrent for explicit background offloading."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Respect main-actor isolation and Swift 6.2 semantics instead of adding unconstrained background tasks."
+        }
+      ],
+      "relevant": [
+        "ecc:swift-concurrency-6-2@63f119"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:swift-concurrency-6-2; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-111",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Make a Swift service testable by injecting protocols for its file system, network, and external APIs and covering them with Swift Testing.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Test Swift code through protocol-based dependency injection."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Define focused protocols and mocks for file, network, and external services and exercise them with Swift Testing."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep external effects replaceable and test the behavior without live dependencies."
+        }
+      ],
+      "relevant": [
+        "ecc:swift-protocol-di-testing@db6b76"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:swift-protocol-di-testing; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-112",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Build a SwiftUI screen with observable state, navigation, composable views, and good rendering performance.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Implement a maintainable SwiftUI interface."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply SwiftUI architecture, @Observable state, view composition, navigation, and render-performance patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep state ownership clear and target SwiftUI rather than UIKit-only implementation."
+        }
+      ],
+      "relevant": [
+        "ecc:swiftui-patterns@229d20"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:swiftui-patterns; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-113",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Run this repository command, diagnose its failure, and make a narrow fix with exact evidence of what was executed and verified.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Execute and verify a repository operation with evidence."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Follow an evidence-first terminal workflow for commands, CI failures, and narrow fixes."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Record the exact command and proof while keeping the change tightly scoped."
+        }
+      ],
+      "relevant": [
+        "ecc:terminal-ops@d83f72"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:terminal-ops; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-114",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Deploy a service to an Uncloud cluster, configure Caddy ingress, publish a route, and inspect its logs.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Manage an Uncloud cluster and its services."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the uc CLI for deployment, Caddy ingress, static proxy routes, ports, scaling, logs, machines, and volumes."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the operations Uncloud-specific and account for cluster machines and volumes."
+        }
+      ],
+      "relevant": [
+        "ecc:uncloud@05a0c7"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:uncloud; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-115",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Our GitHub, Linear, desktop, and hook alerts are noisy and duplicated; redesign routing, deduplication, and escalation.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Operate a unified notification workflow."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Coordinate notification routing, deduplication, escalation, and inbox collapse across ECC surfaces."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Treat the problem as alert operations and reduce duplicates across the connected channels."
+        }
+      ],
+      "relevant": [
+        "ecc:unified-notifications-ops@4f83a3"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:unified-notifications-ops; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-116",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Turn raw footage into a polished short video by cutting it, adding captions and overlays, dubbing it, and exporting the final edit.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Edit and finish a video from raw footage."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the ECC video stack with FFmpeg, Remotion, ElevenLabs, fal.ai, Descript, or CapCut for cuts and augmentations."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cover the edit pipeline from source footage through final export and match the requested media effects."
+        }
+      ],
+      "relevant": [
+        "ecc:video-editing@0b7fbc"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:video-editing; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-117",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Ingest a live stream, index its visual and temporal content, find moments by meaning, and create a clipped alert video.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "See, understand, and act on video or audio data."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Ingest, index, semantically search, timestamp, clip, transcode, and alert on local, URL, RTSP, or live media."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve playable timestamps and use the right pipeline for real-time or stored media."
+        }
+      ],
+      "relevant": [
+        "ecc:videodb@bba67c"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:videodb; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-118",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Use the X API to publish a thread, read a timeline, and report engagement while handling OAuth and rate limits.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Integrate with the X or Twitter API."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply OAuth, posting, timeline, search, analytics, and rate-limit patterns for X."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep platform operations within the X API and handle authentication and rate limits explicitly."
+        }
+      ],
+      "relevant": [
+        "ecc:x-api@4ecb19"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ecc:x-api; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-119",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Build a client that maintains a bidirectional Gemini LiveAPI websocket session with resumption and token refresh.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Integrate a Gemini LiveAPI websocket client."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Generate a service class that handles session setup, resumption, bearer refresh, and ClientMessage or ServerMessage protos."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target the live bidirectional endpoint; one-shot generateContent and media generation are separate workflows."
+        }
+      ],
+      "relevant": [
+        "gemini-live-api@c5cedb"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by gemini-live-api; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-120",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Prevent an autonomous Claude Code session from running dangerous Git commands in this repository.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Block dangerous Git operations for Claude Code."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply Git guardrails that intercept risky commands during the agent session."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Protect repository history and working state while allowing ordinary safe Git work."
+        }
+      ],
+      "relevant": [
+        "git-guardrails-claude-code@365d0d"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by git-guardrails-claude-code; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-121",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Investigate a GKE TPU workload with low TensorCore utilization and node interruptions using system metrics and PromQL.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Troubleshoot GKE TPU workload health and performance."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Monitor TPU duty cycle, memory, node readiness, pool availability, maintenance, and preemption with PromQL."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Focus on TPU-specific GKE metrics and avoid treating this as generic cluster monitoring."
+        }
+      ],
+      "relevant": [
+        "gke-ai-troubleshooting-tpu-metrics-monitoring@4b3648"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by gke-ai-troubleshooting-tpu-metrics-monitoring; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-122",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Containerize an existing application and deploy it to GKE for the first time with suitable manifests.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Onboard an application onto GKE."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the GKE application onboarding workflow for containerization, manifests, deployment, and migration."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target a first-time application deployment and leave cluster administration or upgrades to their specialized workflows."
+        }
+      ],
+      "relevant": [
+        "gke-app-onboarding@3bab24"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by gke-app-onboarding; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-123",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Reduce the cost of a GKE workload by rightsizing requests, using Spot VMs where suitable, and configuring cost allocation and quotas.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Optimize GKE cluster and workload costs."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply rightsizing, Spot VM, CUD, cost-allocation, and resource-quota patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Optimize workload resources and accounting; do not treat this as basic compute-class provisioning."
+        }
+      ],
+      "relevant": [
+        "gke-cost-optimization@4d0ced"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by gke-cost-optimization; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-124",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Choose the correct GKE golden base image for a custom node from the cluster version, OS, architecture, accelerator, and gVisor requirements.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Discover a compatible GKE custom-node golden image."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Map GKE version, OS, architecture, accelerator, gVisor, and cgroups constraints to the base-image map."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Find the image for custom node creation; do not design a whole cluster or standard node pool."
+        }
+      ],
+      "relevant": [
+        "gke-custom-golden-image-discovery@8abc9f"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by gke-custom-golden-image-discovery; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-125",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Configure Cloud Logging, Cloud Monitoring, and managed Prometheus for a GKE cluster and its workloads.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Set up GKE observability."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Configure GKE logging, monitoring, and managed Prometheus collection and integration."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the observability setup on GKE and distinguish it from local logging or external APM configuration."
+        }
+      ],
+      "relevant": [
+        "gke-observability@be995e"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by gke-observability; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-126",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Harden the GKE control plane and platform by securing RBAC, enabling Shielded Nodes, Binary Authorization, and cluster security add-ons.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Secure a GKE platform at cluster level."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Configure Secret Manager add-ons, RBAC hardening, Binary Authorization, Shielded Nodes, Sandbox, and GKE IAM."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Focus on platform-level controls; workload identity, network policies, and pod security belong elsewhere."
+        }
+      ],
+      "relevant": [
+        "gke-platform-security@9ab881"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by gke-platform-security; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-127",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Assess this GKE cluster and workloads before launch across scalability, security, reliability, observability, backup, disaster recovery, and cost.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Review GKE production readiness."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Run a comprehensive productionization assessment across the cluster and workloads."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cover the cross-domain readiness review and defer deep implementation to the relevant specialist skill."
+        }
+      ],
+      "relevant": [
+        "gke-productionize@01cf3c"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by gke-productionize; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-128",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Expose a GKE service through Gateway API or Ingress with Cloud Armor, NEGs, Private Service Connect, and a managed certificate.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Configure GKE edge and service networking."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use Gateway or Ingress manifests, Cloud Armor, container-native load balancing, PSC, and managed SSL patterns."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Stay at edge routing and private service endpoints; do not solve core IP planning or node NAT."
+        }
+      ],
+      "relevant": [
+        "gke-service-networking@c42e4e"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by gke-service-networking; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-129",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Enable the Google Analytics Data API and run a report by date and city with active users and screen views.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Query Google Analytics reporting data through the Data API."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the v1beta Analytics Data API, validate metric and dimension compatibility, and enable it with the cloud CLI."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the task on reporting data; Admin API and front-end tracking setup are outside scope."
+        }
+      ],
+      "relevant": [
+        "google-analytics-data-api-basics@24a730"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-analytics-data-api-basics; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-130",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Design a governed borderless data lakehouse that joins data across clouds and lets AI agents run federated queries securely.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Design a secure multi-cloud data lakehouse for agentic AI."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Discover requirements and connect data silos, federated queries, governance, and AI-agent integration across clouds and on-premises."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Handle cross-cloud and on-premises data; this is broader than a simple single-cloud warehouse."
+        }
+      ],
+      "relevant": [
+        "google-cloud-solution-agentic-ai-borderless-data-lakehouse@9ac3c2"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-cloud-solution-agentic-ai-borderless-data-lakehouse; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-131",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Discover requirements and produce an end-to-end Google Cloud architecture, service blueprint, and deployment recommendation for a complex workload.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Design a holistic Google Cloud solution architecture."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Run interactive requirements discovery and integrate multiple Google Cloud products into a deployment blueprint."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use the broad solution workflow only for complex multi-product workloads, not a single-product or WAF review."
+        }
+      ],
+      "relevant": [
+        "google-cloud-solution-architecture@0c1d4a"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-cloud-solution-architecture; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-132",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Gather requirements, design, build, and deploy an AI agent or multi-agent system on Google Cloud.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build and deploy an AI agent system on Google Cloud."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the solution workflow to recommend an agent architecture and generate implementation and deployment guidance."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the request agentic and Google Cloud-specific rather than a generic solution architecture exercise."
+        }
+      ],
+      "relevant": [
+        "google-cloud-solution-build-deploy-agents@9a2fc3"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-cloud-solution-build-deploy-agents; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-133",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Migrate an existing Gemini API workload to self-hosted GKE inference, including hardware sizing, manifests, staging, and traffic cutover.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Migrate an existing AI inference workload to GKE."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use gcloud and kubectl to inspect the source workload, stage the model, generate manifests, validate, and cut over traffic."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Start from an existing Cloud Run, Gemini API, Agent Platform, or custom VM workload; this is not a brand-new deployment."
+        }
+      ],
+      "relevant": [
+        "google-cloud-solution-guided-gke-ai-migration@1b79e5"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-cloud-solution-guided-gke-ai-migration; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-134",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Design an AlloyDB search system that combines keyword and vector search with structured filters and semantic reranking.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Design a dynamic hybrid search system on AlloyDB."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Combine keyword and semantic vector search, SQL filters, faceting, in-database validation, reranking, and serverless hosting."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use a relational AlloyDB hybrid-search design; simple keyword search and standalone vector databases are outside scope."
+        }
+      ],
+      "relevant": [
+        "google-cloud-solution-hybrid-search-alloydb@6c869e"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-cloud-solution-hybrid-search-alloydb; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-135",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Design and deploy a secure n-tier serverless web application with Terraform, private VPC connectivity, data residency, and PSC.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Design a secure multi-tier serverless Google Cloud application."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Compose architecture, Terraform, zero-trust networking, regional sovereignty, and Private Service Connect guidance."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target serverless Google Cloud services; VM, GKE, and non-Google architectures are out of scope."
+        }
+      ],
+      "relevant": [
+        "google-cloud-solution-n-tier-serverless-web-app@818915"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-cloud-solution-n-tier-serverless-web-app; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-136",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Assess a Google Cloud workload and recommend concrete cost reductions using the Well-Architected Framework.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Optimize workload cost using the Google Cloud WAF."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Evaluate cost requirements and produce build, deploy, and manage recommendations from the WAF cost pillar."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep recommendations cost-focused and grounded in the workload requirements."
+        }
+      ],
+      "relevant": [
+        "google-cloud-waf-cost-optimization@85483e"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-cloud-waf-cost-optimization; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-137",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Evaluate this Google Cloud workload for slow requests and recommend resource, modularity, and elasticity improvements from the WAF.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Optimize Google Cloud workload performance with WAF guidance."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply the Performance Optimization pillar to resource allocation, modular design, and elasticity."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Focus on performance requirements and recommendations rather than security or cost controls."
+        }
+      ],
+      "relevant": [
+        "google-cloud-waf-performance-optimization@73fb39"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-cloud-waf-performance-optimization; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-138",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review a Google Cloud workload and produce a security improvement plan for IAM, networks, data protection, and operations.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Harden a Google Cloud workload with WAF security guidance."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply the Well-Architected security pillar to IAM, network security, data protection, and operational security."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the review security-focused and tie controls to the workload."
+        }
+      ],
+      "relevant": [
+        "google-cloud-waf-security@fd2e3b"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-cloud-waf-security; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-139",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Add rewarded ads to an Android app and configure the Google Mobile Ads SDK without using the rewarded-interstitial format.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Implement Google Mobile Ads rewarded ads."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Integrate and configure the GMA SDK rewarded-ad format in Android, iOS, or Unity."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use standard rewarded ads and explicitly exclude rewarded interstitials."
+        }
+      ],
+      "relevant": [
+        "google-mobile-ads-rewarded@22684f"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-mobile-ads-rewarded; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-140",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Audit an iOS app's Google Mobile Ads integration before launch, including ad IDs, formats, SKAdNetwork IDs, adapters, and preloading.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Validate a Google Mobile Ads SDK integration before launch."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Run GMA checks for ad-unit IDs, formats, SKAdNetwork, mediation SDK compatibility, and ad preloading."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Cover iOS, Android, or Unity integration checks and keep the work validation-focused."
+        }
+      ],
+      "relevant": [
+        "google-mobile-ads-validate@7f36d8"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by google-mobile-ads-validate; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-141",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Pressure-test this design with focused questions, resolve the important tradeoffs, and turn the accepted decisions into clear documentation.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Grill a design and produce its documentation."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use an iterative design-questioning process followed by structured documentation of the decisions."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Challenge the design before writing the final docs and keep the resulting record aligned with accepted decisions."
+        }
+      ],
+      "relevant": [
+        "grill-with-docs@2c8f68",
+        "grilling@d1adf6",
+        "domain-modeling@17785a"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by grill-with-docs; the label was assigned from the corpus description before retrieval evaluation. Independent metadata review also identified directly applicable complementary workflows; those IDs are included in the judgment."
+    },
+    {
+      "id": "positive-143",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Rewrite this AI-generated project update so it sounds natural, specific, and like the original writer.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Make AI-written text sound like its writer."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Edit diction, rhythm, and voice while preserving the source meaning and intent."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Improve naturalness without inventing facts or changing the writer's message."
+        }
+      ],
+      "relevant": [
+        "humanizer:humanizer@b9ecb2"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by humanizer:humanizer; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-144",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Create and manage a temporary privileged-access entitlement, then review and approve a pending grant.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Manage on-demand temporary access with Google Cloud PAM."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the Privileged Access Manager entitlement and grant lifecycle for create, read, update, delete, request, and approval."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep this to temporary PAM access; permanent IAM bindings and general resource provisioning are separate."
+        }
+      ],
+      "relevant": [
+        "iam-helper-for-privileged-access-management@5be3d6"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by iam-helper-for-privileged-access-management; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-145",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Redesign and polish this interface so its layout, language, and interaction details are clearer and more consistent.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Improve the design and clarity of a user interface."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply a design critique and refinement workflow across visual hierarchy, copy, layout, and interaction details."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the requested changes coherent with the product and solve the stated usability problem."
+        }
+      ],
+      "relevant": [
+        "impeccable@cdd869",
+        "ecc:make-interfaces-feel-better@c5a54a"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by impeccable; the label was assigned from the corpus description before retrieval evaluation. Independent metadata review also identified directly applicable complementary workflows; those IDs are included in the judgment."
+    },
+    {
+      "id": "positive-146",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Implement the complete repository specification as one coherent change and deliver it as a reviewable pull request.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Implement a whole specification as one PR."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Read the spec, execute its required implementation, validate the result, and package the change for review."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Treat the specification as the source of truth and keep the work integrated into one reviewable change."
+        }
+      ],
+      "relevant": [
+        "implement-spec@ffdcb4"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by implement-spec; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-147",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Find and pressure-test architecture improvements for this codebase before we commit to a refactor.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Identify and evaluate codebase architecture improvements."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Inspect boundaries, dependencies, and tradeoffs and grill candidate architecture changes."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Recommend changes grounded in the current codebase and avoid speculative redesign."
+        }
+      ],
+      "relevant": [
+        "improve-codebase-architecture@f678ba"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by improve-codebase-architecture; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-148",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Migrate our Managed Service for Apache Airflow DAGs to Airflow 3 and update breaking code using GCS scanning.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Migrate Managed Airflow DAG code safely."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Inspect, download, scan, update, and validate DAGs for MSAA Gen 2 or Gen 3 and Airflow 2.11 or 3 changes."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target code migration to newer Airflow versions; unrelated DAG-run failures are outside scope."
+        }
+      ],
+      "relevant": [
+        "managed-airflow-migrations@c80046"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by managed-airflow-migrations; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-149",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Find the current official guidance for OpenAI and Codex models, skills, tasks, and setup before implementing this integration.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Retrieve official OpenAI and Codex documentation."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Search the OpenAI and Codex documentation surface for current model, skill, task, and setup instructions."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use current official documentation and keep the lookup focused on OpenAI or Codex behavior."
+        }
+      ],
+      "relevant": [
+        "openai-docs@386c67"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by openai-docs; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-150",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Read a PDF, create a revised PDF with the requested content, render it, and verify the final pages.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Read, create, render, and verify a PDF document."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the PDF workflow to extract content, generate the document, render pages, and inspect the result."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Verify the rendered output and keep the deliverable a PDF rather than a Word or slide file."
+        }
+      ],
+      "relevant": [
+        "pdf:pdf@7c285c"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by pdf:pdf; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-151",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Review this proposed implementation only for over-engineering and identify what can be deleted or replaced with simpler code.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Find and remove unnecessary implementation complexity."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply a focused over-engineering review to surface speculative abstractions, dead flexibility, and reinvented standard-library code."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Report one concise finding per issue with a replacement and stay focused on complexity reduction."
+        }
+      ],
+      "relevant": [
+        "ponytail:ponytail-review@8ce0cb"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by ponytail:ponytail-review; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-152",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Create a polished presentation from this outline with a coherent narrative, readable slides, and appropriate visuals.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create a polished PowerPoint or Google Slides deck."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Turn the source material into a structured slide deck with layout, visuals, and presentation-ready formatting."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Design for slides and preserve the narrative; do not return a document or spreadsheet."
+        }
+      ],
+      "relevant": [
+        "presentations:Presentations@d05bb7"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by presentations:Presentations; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-153",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Find the official Google documentation for this IAM permission and API syntax question and synthesize the answer with sources.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Retrieve and synthesize official Google developer documentation."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Search and retrieve Google Cloud, Gemini, Android, Web, Flutter, Go, or Firebase developer docs through the knowledge service."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use official Google sources and do not use this workflow for local filesystem lookups or non-Google documentation."
+        }
+      ],
+      "relevant": [
+        "retrieving-developer-knowledge@92a5e9"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by retrieving-developer-knowledge; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-154",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Configure this repository to use Matt Pocock's recommended skills and setup conventions.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Set up a repository for the Matt Pocock skills."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply the setup workflow to install and configure the repository's skill surface."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Configure the repo-specific setup and preserve existing repository ownership and conventions."
+        }
+      ],
+      "relevant": [
+        "setup-matt-pocock-skills@f950a3"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by setup-matt-pocock-skills; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-155",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Add reproducible pre-commit and write-time quality checks to this repository, including formatting, linting, and required validation.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Set up pre-commit and write-time quality checks for a repository."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Configure pre-commit hooks and Plankton write-time hooks for formatting, linting, and validation commands."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the hooks reproducible and aligned with the repository checks."
+        }
+      ],
+      "relevant": [
+        "setup-pre-commit@10b8bf",
+        "ecc:plankton-code-quality@404d89"
+      ],
+      "reviewed": true,
+      "rationale": "Independent review marked setup-pre-commit and ecc:plankton-code-quality as directly applicable to repository quality checks at commit and write time; labels were frozen before retrieval evaluation."
+    },
+    {
+      "id": "positive-156",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Configure this TypeScript repository so its modules enforce deep import boundaries and avoid ambiguous package entry points.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Enforce deep TypeScript module boundaries."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply the deep-modules setup and its TypeScript configuration or checks."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Target TypeScript module resolution and deep imports rather than general JavaScript packaging."
+        }
+      ],
+      "relevant": [
+        "setup-ts-deep-modules@6fdbf9"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by setup-ts-deep-modules; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-157",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Build a polished dashboard website with navigation, data views, and responsive layout in a repository configured for Sites.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Build a website with Sites."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use the Sites workflow to create a landing page, dashboard, portal, or tracker from the requested content and interactions."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use Sites when the repository contains .openai/hosting.json and keep the result a usable web surface."
+        }
+      ],
+      "relevant": [
+        "sites:sites-building@b31cd8"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by sites:sites-building; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-158",
+      "split": "heldout",
+      "kind": "positive",
+      "task": "Install a curated skill from openai/skills into the agent environment and verify that it is available.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Install a curated agent skill."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Fetch the requested capability package from the curated repository and register it with the coding agent."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Install only the requested reviewed skill and verify availability after installation."
+        }
+      ],
+      "relevant": [
+        "skill-installer@d6f11d"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by skill-installer; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-159",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Create a clean spreadsheet from this data with formulas, useful formatting, and a layout that works in Google Sheets.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create and edit a spreadsheet or Google Sheets-ready file."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Structure tabular data, formulas, formatting, and spreadsheet-compatible output."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Deliver a spreadsheet and preserve formula semantics rather than a document or presentation."
+        }
+      ],
+      "relevant": [
+        "spreadsheets:Spreadsheets@5ee954"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by spreadsheets:Spreadsheets; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-160",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Implement a Python behavior using a focused failing pytest, the smallest fix that passes, and a cleanup pass.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Develop a Python change with test-driven development."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use pytest and follow the red, green, refactor cycle with meaningful behavioral coverage."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Start with the test and avoid tests that merely mirror the implementation."
+        }
+      ],
+      "relevant": [
+        "tdd@56ba9d",
+        "ecc:python-testing@6e1eb4"
+      ],
+      "reviewed": true,
+      "rationale": "Independent review marked tdd and ecc:python-testing as directly applicable to a Python change developed with a failing pytest and focused behavioral coverage; labels were frozen before retrieval evaluation."
+    },
+    {
+      "id": "positive-161",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Turn these reference materials into a reusable template and update the existing template without losing its source links.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create or update a reference-backed template."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Extract structure from the references and compose a reusable template with traceable source material."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the template grounded in the supplied references and preserve provenance."
+        }
+      ],
+      "relevant": [
+        "template-creator:template-creator@7fb87d"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by template-creator:template-creator; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-162",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Split this implementation plan into small tracer-bullet tickets that can be executed and reviewed independently.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Decompose a plan into actionable work tickets."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Map the plan into sequenced tracer-bullet issues with clear outcomes and dependencies."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep tickets small enough to execute while retaining the plan's end-to-end path."
+        }
+      ],
+      "relevant": [
+        "to-tickets@89e60e"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by to-tickets; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-163",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Move these incoming issues through the triage roles, assign the right labels, and record the next action for each.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Triage and route a set of issues."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply the triage role workflow to classify, label, prioritize, and route each issue."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve issue context and give each item a clear next step rather than closing it without review."
+        }
+      ],
+      "relevant": [
+        "triage@c35110"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by triage; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-164",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Turn this planning data into an interactive visual that makes the schedule and tradeoffs easy to explore.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Create an interactive visualization from data."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Map the data to an interactive chart or visual with controls for exploring relationships and scenarios."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use interaction when it clarifies the comparison and preserve the underlying data accurately."
+        }
+      ],
+      "relevant": [
+        "visualize:visualize@10ebb4"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by visualize:visualize; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-165",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Re-explain the previous answer in simpler language and include the context I need to understand the decision.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Make a technical explanation easier to understand."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Re-pitch the answer with simpler wording, missing context, and a clearer explanation of the decision."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve the substance while reducing confusion and avoiding a wholly different answer."
+        }
+      ],
+      "relevant": [
+        "wait-what@a26bc0"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by wait-what; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-166",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Write a concise operational document that another coding agent can follow without guessing about inputs, steps, or boundaries.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Write documentation that agents can consume."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Structure the document around explicit inputs, actions, outputs, and constraints for an agent workflow."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep instructions unambiguous, compact, and directly usable by another agent."
+        }
+      ],
+      "relevant": [
+        "writing-for-agents@d528db"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by writing-for-agents; the label was assigned from the corpus description before retrieval evaluation."
+    },
+    {
+      "id": "positive-167",
+      "split": "dev",
+      "kind": "positive",
+      "task": "Shape these raw notes into a clear article with a strong structure, useful transitions, and a readable narrative.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Turn raw material into a coherent article."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Organize fragments into an outline, sequence the ideas, and revise them into an article."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve the source ideas while improving structure and readability."
+        }
+      ],
+      "relevant": [
+        "writing-shape@7c0af7"
+      ],
+      "reviewed": true,
+      "rationale": "The task directly requests the capability described by writing-shape; the label was assigned from the corpus description before retrieval evaluation."
+    }
+  ],
+  "negative_cases": [
+    {
+      "id": "negative-001",
+      "split": "dev",
+      "kind": "negative",
+      "task": "Calculate 37 times 24 and show the arithmetic.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Solve a multiplication problem."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Use ordinary arithmetic and show the intermediate calculation."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Return the exact integer result and show each multiplication step."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    },
+    {
+      "id": "negative-002",
+      "split": "heldout",
+      "kind": "negative",
+      "task": "Convert 2.5 kilometres to metres.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Convert a simple metric measurement."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Multiply the value by the metric conversion factor."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Return metres as a numeric value using 1 kilometre = 1000 metres."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    },
+    {
+      "id": "negative-003",
+      "split": "dev",
+      "kind": "negative",
+      "task": "Sort these five numbers from smallest to largest: 8, 3, 11, 2, 7.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Sort a short list of numbers."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Compare the numeric values and return them in ascending order."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve all values and return them in ascending numeric order."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    },
+    {
+      "id": "negative-004",
+      "split": "heldout",
+      "kind": "negative",
+      "task": "Extract the first letter of each word in the phrase \"red green blue\".",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Transform a short phrase into initials."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Split the phrase into words and take each initial."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve only the first character of each word and return the resulting sequence."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    },
+    {
+      "id": "negative-005",
+      "split": "dev",
+      "kind": "negative",
+      "task": "What is 144 divided by 12?",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Compute a basic division."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Evaluate the exact quotient using elementary arithmetic."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Return the exact quotient as a number."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    },
+    {
+      "id": "negative-006",
+      "split": "heldout",
+      "kind": "negative",
+      "task": "Reverse the characters in the string \"strawberry\".",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Reverse a short string."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Read the characters from right to left."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Preserve every character and reverse their order."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    },
+    {
+      "id": "negative-007",
+      "split": "dev",
+      "kind": "negative",
+      "task": "Count the words in this sentence: \"A small bird crossed the garden.\"",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Count words in a sentence."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Tokenize the sentence on its whitespace-separated words."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Count the words separated by spaces and return the integer count."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    },
+    {
+      "id": "negative-008",
+      "split": "heldout",
+      "kind": "negative",
+      "task": "Convert the hexadecimal number 2A to decimal.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Convert a hexadecimal integer to decimal."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Evaluate the base-16 digits using positional notation."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Use base-16 positional values and return a decimal integer."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    },
+    {
+      "id": "negative-009",
+      "split": "dev",
+      "kind": "negative",
+      "task": "Return the unique values from [4, 4, 9, 1, 9] in first-seen order.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Deduplicate a short list while preserving order."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Scan the list and retain the first occurrence of each value."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Keep the first occurrence order while dropping repeated values."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    },
+    {
+      "id": "negative-010",
+      "split": "heldout",
+      "kind": "negative",
+      "task": "Complete the sequence 2, 4, 6, 8, __ with the next number.",
+      "queries": [
+        {
+          "perspective": "outcome",
+          "query": "Continue a simple arithmetic sequence."
+        },
+        {
+          "perspective": "mechanism",
+          "query": "Apply the constant difference between consecutive terms."
+        },
+        {
+          "perspective": "constraints",
+          "query": "Identify the constant difference and return the next integer."
+        }
+      ],
+      "relevant": [],
+      "reviewed": true,
+      "rationale": "Independently selected as a self-contained transformation that does not require workflow guidance; no retrieval results were consulted."
+    }
+  ],
+  "name": "skillwick-evaluation-30pct-seed-20260913",
+  "provenance": {
+    "corpus_manifest": "target/evaluation/corpus.json",
+    "export_command": "python3 scripts/evaluate_skills.py export --skillwick skillwick --output target/evaluation/corpus.json --coverage 0.30 --seed 20260913",
+    "reviewer": "codex-evaluation-author",
+    "method": "Agent-authored independent review from corpus descriptions before retrieval replay; no search results or model selections were used."
+  }
+}

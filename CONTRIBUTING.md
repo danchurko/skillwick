@@ -9,6 +9,10 @@ they enter the supported surface.
 Install stable Rust, then run:
 
 ```sh
+git clone https://github.com/danchurko/skillwick.git
+cd skillwick
+cargo build --release --locked
+./target/release/skillwick --version
 make check
 ```
 
@@ -39,7 +43,26 @@ fixture library.
 See [the design contract](docs/SPEC.md), [architecture](docs/ARCHITECTURE.md),
 and [verification record](docs/IMPLEMENTATION.md).
 
+For retrieval work, use the [evaluation guide](docs/BENCHMARKS.md). Keep the
+corpus, judgments, and query budget fixed across comparisons. Real model runs
+are separate from local checks and use the account configured for Codex.
+Run `make test-evaluation` with uv for the Python evaluation checks. They use
+fake executables and do not make model requests; CI runs them separately from
+the Rust checks.
+
 ## Pull requests
 
 Keep changes focused. Include the motivation, behavioral impact, tests run, and
 remaining limits. Use Conventional Commits for commit and pull-request titles.
+
+## Release maintenance
+
+Publish the arm64 and x86_64 archives with their per-file SHA-256 checksums.
+Keep build manifests in CI and use `scripts/install.sh` as the script installer.
+Update the Homebrew formula from verified published archive digests.
+
+The generated release workflow has one deliberate customization: the publication
+allowlist. `allow-dirty = ["ci"]` preserves it, so `dist generate --check` alone
+does not verify workflow consistency. After changing cargo-dist configuration,
+regenerate CI in a temporary copy without that exemption and verify that only
+the publication cleanup step differs.

@@ -1,7 +1,13 @@
-# Skillwick v1 implementation record
+# Verification history
 
-Status: v0.1.0 published. Verification used synthetic skill packages and
-temporary homes only. No test changed live Codex configuration.
+This is a dated implementation record, beginning with v0.1.0 and followed by
+later evidence below. Version numbers, test counts, toolchains, and release
+incidents describe their respective runs, not current project status. Use the
+[usage guide](USAGE.md), [compatibility](COMPATIBILITY.md), and
+[evaluation guide](BENCHMARKS.md) for the current supported surface.
+
+The original v0.1.0 verification used synthetic skill packages and temporary
+homes. No setup test changed live Codex configuration.
 
 ## Execution plan
 
@@ -148,13 +154,13 @@ archive, verified its checksum, installed into a temporary prefix, and returned
 - The optional suggestion-hook command is cached-only and failure-open. Codex
   still requires native review and trust before the installed handler runs.
 
-Commands, results, hardware, compatibility evidence, evaluation metrics, and
-remaining limits will be recorded here after each milestone passes.
+New verification entries retain their run dates and distinguish historical
+evidence from current behaviour.
 
 ## Post-v0.1 benchmark and integration evidence
 
 On 12 September 2026, the production-path benchmark evaluated 65 labelled tasks
-against 418 enabled records from the maintainer's live Codex inventory. Native
+against a captured Codex inventory containing 418 enabled records. Native
 `skills/list` supplied 327 ECC skills, 15 other plugin skills, and 76 records
 without a plugin ID. Temporary Skillwick config, cache, and state kept the run
 isolated without hiding installed plugins. The optimized lexical runner measured
@@ -172,3 +178,19 @@ additional context, then uninstall removed only Skillwick's handler. Codex's
 trust review remains unchanged. This matches the official
 [Codex hooks contract](https://learn.chatgpt.com/docs/hooks): matching hook
 sources coexist and non-managed hooks require review.
+
+## v0.1.4 distribution verification
+
+On 13 September 2026, both published macOS archives were downloaded to a
+temporary directory. Their individual checksum files validated, both archives
+contained the expected target directory, executable, README, and two licences,
+and the arm64 archive passed the repository installer's real-archive smoke path.
+GitHub reports archive digests beginning `fc51722e2622` (arm64) and
+`0723cd48b632` (x86_64), matching `Formula/skillwick.rb`.
+
+The release workflow now deletes every publication artifact except the two
+architecture archives and their individual checksums before upload. This is a
+future-release allowlist; historical v0.1.4 assets were not rewritten. A fresh
+arm64 build from this worktree passed. The Homebrew Rust installation lacks the
+x86_64 standard library, so the current x86_64 source build was not independently
+repeated locally; the downloaded x86_64 archive and checksum were verified.

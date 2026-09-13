@@ -1,7 +1,7 @@
 # Local English embedding and reranking models
 
 Reviewed 12 September 2026. This is a source-backed selection for Skillwick,
-not a benchmark run on this Mac. Sources are model cards/configuration files
+not a Skillwick benchmark. Sources are model cards/configuration files
 and the local repository specification; model metadata was checked on the
 review date.
 
