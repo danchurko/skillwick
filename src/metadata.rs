@@ -1,10 +1,41 @@
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use std::{fs, path::Path};
+use std::{
+    fs,
+    io::{self, Read},
+    path::Path,
+};
 
 pub const MAX_FILE: usize = 1024 * 1024;
 const MAX_FRONTMATTER: usize = 64 * 1024;
 const MAX_DESCRIPTION: usize = 8 * 1024;
+
+#[derive(Debug)]
+pub(crate) enum ReadError {
+    Io(io::Error),
+    TooLarge,
+}
+
+impl ReadError {
+    pub(crate) fn is_too_large(&self) -> bool {
+        matches!(self, Self::TooLarge)
+    }
+}
+
+impl std::fmt::Display for ReadError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(error) => error.fmt(formatter),
+            Self::TooLarge => formatter.write_str("file exceeds its size limit"),
+        }
+    }
+}
+
+impl From<io::Error> for ReadError {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
+}
 
 #[derive(Debug, Deserialize)]
 struct Frontmatter {
@@ -36,11 +67,30 @@ pub struct Metadata {
     pub policy_diagnostic: Option<String>,
 }
 
-pub fn parse(path: &Path) -> Result<Metadata, String> {
-    let bytes = fs::read(path).map_err(|e| e.to_string())?;
-    if bytes.len() > MAX_FILE {
-        return Err("instruction file exceeds 1 MiB".into());
+pub(crate) fn read_bounded(path: &Path, limit: usize) -> Result<Vec<u8>, ReadError> {
+    let file = fs::File::open(path)?;
+    if file.metadata()?.len() > limit as u64 {
+        return Err(ReadError::TooLarge);
     }
+
+    // The metadata check avoids an oversized allocation in the normal case;
+    // the extra byte closes the race where a file grows after that check.
+    let mut bytes = Vec::new();
+    file.take(limit as u64 + 1).read_to_end(&mut bytes)?;
+    if bytes.len() > limit {
+        return Err(ReadError::TooLarge);
+    }
+    Ok(bytes)
+}
+
+pub fn parse(path: &Path) -> Result<Metadata, String> {
+    let bytes = read_bounded(path, MAX_FILE).map_err(|error| {
+        if error.is_too_large() {
+            "instruction file exceeds 1 MiB".to_owned()
+        } else {
+            error.to_string()
+        }
+    })?;
     let raw =
         std::str::from_utf8(&bytes).map_err(|_| "instruction file is not UTF-8".to_string())?;
     let text = raw.strip_prefix('\u{feff}').unwrap_or(raw);
@@ -156,28 +206,20 @@ fn adjacent_policy(path: &Path) -> (Option<bool>, Option<String>) {
         .parent()
         .unwrap_or_else(|| Path::new("."))
         .join("agents/openai.yaml");
-    let bytes = match fs::read(&policy_path) {
+    let bytes = match read_bounded(&policy_path, MAX_FRONTMATTER) {
         Ok(bytes) => bytes,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return (None, None),
+        Err(ReadError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
+            return (None, None)
+        }
         Err(error) => {
-            return (
-                None,
-                Some(format!(
-                    "invocation policy: unable to read {}: {error}",
-                    policy_path.display()
-                )),
-            )
+            let detail = if error.is_too_large() {
+                format!("{} exceeds 64 KiB", policy_path.display())
+            } else {
+                format!("unable to read {}: {error}", policy_path.display())
+            };
+            return (None, Some(format!("invocation policy: {detail}")));
         }
     };
-    if bytes.len() > MAX_FRONTMATTER {
-        return (
-            None,
-            Some(format!(
-                "invocation policy: {} exceeds 64 KiB",
-                policy_path.display()
-            )),
-        );
-    }
     let text = match std::str::from_utf8(&bytes) {
         Ok(text) => text,
         Err(_) => {

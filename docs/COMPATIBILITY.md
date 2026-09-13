@@ -1,7 +1,9 @@
 # Compatibility
 
 Skillwick v1 has one supported integration and one supported operating-system
-family. Other environments are not implied by portable Rust source.
+family. Other environments are not implied by portable Rust source. The
+compatibility table is a support boundary, not a promise that every Rust target
+will receive a release artifact.
 
 ## Coding agents
 
@@ -37,3 +39,7 @@ terminates the short-lived child.
 Compatibility is based on the detected CLI executable. New Codex versions need
 a release-tagged fixture, source review, and real integration proof before
 Skillwick changes native catalogue policy.
+
+For current commands and failure semantics, see the [reference](REFERENCE.md).
+For installation and recovery, see [getting started](GETTING_STARTED.md) and
+[operations](OPERATIONS.md).

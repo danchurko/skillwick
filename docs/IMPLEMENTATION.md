@@ -1,148 +1,83 @@
-# Verification history
+# Implementation and verification history
 
-This is a dated implementation record, beginning with v0.1.0 and followed by
-later evidence below. Version numbers, test counts, toolchains, and release
-incidents describe their respective runs, not current project status. Use the
-[usage guide](USAGE.md) and [compatibility](COMPATIBILITY.md) for the current
-supported surface.
+This is a dated record of implementation and release evidence. Version numbers,
+test counts, toolchains, and release incidents describe their respective runs,
+not current project status. Use the [getting-started guide](GETTING_STARTED.md),
+[operations guide](OPERATIONS.md), and [reference](REFERENCE.md) for the
+current supported surface.
 
-The original v0.1.0 verification used synthetic skill packages and temporary
-homes. No setup test changed live Codex configuration.
+## Initial implementation record
 
-## Execution plan
+The first implementation established scoped source discovery, bounded metadata
+parsing, one SQLite/FTS5 index, deterministic search, live `read`, short-lived
+Codex inventory, compatibility checks, reversible setup, diagnostics,
+uninstall, and macOS release artifacts.
 
-1. Prove the lexical vertical slice: scoped source discovery, bounded metadata
-   parsing, one SQLite/FTS5 index, deterministic search, and live `read`.
-2. Add lifecycle safety: refresh semantics, short-lived Codex inventory,
-   compatibility checks, reversible setup, diagnostics, and uninstall.
-3. Prepare native macOS release artifacts, packaging, installer fixtures, and
-   an evidence-backed release-candidate report.
+The following decisions remain part of the product history:
 
-## Fixed decisions
+- Existing package owners retain installed skills and updates. Skillwick stores
+  derived metadata and integration state only.
+- Search is explicit, local, and lexical. The production path has no MCP
+  server, daemon, remote registry, package installer, or instruction execution.
+- Native catalogue suppression is limited to explicitly supported Codex
+  versions after replacement discovery succeeds.
+- Setup and installer tests use isolated homes and fixture executables; they do
+  not modify persistent user configuration.
+- Integration edits use marked ownership and conditional rollback. Uninstall
+  preserves installed skills and unrelated configuration.
 
-- Installed packages remain owned by their existing installers. Skillwick stores
-  derived metadata only.
-- Search stays lexical and local. No MCP server, Codex fork, daemon, embeddings,
-  remote registry, package installer, or instruction execution exists in v1.
-- Codex catalogue suppression is enabled only for explicitly supported versions,
-  after the replacement instruction and an indexable source are verified.
-- Setup tests use isolated `HOME`, `CODEX_HOME`, XDG directories, and fixture
-  executables. No test targets live workstation configuration.
-- Integration edits use marked ownership plus conditional rollback. Uninstall
-  preserves installed and third-party skills.
+## Retained implementation evidence
 
-## Implemented surface
+The shipped surface includes:
 
 - Scoped filesystem discovery for global, project, ancestor, and explicit roots;
-  canonical deduplication; authorized-root symlink checks; cycle detection.
-- Bounded Agent Skills frontmatter parsing with BOM, CRLF, Unicode, folded YAML,
-  duplicate-key, size-limit, invalid-YAML, and degraded-description handling.
-- One bundled SQLite database with transactional metadata/FTS5 updates, bounded
-  lock waits, safe incomplete-scan behavior, technical-token aliases, weighted
-  BM25, exact-name and term-coverage ranking, and deterministic ties.
+  canonical deduplication; authorized-root symlink checks; and cycle detection.
+- Bounded Agent Skills frontmatter parsing with Unicode, duplicate-key,
+  size-limit, invalid-YAML, and degraded-description handling.
+- Transactional SQLite/FTS5 refreshes, bounded lock waits, safe incomplete-scan
+  behavior, deterministic ranking, and technical-token aliases.
 - Search, `read`, `inspect`, `list`, `refresh`, `init`, `doctor`, `uninstall`,
-  JSON output, and zsh completions.
-- Short-lived Codex `skills/list` inventory with bounded newline-delimited JSON,
-  interleaved-notification handling, request IDs, stderr capture, timeout, EOF,
-  and child termination. Native enabled state suppresses filesystem aliases.
-- Reversible SKILLWICK.md context/reference and TOML integration with atomic
-  writes, restrictive permissions, an ownership journal, override/collision
-  checks, and conditional leaf rollback.
-- cargo-dist configuration and generated GitHub release workflow, native Mac
-  archives/checksums, a Homebrew formula template, and an explicit version/prefix
-  installer that does not edit a home directory.
+  versioned JSON output, and Zsh completions.
+- A short-lived Codex `skills/list` inventory with bounded newline-delimited
+  JSON, interleaved-notification handling, request IDs, timeout, EOF, and child
+  termination.
+- Reversible Skillwick context/reference and TOML integration with atomic writes,
+  restrictive permissions, ownership journaling, collision checks, and
+  conditional rollback.
+- cargo-dist macOS archives, per-file SHA-256 checksums, a Homebrew formula
+  template, and an explicit-prefix installer.
 
 ## Verification log
 
-Host: Apple Silicon Mac, macOS 26.6.2. Temporary toolchain: Rust 1.98.1 in
-`/private/tmp`. Installed Codex CLI: 0.154.0.
+The release checks use isolated temporary homes and fixture packages. Codex
+integration uses the supported CLI contract and does not modify installed skills
+or persistent user configuration.
 
-The locked dependency graph also passed `cargo +1.88.0 check --all-targets
---locked --offline`. Rust 1.85.0 correctly failed because current locked
-dependencies require 1.88, so `package.rust-version` now states 1.88.
+Core source checks are:
 
-Core checks:
-
-```text
+```sh
 cargo fmt --check
-cargo clippy --all-targets --locked --offline -- -D warnings
-cargo test --all-targets --locked --offline
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --all-targets --locked
+make check
 ```
 
-Result: the retained Rust, CLI acceptance, Codex integration, and distribution
-checks passed separately.
-
-`tests/cli_acceptance.sh` proved temporary-home setup, repeatability, global and
-project scope, no sibling leakage, paths with spaces, C++/C#/.NET/Node.js query
-handling, JSON, relative-base `read`, output bounds, exit codes, deletion,
-dry-run, and clean broken-pipe behavior.
-
-`tests/codex_integration.sh` used the real 0.154.0 app server with a temporary
-`HOME`, `CODEX_HOME`, and XDG tree. It proved the requested working-directory
-scope, native inventory, strict doctor health, inventory before catalogue
-suppression, no managed writes after an inventory failure, the owned
-context/reference config changes, explicit reads, uninstall, and preservation
-of later unrelated edits.
-
-Pinned cargo-dist 0.28.0 generated the GitHub workflow. `dist plan`
-selected only `aarch64-apple-darwin` and `x86_64-apple-darwin`. `dist build`
-created both archives and SHA-256 files. Both binaries were identified as the
-expected Mach-O architecture; the Intel binary also ran through Rosetta on this
-host. `otool -L` showed only system libraries, confirming bundled SQLite. Build
-load commands target macOS 11.0 for arm64 and 10.12 for x86_64; runtime execution
-was tested only on macOS 26.6.2. Installer and archive checksum smoke tests
-passed. Ruby formula syntax and shell syntax checks passed.
-
-GitHub Actions CI run
-[`34687019561`](https://github.com/churdaa/skillwick/actions/runs/34687019561)
-passed `make check` on commit `52c581d8b9d73e43cb02e39270d5dd61b2b273d7`.
-The final main-branch run
-[`34687599560`](https://github.com/churdaa/skillwick/actions/runs/34687599560)
-also passed after the release workflow runner update.
-
-The public
-[`v0.1.0` release](https://github.com/churdaa/skillwick/releases/tag/v0.1.0)
-contains arm64 and x86_64 archives plus separate SHA-256 files. GitHub reports
-archive digests `86a24cd4d6653f752a44f00c5b4ff98081786404f372af539e3f1f3eec591506`
-and `dcc272ae3d486dc6e5d6ec0d18903095ab5f09879f6271e2fd2e25c747e9196b`,
-matching the formula and local build evidence. Fetching the installer from the
-immutable tag into an isolated temporary home downloaded the public arm64
-archive, verified its checksum, installed into a temporary prefix, and returned
-`skillwick 0.1.0`.
+The retained CLI, Codex, distribution, documentation, and trust-boundary checks
+are run separately so source tests are not mistaken for release or integration
+evidence. Published release verification additionally checks archive layout,
+checksums, executable versions, installer behavior, and package metadata.
 
 ## Compatibility and limits
 
-- Codex 0.154.0 accepted `skills.include_instructions = false`; its real
-  `skills/list` RPC returned current system/user inventory. Other versions
+- Codex 0.154.0 accepts `skills.include_instructions = false`; its native
+  `skills/list` contract is covered by the integration fixture. Other versions
   default to filesystem discovery only.
-- Signing, notarization, and execution on an actual Intel Mac or older macOS
-  release remain unverified.
-- The first tag-triggered cargo-dist run could not start because its generated
-  workflow selected retired `ubuntu-20.04` runners. The run was cancelled and
-  main now selects `ubuntu-24.04`; the v0.1.0 assets were published from the
-  exact locally verified cargo-dist archives. A later tag must prove the fixed
-  release workflow end to end.
-- Non-full refresh currently hashes every discovered metadata document. This is
-  simpler and correct; stat-based hash skipping can be added if real libraries
-  show refresh cost is material.
+- macOS arm64 is the supported runtime. macOS x86_64 archives are built, but
+  hardware and older macOS runtime coverage remain limited.
+- Signing and notarization are not claimed unless a release verifies them.
+- Historical benchmark and model-research measurements are not production
+  quality claims. Current research boundaries are recorded in [research](RESEARCH.md).
 
-New verification entries retain their run dates and distinguish historical
-evidence from current behaviour.
-
-## v0.1.4 distribution verification
-
-On 13 September 2026, both published macOS archives were downloaded to a
-temporary directory. Their individual checksum files validated, both archives
-contained the expected target directory, executable, README, and two licences,
-the arm64 archive passed the repository installer's real-archive smoke path, and
-the x86_64 binary reported `skillwick 0.1.4` under Rosetta.
-GitHub reports archive digests beginning `fc51722e2622` (arm64) and
-`0723cd48b632` (x86_64), matching `Formula/skillwick.rb`.
-
-The release workflow now deletes every publication artifact except the two
-architecture archives and their individual checksums before upload. This is a
-future-release allowlist; historical v0.1.4 assets were not rewritten. A fresh
-arm64 build from this worktree passed. The Homebrew Rust installation lacks the
-x86_64 standard library, so the current x86_64 source build was not independently
-repeated locally; the downloaded x86_64 archive, checksum, and executable version
-were verified.
+The detailed host, path, and release-run metadata remains in the corresponding
+CI or release records. This document keeps only evidence needed to understand
+the product history and its limits.

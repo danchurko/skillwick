@@ -515,10 +515,13 @@ fn validate_source(row: &search::ResultRow) -> Result<ValidatedSource, Failure> 
             3,
         ));
     }
-    let bytes = fs::read(&current).map_err(|_| Failure("skill source is unavailable".into(), 3))?;
-    if bytes.len() > metadata::MAX_FILE {
-        return Err(Failure("instruction file exceeds 1 MiB".into(), 3));
-    }
+    let bytes = metadata::read_bounded(&current, metadata::MAX_FILE).map_err(|error| {
+        if error.is_too_large() {
+            Failure("instruction file exceeds 1 MiB".into(), 3)
+        } else {
+            Failure("skill source is unavailable".into(), 3)
+        }
+    })?;
     if format!("{:x}", Sha256::digest(&bytes)) != row.hash {
         return Err(Failure(
             "skill changed after indexing; run `skillwick refresh`".into(),

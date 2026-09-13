@@ -16,9 +16,10 @@ cargo build --release --locked
 make check
 ```
 
-`make check` formats, lints, runs Rust tests, and exercises the filesystem CLI
-and installer with temporary homes. Codex-specific checks are separate because
-they require an installed compatible Codex CLI:
+`make check` formats, lints, runs Rust tests, exercises the filesystem CLI and
+installer with temporary homes, checks documentation contracts, and runs
+trust-boundary regressions. Codex-specific checks are separate because they
+require an installed compatible Codex CLI:
 
 ```sh
 make test-codex
@@ -30,6 +31,13 @@ uses isolated `HOME`, `CODEX_HOME`, and XDG directories. The inference test uses
 the caller's existing Codex authentication but gives the model only a temporary
 fixture library.
 
+Run the documentation and trust checks directly when changing their surfaces:
+
+```sh
+make docs-check
+make test-trust
+```
+
 ## Design rules
 
 - Keep installed skills in their existing locations.
@@ -40,8 +48,8 @@ fixture library.
 - Keep source, metadata, and policy errors visible. Never treat an incomplete
   scan as proof that a skill was deleted.
 
-See [the implementation specification](docs/design/discovery-spec.md), [architecture](docs/ARCHITECTURE.md),
-and [verification record](docs/IMPLEMENTATION.md).
+See [the architecture](docs/ARCHITECTURE.md), [command reference](docs/REFERENCE.md),
+[decisions](docs/DECISIONS.md), and [verification history](docs/IMPLEMENTATION.md).
 
 Keep the CLI's search path explicit and local. Tests should use temporary homes
 and fixture skill packages for filesystem and Codex integration coverage; do not

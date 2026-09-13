@@ -1,4 +1,4 @@
-.PHONY: build check dependency-assurance fmt hooks lint test test-cli test-codex test-inference dist
+.PHONY: build check dependency-assurance docs-check fmt hooks lint test test-cli test-codex test-inference test-trust dist
 
 build:
 	cargo build --locked
@@ -25,7 +25,13 @@ test-codex: build
 test-inference: build
 	sh tests/inference_smoke.sh target/debug/skillwick
 
-check: fmt lint test test-cli
+docs-check: build
+	sh tests/docs_check.sh target/debug/skillwick
+
+test-trust: build
+	sh tests/trust_boundary.sh target/debug/skillwick
+
+check: fmt lint test test-cli docs-check test-trust
 
 dependency-assurance:
 	./scripts/dependency-assurance.sh

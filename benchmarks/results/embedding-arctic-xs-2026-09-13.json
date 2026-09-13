@@ -1,0 +1,3094 @@
+{
+  "version": 1,
+  "kind": "skillwick-embedding-experiment",
+  "measured_at": "2026-09-13T23:07:51.863887+00:00",
+  "status": "research-only; no production behavior changed",
+  "profile_sha256": "f398dcba56af7f64061ab13a95cd12cfdd35ce96a643165a0ba4b1ecea10f959",
+  "model": {
+    "name": "snowflake/snowflake-arctic-embed-xs",
+    "revision": "d8c86521100d3556476a063fc2342036d45c106f",
+    "file": "onnx/model.onnx",
+    "sha256": "cf2698d30ff05da02c70a088313bad56e5c2f401d734cb24a8390d446111936c",
+    "bytes": 90387631,
+    "license": "Apache-2.0"
+  },
+  "runtime": {
+    "python": "3.10.21",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "fastembed": "0.8.0",
+    "onnxruntime": "1.23.2"
+  },
+  "measurements": {
+    "cold_model_load_ms": 145.474292,
+    "index_or_candidate_build_ms": 20462.6065,
+    "warm_query_ms": {
+      "samples": 315,
+      "min": 0.930833,
+      "median": 2.50425,
+      "p95": 4.614583,
+      "max": 6.490375
+    },
+    "peak_rss_kib": 840464,
+    "artifact_bytes": 90387631
+  },
+  "quality": {
+    "queries": 105,
+    "recall_at_5": 0.7428571428571429,
+    "mrr_at_5": 0.63,
+    "ndcg_at_5": 0.6585200901126524
+  },
+  "failure_behavior": {
+    "missing": "model artifact missing",
+    "corrupt": "model artifact checksum mismatch",
+    "verified_before_offline_model_load": true,
+    "lexical_search_affected": false
+  },
+  "rankings": [
+    {
+      "id": "positive-004:1",
+      "query": "Author and deploy a reliable AWS CDK stack in TypeScript.",
+      "relevant": [
+        "aws-cdk"
+      ],
+      "ranked": [
+        "aws-cdk",
+        "aws-sdk-js-v3-usage",
+        "aws-sdk-swift-usage",
+        "ecc:source-command-hookify-help",
+        "aws-deployment",
+        "ecc:nextjs-turbopack",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-epic-publish",
+        "template-creator:template-creator",
+        "prototype",
+        "ecc:source-command-setup-pm",
+        "ecc:source-command-epic-sync",
+        "ecc:source-command-gradle-build",
+        "codebase-design",
+        "spreadsheets:Spreadsheets",
+        "ecc:source-command-epic-validate",
+        "migrate-to-shoehorn",
+        "domain-modeling",
+        "aws-cloudformation",
+        "setup-pre-commit"
+      ]
+    },
+    {
+      "id": "positive-004:2",
+      "query": "Use CDK constructs, synth or diff, deployment, and CloudFormation troubleshooting patterns.",
+      "relevant": [
+        "aws-cdk"
+      ],
+      "ranked": [
+        "aws-cdk",
+        "code-review",
+        "diagnosing-bugs",
+        "domain-modeling",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-feature-dev",
+        "setup-pre-commit",
+        "wizard",
+        "resolving-merge-conflicts",
+        "prototype",
+        "deslop",
+        "migrate-to-shoehorn",
+        "codebase-design",
+        "template-creator:template-creator",
+        "research",
+        "skill-creator",
+        "ecc:deployment-patterns",
+        "ecc:source-command-update-codemaps",
+        "gke-compute-classes",
+        "ecc:source-command-gradle-build"
+      ]
+    },
+    {
+      "id": "positive-004:3",
+      "query": "Stay within AWS CDK and preserve existing resources while resolving drift or deployment errors.",
+      "relevant": [
+        "aws-cdk"
+      ],
+      "ranked": [
+        "aws-cdk",
+        "resolving-merge-conflicts",
+        "aws-deployment",
+        "setup-pre-commit",
+        "ecc:source-command-feature-dev",
+        "ecc:deployment-patterns",
+        "aws-cloudformation",
+        "ecc:source-command-hookify-help",
+        "diagnosing-bugs",
+        "domain-modeling",
+        "migrate-to-shoehorn",
+        "ecc:source-command-epic-publish",
+        "ecc:source-command-auto-update",
+        "ecc:source-command-promote",
+        "aws-compute",
+        "aws-serverless",
+        "skill-creator",
+        "aws-storage",
+        "template-creator:template-creator",
+        "ecc:source-command-epic-validate"
+      ]
+    },
+    {
+      "id": "positive-008:1",
+      "query": "Analyze BigQuery data with the Python BigFrames API.",
+      "relevant": [
+        "bigquery-bigframes"
+      ],
+      "ranked": [
+        "bigquery-bigframes",
+        "bigquery-ai-ml",
+        "bigquery-basics",
+        "jupyter-notebook",
+        "gke-cost-analysis",
+        "aws-billing-and-cost-management",
+        "bigtable-basics",
+        "codebase-memory",
+        "research",
+        "openai-docs",
+        "prototype",
+        "developing-genkit-python",
+        "aws-storage",
+        "cloud-monitoring-metric-selection",
+        "code-review",
+        "visualize:visualize",
+        "datalineage-bigquery-asset-impact-analysis",
+        "find-docs",
+        "spreadsheets:Spreadsheets",
+        "resolving-merge-conflicts"
+      ]
+    },
+    {
+      "id": "positive-008:2",
+      "query": "Generate BigQuery DataFrames code using the pandas and scikit-learn style interface.",
+      "relevant": [
+        "bigquery-bigframes"
+      ],
+      "ranked": [
+        "bigquery-bigframes",
+        "jupyter-notebook",
+        "bigquery-ai-ml",
+        "visualize:visualize",
+        "spreadsheets:Spreadsheets",
+        "openai-docs",
+        "deslop",
+        "prototype",
+        "bigquery-basics",
+        "developing-genkit-python",
+        "research",
+        "code-review",
+        "bigtable-basics",
+        "skill-installer",
+        "wizard",
+        "imagegen",
+        "codebase-design",
+        "skill-creator",
+        "ecc:source-command-feature-dev",
+        "template-creator:template-creator"
+      ]
+    },
+    {
+      "id": "positive-008:3",
+      "query": "Use BigFrames for the notebook workflow rather than SQL-first code or the low-level BigQuery client.",
+      "relevant": [
+        "bigquery-bigframes"
+      ],
+      "ranked": [
+        "bigquery-bigframes",
+        "jupyter-notebook",
+        "bigtable-basics",
+        "bigquery-ai-ml",
+        "visualize:visualize",
+        "setup-pre-commit",
+        "openai-docs",
+        "bigquery-basics",
+        "spreadsheets:Spreadsheets",
+        "code-review",
+        "prototype",
+        "research",
+        "resolving-merge-conflicts",
+        "wizard",
+        "dbt-sf-to-bq-translator",
+        "deslop",
+        "skill-installer",
+        "writing-for-agents",
+        "pdf:pdf",
+        "ecc:source-command-feature-dev"
+      ]
+    },
+    {
+      "id": "positive-009:1",
+      "query": "Reduce an answer to a compact, technically accurate form.",
+      "relevant": [
+        "caveman"
+      ],
+      "ranked": [
+        "prototype",
+        "code-review",
+        "impeccable",
+        "wizard",
+        "research",
+        "grilling",
+        "codebase-design",
+        "template-creator:template-creator",
+        "domain-modeling",
+        "migrate-to-shoehorn",
+        "setup-pre-commit",
+        "skill-creator",
+        "visualize:visualize",
+        "ecc:source-command-feature-dev",
+        "deslop",
+        "ecc:article-writing",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-review-pr",
+        "tdd",
+        "verify-this"
+      ]
+    },
+    {
+      "id": "positive-009:2",
+      "query": "Apply the compressed communication mode at an appropriate lite, full, or ultra level.",
+      "relevant": [
+        "caveman"
+      ],
+      "ranked": [
+        "caveman",
+        "code-review",
+        "setup-pre-commit",
+        "wizard",
+        "deslop",
+        "resolving-merge-conflicts",
+        "domain-modeling",
+        "prototype",
+        "codebase-design",
+        "ecc:source-command-hookify-help",
+        "research",
+        "ecc:source-command-review-pr",
+        "humanizer:humanizer",
+        "ecc:source-command-feature-dev",
+        "ecc:article-writing",
+        "ecc:nasiko-control-plane",
+        "migrate-to-shoehorn",
+        "impeccable",
+        "ecc:configure-ecc",
+        "visualize:visualize"
+      ]
+    },
+    {
+      "id": "positive-009:3",
+      "query": "Preserve technical meaning while minimizing output tokens and use the requested concise voice.",
+      "relevant": [
+        "caveman"
+      ],
+      "ranked": [
+        "code-review",
+        "impeccable",
+        "prototype",
+        "domain-modeling",
+        "ecc:source-command-feature-dev",
+        "setup-pre-commit",
+        "codebase-design",
+        "caveman",
+        "wizard",
+        "humanizer:humanizer",
+        "ecc:article-writing",
+        "deslop",
+        "visualize:visualize",
+        "research",
+        "ecc:source-command-hookify",
+        "ecc:source-command-update-codemaps",
+        "skill-creator",
+        "resolving-merge-conflicts",
+        "ecc:source-command-review-pr",
+        "template-creator:template-creator"
+      ]
+    },
+    {
+      "id": "positive-030:1",
+      "query": "Optimize a ClickHouse analytical workload.",
+      "relevant": [
+        "ecc:clickhouse-io"
+      ],
+      "ranked": [
+        "ecc:clickhouse-io",
+        "wizard",
+        "setup-pre-commit",
+        "code-review",
+        "visualize:visualize",
+        "migrate-to-shoehorn",
+        "domain-modeling",
+        "research",
+        "diagnosing-bugs",
+        "grilling",
+        "prototype",
+        "resolving-merge-conflicts",
+        "ecc:data-throughput-accelerator",
+        "tdd",
+        "impeccable",
+        "template-creator:template-creator",
+        "ecc:source-command-feature-dev",
+        "skill-installer",
+        "ecc:benchmark",
+        "ecc:ito-baskets"
+      ]
+    },
+    {
+      "id": "positive-030:2",
+      "query": "Apply ClickHouse schema, query-planning, and data-engineering patterns for high-performance analytics.",
+      "relevant": [
+        "ecc:clickhouse-io"
+      ],
+      "ranked": [
+        "ecc:clickhouse-io",
+        "research",
+        "visualize:visualize",
+        "domain-modeling",
+        "setup-pre-commit",
+        "bigquery-ai-ml",
+        "wizard",
+        "code-review",
+        "ecc:source-command-feature-dev",
+        "migrate-to-shoehorn",
+        "prototype",
+        "ecc:source-command-projects",
+        "spanner-basics",
+        "bigtable-basics",
+        "codebase-design",
+        "tdd",
+        "diagnosing-bugs",
+        "writing-for-agents",
+        "template-creator:template-creator",
+        "resolving-merge-conflicts"
+      ]
+    },
+    {
+      "id": "positive-030:3",
+      "query": "Keep the workload analytical and ClickHouse-specific rather than general SQL tuning.",
+      "relevant": [
+        "ecc:clickhouse-io"
+      ],
+      "ranked": [
+        "ecc:clickhouse-io",
+        "setup-pre-commit",
+        "code-review",
+        "wizard",
+        "resolving-merge-conflicts",
+        "domain-modeling",
+        "ecc:data-throughput-accelerator",
+        "research",
+        "grilling",
+        "impeccable",
+        "diagnosing-bugs",
+        "ecc:source-command-feature-dev",
+        "migrate-to-shoehorn",
+        "agent-platform-tuning",
+        "visualize:visualize",
+        "prototype",
+        "ecc:benchmark",
+        "ecc:source-command-hookify-help",
+        "tdd",
+        "bigtable-basics"
+      ]
+    },
+    {
+      "id": "positive-031:1",
+      "query": "Produce a step-by-step CodeTour for a codebase.",
+      "relevant": [
+        "ecc:code-tour"
+      ],
+      "ranked": [
+        "ecc:source-command-feature-dev",
+        "codebase-design",
+        "code-review",
+        "prototype",
+        "domain-modeling",
+        "ecc:source-command-hookify-help",
+        "deslop",
+        "setup-pre-commit",
+        "wizard",
+        "template-creator:template-creator",
+        "ecc:source-command-update-codemaps",
+        "visualize:visualize",
+        "research",
+        "ecc:code-tour",
+        "imagegen",
+        "diagnosing-bugs",
+        "impeccable",
+        "tdd",
+        "resolving-merge-conflicts",
+        "migrate-to-shoehorn"
+      ]
+    },
+    {
+      "id": "positive-031:2",
+      "query": "Generate a .tour file with anchored steps for an onboarding, architecture, or review walkthrough.",
+      "relevant": [
+        "ecc:code-tour"
+      ],
+      "ranked": [
+        "ecc:code-tour",
+        "wizard",
+        "template-creator:template-creator",
+        "impeccable",
+        "migrate-to-shoehorn",
+        "ecc:source-command-feature-dev",
+        "code-review",
+        "ecc:source-command-plan-canvas",
+        "setup-pre-commit",
+        "prototype",
+        "codebase-design",
+        "ecc:ecc-guide",
+        "visualize:visualize",
+        "domain-modeling",
+        "plugin-creator",
+        "research",
+        "skill-creator",
+        "pdf:pdf",
+        "imagegen",
+        "ecc:source-command-hookify-help"
+      ]
+    },
+    {
+      "id": "positive-031:3",
+      "query": "Include actual file and line references and keep the deliverable a CodeTour rather than prose documentation alone.",
+      "relevant": [
+        "ecc:code-tour"
+      ],
+      "ranked": [
+        "code-review",
+        "ecc:source-command-feature-dev",
+        "impeccable",
+        "template-creator:template-creator",
+        "setup-pre-commit",
+        "codebase-design",
+        "ecc:code-tour",
+        "ecc:source-command-hookify-help",
+        "deslop",
+        "domain-modeling",
+        "visualize:visualize",
+        "find-docs",
+        "research",
+        "pdf:pdf",
+        "writing-for-agents",
+        "wizard",
+        "prototype",
+        "resolving-merge-conflicts",
+        "ecc:tasteforge-video",
+        "ecc:source-command-review-pr"
+      ]
+    },
+    {
+      "id": "positive-037:1",
+      "query": "Harden a Django application against common web threats.",
+      "relevant": [
+        "ecc:django-security"
+      ],
+      "ranked": [
+        "ecc:django-security",
+        "domain-modeling",
+        "prototype",
+        "ecc:django-verification",
+        "impeccable",
+        "code-review",
+        "research",
+        "ecc:django-patterns",
+        "template-creator:template-creator",
+        "ecc:django-celery",
+        "diagnosing-bugs",
+        "ecc:source-command-feature-dev",
+        "setup-pre-commit",
+        "openai-docs",
+        "codebase-design",
+        "wizard",
+        "jupyter-notebook",
+        "migrate-to-shoehorn",
+        "imagegen",
+        "skill-creator"
+      ]
+    },
+    {
+      "id": "positive-037:2",
+      "query": "Apply Django security patterns for auth, authorization, CSRF, SQL injection, XSS, and deployment configuration.",
+      "relevant": [
+        "ecc:django-security"
+      ],
+      "ranked": [
+        "ecc:django-security",
+        "ecc:django-verification",
+        "ecc:laravel-security",
+        "ecc:quarkus-security",
+        "ecc:django-patterns",
+        "ecc:springboot-security",
+        "ecc:perl-security",
+        "ecc:django-celery",
+        "ecc:django-tdd",
+        "aws-security",
+        "setup-pre-commit",
+        "openai-docs",
+        "ecc:database-migrations",
+        "diagnosing-bugs",
+        "template-creator:template-creator",
+        "ecc:fastapi-patterns",
+        "jupyter-notebook",
+        "domain-modeling",
+        "code-review",
+        "ecc:security-review"
+      ]
+    },
+    {
+      "id": "positive-037:3",
+      "query": "Focus on Django security controls rather than general framework architecture or product functionality.",
+      "relevant": [
+        "ecc:django-security"
+      ],
+      "ranked": [
+        "ecc:django-security",
+        "ecc:django-verification",
+        "ecc:django-patterns",
+        "code-review",
+        "prototype",
+        "domain-modeling",
+        "openai-docs",
+        "plugin-creator",
+        "research",
+        "template-creator:template-creator",
+        "ecc:source-command-feature-dev",
+        "ecc:security-review",
+        "ecc:django-celery",
+        "codebase-design",
+        "jupyter-notebook",
+        "diagnosing-bugs",
+        "impeccable",
+        "ecc:python-patterns",
+        "ecc:perl-security",
+        "skill-creator"
+      ]
+    },
+    {
+      "id": "positive-038:1",
+      "query": "Create a secure, portable Docker and Compose workflow.",
+      "relevant": [
+        "ecc:docker-patterns"
+      ],
+      "ranked": [
+        "wizard",
+        "template-creator:template-creator",
+        "setup-pre-commit",
+        "prototype",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-hookify-help",
+        "impeccable",
+        "skill-creator",
+        "code-review",
+        "domain-modeling",
+        "visualize:visualize",
+        "ecc:docker-patterns",
+        "research",
+        "codebase-design",
+        "skill-installer",
+        "pdf:pdf",
+        "resolving-merge-conflicts",
+        "plugin-creator",
+        "ecc:source-command-update-codemaps",
+        "ecc:terminal-opener"
+      ]
+    },
+    {
+      "id": "positive-038:2",
+      "query": "Use container, networking, volumes, Compose orchestration, and installer-harness patterns.",
+      "relevant": [
+        "ecc:docker-patterns"
+      ],
+      "ranked": [
+        "ecc:docker-patterns",
+        "ecc:source-command-feature-dev",
+        "wizard",
+        "ecc:configure-ecc",
+        "template-creator:template-creator",
+        "plugin-creator",
+        "ecc:source-command-hookify-help",
+        "skill-installer",
+        "domain-modeling",
+        "ecc:deployment-patterns",
+        "research",
+        "ecc:source-command-update-codemaps",
+        "codebase-design",
+        "code-review",
+        "setup-pre-commit",
+        "prototype",
+        "ecc:compose-multiplatform-patterns",
+        "ecc:source-command-promote",
+        "ecc:vite-patterns",
+        "skill-creator"
+      ]
+    },
+    {
+      "id": "positive-038:3",
+      "query": "Account for native macOS and Windows validation and avoid assuming Linux-only behavior.",
+      "relevant": [
+        "ecc:docker-patterns"
+      ],
+      "ranked": [
+        "code-review",
+        "setup-pre-commit",
+        "prototype",
+        "migrate-to-shoehorn",
+        "domain-modeling",
+        "ecc:source-command-hookify-help",
+        "research",
+        "wizard",
+        "deslop",
+        "diagnosing-bugs",
+        "impeccable",
+        "template-creator:template-creator",
+        "resolving-merge-conflicts",
+        "ecc:nasiko-control-plane",
+        "codebase-design",
+        "plugin-creator",
+        "skill-creator",
+        "ecc:terminal-opener",
+        "skill-installer",
+        "grilling"
+      ]
+    },
+    {
+      "id": "positive-044:1",
+      "query": "Prevent token decimal mismatches across EVM chains.",
+      "relevant": [
+        "ecc:evm-token-decimals"
+      ],
+      "ranked": [
+        "ecc:evm-token-decimals",
+        "code-review",
+        "setup-pre-commit",
+        "resolving-merge-conflicts",
+        "ecc:source-command-update-codemaps",
+        "domain-modeling",
+        "ecc:source-command-hookify-help",
+        "deslop",
+        "ecc:ito-compute",
+        "prototype",
+        "migrate-to-shoehorn",
+        "template-creator:template-creator",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-epic-claim",
+        "ecc:source-command-hookify-configure",
+        "plugin-creator",
+        "wizard",
+        "ecc:nasiko-control-plane",
+        "ecc:terminal-opener",
+        "research"
+      ]
+    },
+    {
+      "id": "positive-044:2",
+      "query": "Look up decimals at runtime, cache them by chain and token, and normalize amounts without precision drift.",
+      "relevant": [
+        "ecc:evm-token-decimals"
+      ],
+      "ranked": [
+        "ecc:evm-token-decimals",
+        "code-review",
+        "research",
+        "ecc:source-command-update-codemaps",
+        "domain-modeling",
+        "deslop",
+        "setup-pre-commit",
+        "ecc:benchmark",
+        "ecc:data-throughput-accelerator",
+        "ecc:ito-compute",
+        "grilling",
+        "ecc:source-command-hookify-help",
+        "resolving-merge-conflicts",
+        "ecc:benchmark-optimization-loop",
+        "prototype",
+        "ecc:source-command-feature-dev",
+        "caveman",
+        "visualize:visualize",
+        "diagnosing-bugs",
+        "openai-docs"
+      ]
+    },
+    {
+      "id": "positive-044:3",
+      "query": "Handle bridged tokens and chain identity explicitly; never assume one global decimal value.",
+      "relevant": [
+        "ecc:evm-token-decimals"
+      ],
+      "ranked": [
+        "ecc:evm-token-decimals",
+        "domain-modeling",
+        "code-review",
+        "resolving-merge-conflicts",
+        "prototype",
+        "ecc:source-command-update-codemaps",
+        "tdd",
+        "research",
+        "impeccable",
+        "setup-pre-commit",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-hookify-help",
+        "codebase-design",
+        "deslop",
+        "ecc:contract-first",
+        "ecc:ito-compute",
+        "template-creator:template-creator",
+        "wizard",
+        "grilling",
+        "openai-docs"
+      ]
+    },
+    {
+      "id": "positive-047:1",
+      "query": "Audit revenue and billing operations with evidence.",
+      "relevant": [
+        "ecc:finance-billing-ops"
+      ],
+      "ranked": [
+        "ecc:finance-billing-ops",
+        "research",
+        "code-review",
+        "impeccable",
+        "domain-modeling",
+        "verify-this",
+        "ecc:customer-billing-ops",
+        "ecc:ecc-tools-cost-audit",
+        "ecc:ito-compute",
+        "template-creator:template-creator",
+        "visualize:visualize",
+        "prototype",
+        "aws-billing-and-cost-management",
+        "wizard",
+        "ecc:ito-baskets",
+        "ecc:automation-audit-ops",
+        "ecc:production-audit",
+        "writing-for-agents",
+        "ecc:returns-reverse-logistics",
+        "migrate-to-shoehorn"
+      ]
+    },
+    {
+      "id": "positive-047:2",
+      "query": "Trace pricing, refunds, team billing, duplicate charges, and billing-model behavior to source records and code.",
+      "relevant": [
+        "ecc:finance-billing-ops"
+      ],
+      "ranked": [
+        "ecc:finance-billing-ops",
+        "code-review",
+        "domain-modeling",
+        "ecc:ecc-tools-cost-audit",
+        "research",
+        "aws-billing-and-cost-management",
+        "template-creator:template-creator",
+        "ecc:customer-billing-ops",
+        "tdd",
+        "verify-this",
+        "impeccable",
+        "wizard",
+        "setup-pre-commit",
+        "ecc:cost-tracking",
+        "ecc:source-command-feature-dev",
+        "diagnosing-bugs",
+        "ecc:ito-compute",
+        "ecc:source-command-review-pr",
+        "grilling",
+        "ecc:source-command-refactor-clean"
+      ]
+    },
+    {
+      "id": "positive-047:3",
+      "query": "Prefer verifiable billing reality over generic payment recommendations.",
+      "relevant": [
+        "ecc:finance-billing-ops"
+      ],
+      "ranked": [
+        "code-review",
+        "ecc:finance-billing-ops",
+        "impeccable",
+        "template-creator:template-creator",
+        "research",
+        "ecc:ito-compute",
+        "domain-modeling",
+        "prototype",
+        "verify-this",
+        "visualize:visualize",
+        "setup-pre-commit",
+        "plugin-creator",
+        "wizard",
+        "diagnosing-bugs",
+        "tdd",
+        "ecc:tasteforge-video",
+        "ecc:contract-first",
+        "ecc:source-command-review-pr",
+        "aws-billing-and-cost-management",
+        "codebase-design"
+      ]
+    },
+    {
+      "id": "positive-050:1",
+      "query": "Perform quick reproducible bioinformatics lookups.",
+      "relevant": [
+        "ecc:gget"
+      ],
+      "ranked": [
+        "research",
+        "domain-modeling",
+        "setup-pre-commit",
+        "code-review",
+        "wizard",
+        "prototype",
+        "openai-docs",
+        "template-creator:template-creator",
+        "migrate-to-shoehorn",
+        "ecc:ito-compute",
+        "visualize:visualize",
+        "ecc:gget",
+        "diagnosing-bugs",
+        "grilling",
+        "resolving-merge-conflicts",
+        "skill-installer",
+        "codebase-design",
+        "deslop",
+        "tdd",
+        "ecc:benchmark"
+      ]
+    },
+    {
+      "id": "positive-050:2",
+      "query": "Use the gget CLI or Python package for sequence retrieval, BLAST-like queries, and enrichment checks.",
+      "relevant": [
+        "ecc:gget"
+      ],
+      "ranked": [
+        "ecc:gget",
+        "ecc:source-command-hookify-help",
+        "code-review",
+        "setup-pre-commit",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-projects",
+        "research",
+        "codebase-design",
+        "prototype",
+        "template-creator:template-creator",
+        "resolving-merge-conflicts",
+        "jupyter-notebook",
+        "ecc:source-command-update-codemaps",
+        "ecc:source-command-go-review",
+        "ecc:source-command-review-pr",
+        "codebase-memory",
+        "skill-installer",
+        "deslop",
+        "ecc:source-command-fastapi-review",
+        "ecc:data-throughput-accelerator"
+      ]
+    },
+    {
+      "id": "positive-050:3",
+      "query": "Keep the workflow focused on genomic reference databases and preserve evidence logs.",
+      "relevant": [
+        "ecc:gget"
+      ],
+      "ranked": [
+        "research",
+        "setup-pre-commit",
+        "code-review",
+        "resolving-merge-conflicts",
+        "ecc:gget",
+        "template-creator:template-creator",
+        "migrate-to-shoehorn",
+        "verify-this",
+        "domain-modeling",
+        "ecc:source-command-feature-dev",
+        "prototype",
+        "grilling",
+        "visualize:visualize",
+        "wizard",
+        "diagnosing-bugs",
+        "impeccable",
+        "gke-reliability",
+        "ecc:data-throughput-accelerator",
+        "openai-docs",
+        "codebase-design"
+      ]
+    },
+    {
+      "id": "positive-054:1",
+      "query": "Extract reusable engineering lessons after a complex task or failure.",
+      "relevant": [
+        "ecc:growth-log"
+      ],
+      "ranked": [
+        "impeccable",
+        "prototype",
+        "domain-modeling",
+        "tdd",
+        "grilling",
+        "visualize:visualize",
+        "research",
+        "migrate-to-shoehorn",
+        "codebase-design",
+        "resolving-merge-conflicts",
+        "diagnosing-bugs",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-learn",
+        "code-review",
+        "template-creator:template-creator",
+        "wizard",
+        "setup-pre-commit",
+        "skill-creator",
+        "scaffold-exercises",
+        "deslop"
+      ]
+    },
+    {
+      "id": "positive-054:2",
+      "query": "Distill the event into repeatable patterns, causes, and actions in a growth log.",
+      "relevant": [
+        "ecc:growth-log"
+      ],
+      "ranked": [
+        "ecc:growth-log",
+        "domain-modeling",
+        "visualize:visualize",
+        "impeccable",
+        "prototype",
+        "grilling",
+        "diagnosing-bugs",
+        "research",
+        "wizard",
+        "code-review",
+        "resolving-merge-conflicts",
+        "setup-pre-commit",
+        "ecc:source-command-hookify",
+        "deslop",
+        "tdd",
+        "ecc:source-command-hookify-help",
+        "skill-creator",
+        "template-creator:template-creator",
+        "migrate-to-shoehorn",
+        "ecc:data-throughput-accelerator"
+      ]
+    },
+    {
+      "id": "positive-054:3",
+      "query": "Write a reusable learning record rather than a chronological personal diary.",
+      "relevant": [
+        "ecc:growth-log"
+      ],
+      "ranked": [
+        "template-creator:template-creator",
+        "impeccable",
+        "research",
+        "wizard",
+        "setup-pre-commit",
+        "visualize:visualize",
+        "code-review",
+        "prototype",
+        "grilling",
+        "domain-modeling",
+        "skill-creator",
+        "ecc:source-command-learn",
+        "jupyter-notebook",
+        "codebase-design",
+        "humanizer:humanizer",
+        "diagnosing-bugs",
+        "deslop",
+        "ecc:source-command-hookify-help",
+        "openai-docs",
+        "scaffold-exercises"
+      ]
+    },
+    {
+      "id": "positive-058:1",
+      "query": "Segment a home network into secure VLANs.",
+      "relevant": [
+        "ecc:homelab-vlan-segmentation"
+      ],
+      "ranked": [
+        "ecc:homelab-vlan-segmentation",
+        "research",
+        "domain-modeling",
+        "ecc:homelab-network-readiness",
+        "migrate-to-shoehorn",
+        "wizard",
+        "ecc:source-command-feature-dev",
+        "code-review",
+        "ecc:nasiko-control-plane",
+        "prototype",
+        "ecc:homelab-wireguard-vpn",
+        "ecc:terminal-opener",
+        "codebase-design",
+        "ecc:homelab-network-setup",
+        "visualize:visualize",
+        "diagnosing-bugs",
+        "resolving-merge-conflicts",
+        "skill-installer",
+        "setup-pre-commit",
+        "ecc:source-command-review-pr"
+      ]
+    },
+    {
+      "id": "positive-058:2",
+      "query": "Configure switch trunks, firewall rules, and SSID mappings on UniFi, pfSense, OPNsense, or MikroTik.",
+      "relevant": [
+        "ecc:homelab-vlan-segmentation"
+      ],
+      "ranked": [
+        "ecc:homelab-vlan-segmentation",
+        "wizard",
+        "domain-modeling",
+        "research",
+        "migrate-to-shoehorn",
+        "code-review",
+        "ecc:nasiko-control-plane",
+        "ecc:network-interface-health",
+        "resolving-merge-conflicts",
+        "imagegen",
+        "prototype",
+        "visualize:visualize",
+        "codebase-design",
+        "ecc:ito-compute",
+        "ecc:homelab-network-readiness",
+        "caveman",
+        "template-creator:template-creator",
+        "impeccable",
+        "gke-service-networking",
+        "ecc:network-config-validation"
+      ]
+    },
+    {
+      "id": "positive-058:3",
+      "query": "Cover home-network segmentation and its four traffic classes rather than generic subnet planning.",
+      "relevant": [
+        "ecc:homelab-vlan-segmentation"
+      ],
+      "ranked": [
+        "domain-modeling",
+        "ecc:homelab-vlan-segmentation",
+        "code-review",
+        "ecc:homelab-network-readiness",
+        "codebase-design",
+        "prototype",
+        "diagnosing-bugs",
+        "research",
+        "ecc:source-command-feature-dev",
+        "ecc:homelab-network-setup",
+        "migrate-to-shoehorn",
+        "ecc:network-interface-health",
+        "tdd",
+        "ecc:ito-baskets",
+        "ecc:network-bgp-diagnostics",
+        "grilling",
+        "visualize:visualize",
+        "ecc:tasteforge-video",
+        "ecc:homelab-wireguard-vpn",
+        "impeccable"
+      ]
+    },
+    {
+      "id": "positive-065:1",
+      "query": "Design a latency-sensitive system around freshness and p95 goals.",
+      "relevant": [
+        "ecc:latency-critical-systems"
+      ],
+      "ranked": [
+        "ecc:latency-critical-systems",
+        "code-review",
+        "prototype",
+        "impeccable",
+        "domain-modeling",
+        "ecc:source-command-feature-dev",
+        "tdd",
+        "research",
+        "ecc:benchmark",
+        "ecc:ito-compute",
+        "ecc:source-command-fastapi-review",
+        "ecc:data-throughput-accelerator",
+        "ecc:tasteforge-video",
+        "setup-pre-commit",
+        "codebase-design",
+        "ecc:source-command-hookify",
+        "grilling",
+        "wizard",
+        "ecc:openclaw-persona-forge",
+        "ecc:source-command-hookify-help"
+      ]
+    },
+    {
+      "id": "positive-065:2",
+      "query": "Analyze real-time dashboards, market data, streaming agents, queues, and caches with latency-focused patterns.",
+      "relevant": [
+        "ecc:latency-critical-systems"
+      ],
+      "ranked": [
+        "ecc:latency-critical-systems",
+        "ecc:dashboard-builder",
+        "ecc:videodb",
+        "ecc:benchmark",
+        "ecc:data-throughput-accelerator",
+        "aws-storage",
+        "research",
+        "google-cloud-solution-agentic-ai-bidirectional-streaming",
+        "ecc:prediction-market-risk-review",
+        "spanner-basics",
+        "ecc:clickhouse-io",
+        "aws-billing-and-cost-management",
+        "ecc:source-command-feature-dev",
+        "ecc:mysql-patterns",
+        "ecc:content-engine",
+        "visualize:visualize",
+        "impeccable",
+        "code-review",
+        "ecc:pytorch-patterns",
+        "bigquery-ai-ml"
+      ]
+    },
+    {
+      "id": "positive-065:3",
+      "query": "Make p95 latency and data freshness explicit success criteria for the design.",
+      "relevant": [
+        "ecc:latency-critical-systems"
+      ],
+      "ranked": [
+        "prototype",
+        "code-review",
+        "ecc:latency-critical-systems",
+        "domain-modeling",
+        "impeccable",
+        "ecc:benchmark",
+        "setup-pre-commit",
+        "ecc:ito-compute",
+        "research",
+        "ecc:data-throughput-accelerator",
+        "tdd",
+        "wizard",
+        "codebase-design",
+        "ecc:source-command-feature-dev",
+        "ecc:tasteforge-video",
+        "grilling",
+        "migrate-to-shoehorn",
+        "verify-this",
+        "deslop",
+        "ecc:openclaw-persona-forge"
+      ]
+    },
+    {
+      "id": "positive-066:1",
+      "query": "Run an AI-native lead intelligence and outreach workflow.",
+      "relevant": [
+        "ecc:lead-intelligence"
+      ],
+      "ranked": [
+        "deslop",
+        "visualize:visualize",
+        "openai-docs",
+        "ecc:lead-intelligence",
+        "research",
+        "skill-installer",
+        "ecc:source-command-feature-dev",
+        "domain-modeling",
+        "humanizer:humanizer",
+        "wizard",
+        "code-review",
+        "prototype",
+        "setup-pre-commit",
+        "skill-creator",
+        "migrate-to-shoehorn",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-promote",
+        "developing-genkit-go",
+        "tdd",
+        "codebase-design"
+      ]
+    },
+    {
+      "id": "positive-066:2",
+      "query": "Score signals, rank mutual connections, discover warm paths, model source-derived voice, and adapt outreach by channel.",
+      "relevant": [
+        "ecc:lead-intelligence"
+      ],
+      "ranked": [
+        "research",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-projects",
+        "domain-modeling",
+        "ecc:source-command-promote",
+        "ecc:source-command-instinct-status",
+        "ecc:source-command-review-pr",
+        "humanizer:humanizer",
+        "ecc:investor-outreach",
+        "ecc:connections-optimizer",
+        "ecc:source-command-update-codemaps",
+        "ecc:source-command-hookify",
+        "visualize:visualize",
+        "ecc:source-command-hookify-help",
+        "ecc:ecc-guide",
+        "ecc:benchmark",
+        "codebase-design",
+        "ecc:recsys-pipeline-architect",
+        "ecc:brand-voice",
+        "ecc:social-graph-ranker"
+      ]
+    },
+    {
+      "id": "positive-066:3",
+      "query": "Target high-value contacts and keep email, LinkedIn, and X outreach distinct.",
+      "relevant": [
+        "ecc:lead-intelligence"
+      ],
+      "ranked": [
+        "research",
+        "domain-modeling",
+        "ecc:connections-optimizer",
+        "ecc:investor-outreach",
+        "visualize:visualize",
+        "ecc:source-command-promote",
+        "code-review",
+        "prototype",
+        "migrate-to-shoehorn",
+        "impeccable",
+        "wizard",
+        "ecc:source-command-feature-dev",
+        "ecc:lead-intelligence",
+        "template-creator:template-creator",
+        "ecc:ito-baskets",
+        "codebase-design",
+        "resolving-merge-conflicts",
+        "diagnosing-bugs",
+        "grilling",
+        "deslop"
+      ]
+    },
+    {
+      "id": "positive-077:1",
+      "query": "Validate network device configuration before deployment.",
+      "relevant": [
+        "ecc:network-config-validation"
+      ],
+      "ranked": [
+        "setup-pre-commit",
+        "wizard",
+        "ecc:network-config-validation",
+        "domain-modeling",
+        "migrate-to-shoehorn",
+        "code-review",
+        "prototype",
+        "resolving-merge-conflicts",
+        "ecc:nasiko-control-plane",
+        "ecc:source-command-feature-dev",
+        "diagnosing-bugs",
+        "skill-creator",
+        "codebase-design",
+        "research",
+        "verify-this",
+        "ecc:homelab-network-readiness",
+        "ecc:source-command-epic-validate",
+        "ecc:source-command-hookify-help",
+        "template-creator:template-creator",
+        "ecc:source-command-hookify-configure"
+      ]
+    },
+    {
+      "id": "positive-077:2",
+      "query": "Run pre-deployment checks for addresses, overlaps, references, management-plane exposure, and IOS-style security hygiene.",
+      "relevant": [
+        "ecc:network-config-validation"
+      ],
+      "ranked": [
+        "ecc:network-config-validation",
+        "code-review",
+        "ecc:nasiko-control-plane",
+        "setup-pre-commit",
+        "diagnosing-bugs",
+        "domain-modeling",
+        "ecc:cisco-ios-patterns",
+        "ecc:deployment-patterns",
+        "wizard",
+        "ecc:source-command-feature-dev",
+        "migrate-to-shoehorn",
+        "ecc:quarkus-verification",
+        "template-creator:template-creator",
+        "ecc:network-interface-health",
+        "grilling",
+        "resolving-merge-conflicts",
+        "research",
+        "ecc:browser-qa",
+        "prototype",
+        "ecc:ecc-guide"
+      ]
+    },
+    {
+      "id": "positive-077:3",
+      "query": "Review the configuration without deploying it and surface dangerous commands explicitly.",
+      "relevant": [
+        "ecc:network-config-validation"
+      ],
+      "ranked": [
+        "code-review",
+        "ecc:nasiko-control-plane",
+        "wizard",
+        "setup-pre-commit",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-hookify-help",
+        "domain-modeling",
+        "deslop",
+        "migrate-to-shoehorn",
+        "resolving-merge-conflicts",
+        "ecc:source-command-hookify-configure",
+        "ecc:terminal-opener",
+        "ecc:source-command-review-pr",
+        "ecc:source-command-hookify",
+        "prototype",
+        "ecc:source-command-promote",
+        "ecc:source-command-auto-update",
+        "template-creator:template-creator",
+        "skill-creator",
+        "research"
+      ]
+    },
+    {
+      "id": "positive-086:1",
+      "query": "Perform a local-evidence production readiness audit.",
+      "relevant": [
+        "ecc:production-audit"
+      ],
+      "ranked": [
+        "research",
+        "ecc:production-audit",
+        "code-review",
+        "setup-pre-commit",
+        "verify-this",
+        "prototype",
+        "gke-productionize",
+        "domain-modeling",
+        "impeccable",
+        "migrate-to-shoehorn",
+        "wizard",
+        "ecc:automation-audit-ops",
+        "tdd",
+        "ecc:research-ops",
+        "template-creator:template-creator",
+        "ecc:benchmark",
+        "ecc:tasteforge-video",
+        "resolving-merge-conflicts",
+        "skill-creator",
+        "ecc:source-command-epic-validate"
+      ]
+    },
+    {
+      "id": "positive-086:2",
+      "query": "Inspect shipped behavior, pre-launch checks, and post-merge risks without sending repository data to an external service.",
+      "relevant": [
+        "ecc:production-audit"
+      ],
+      "ranked": [
+        "setup-pre-commit",
+        "ecc:production-audit",
+        "code-review",
+        "resolving-merge-conflicts",
+        "ecc:source-command-feature-dev",
+        "diagnosing-bugs",
+        "migrate-to-shoehorn",
+        "domain-modeling",
+        "ecc:source-command-hookify",
+        "prototype",
+        "ecc:quarkus-verification",
+        "ecc:source-command-hookify-help",
+        "ecc:data-throughput-accelerator",
+        "impeccable",
+        "ecc:ecc-guide",
+        "ecc:nasiko-control-plane",
+        "ecc:canary-watch",
+        "ecc:source-command-refactor-clean",
+        "research",
+        "verify-this"
+      ]
+    },
+    {
+      "id": "positive-086:3",
+      "query": "Use local evidence and frame findings as production readiness risks, not a generic code review.",
+      "relevant": [
+        "ecc:production-audit"
+      ],
+      "ranked": [
+        "code-review",
+        "research",
+        "ecc:source-command-feature-dev",
+        "setup-pre-commit",
+        "prototype",
+        "ecc:tasteforge-video",
+        "diagnosing-bugs",
+        "verify-this",
+        "impeccable",
+        "ecc:benchmark",
+        "domain-modeling",
+        "ecc:production-audit",
+        "migrate-to-shoehorn",
+        "template-creator:template-creator",
+        "deslop",
+        "ecc:source-command-update-codemaps",
+        "wizard",
+        "ecc:source-command-review-pr",
+        "tdd",
+        "ecc:nasiko-control-plane"
+      ]
+    },
+    {
+      "id": "positive-093:1",
+      "query": "Bootstrap the repo-scan audit capability.",
+      "relevant": [
+        "ecc:repo-scan"
+      ],
+      "ranked": [
+        "ecc:repo-scan",
+        "setup-pre-commit",
+        "skill-installer",
+        "code-review",
+        "migrate-to-shoehorn",
+        "research",
+        "prototype",
+        "ponytail:ponytail-audit",
+        "ecc:source-command-hookify-help",
+        "tdd",
+        "resolving-merge-conflicts",
+        "ecc:source-command-update-codemaps",
+        "impeccable",
+        "ecc:source-command-review-pr",
+        "template-creator:template-creator",
+        "ecc:source-command-feature-dev",
+        "ecc:nanoclaw-repl",
+        "ecc:nasiko-control-plane",
+        "domain-modeling",
+        "plugin-creator"
+      ]
+    },
+    {
+      "id": "positive-093:2",
+      "query": "Install the external repo-scan skill from its pinned, reviewable commit before invoking the audit.",
+      "relevant": [
+        "ecc:repo-scan"
+      ],
+      "ranked": [
+        "setup-pre-commit",
+        "ecc:repo-scan",
+        "skill-installer",
+        "ecc:source-command-auto-update",
+        "resolving-merge-conflicts",
+        "ecc:source-command-hookify-help",
+        "ecc:nasiko-control-plane",
+        "ecc:source-command-review-pr",
+        "ponytail:ponytail-audit",
+        "ecc:source-command-feature-dev",
+        "code-review",
+        "ecc:source-command-update-codemaps",
+        "wizard",
+        "ecc:source-command-promote",
+        "ecc:terminal-opener",
+        "ecc:source-command-instinct-status",
+        "impeccable",
+        "skill-creator",
+        "ecc:ecc-guide",
+        "ecc:source-command-ecc-guide"
+      ]
+    },
+    {
+      "id": "positive-093:3",
+      "query": "This pointer only prepares the audit skill; do not claim that the source audit itself has run.",
+      "relevant": [
+        "ecc:repo-scan"
+      ],
+      "ranked": [
+        "research",
+        "prototype",
+        "code-review",
+        "impeccable",
+        "wizard",
+        "skill-creator",
+        "ecc:source-command-promote",
+        "template-creator:template-creator",
+        "ecc:benchmark",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-feature-dev",
+        "setup-pre-commit",
+        "ecc:source-command-instinct-status",
+        "ecc:repo-scan",
+        "ecc:source-command-review-pr",
+        "migrate-to-shoehorn",
+        "ecc:source-command-learn",
+        "ecc:hookify-rules",
+        "ecc:source-command-projects",
+        "skill-installer"
+      ]
+    },
+    {
+      "id": "positive-094:1",
+      "query": "Extract cross-cutting principles into reusable rules.",
+      "relevant": [
+        "ecc:rules-distill"
+      ],
+      "ranked": [
+        "code-review",
+        "prototype",
+        "research",
+        "impeccable",
+        "tdd",
+        "domain-modeling",
+        "template-creator:template-creator",
+        "grilling",
+        "visualize:visualize",
+        "ecc:rules-distill",
+        "resolving-merge-conflicts",
+        "ecc:ito-baskets",
+        "codebase-design",
+        "plugin-creator",
+        "wizard",
+        "scaffold-exercises",
+        "setup-pre-commit",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-learn"
+      ]
+    },
+    {
+      "id": "positive-094:2",
+      "query": "Scan skills, identify recurring guidance, and append, revise, or create a rule file.",
+      "relevant": [
+        "ecc:rules-distill"
+      ],
+      "ranked": [
+        "ecc:rules-distill",
+        "ecc:hookify-rules",
+        "impeccable",
+        "skill-creator",
+        "ecc:source-command-feature-dev",
+        "code-review",
+        "research",
+        "wizard",
+        "template-creator:template-creator",
+        "ecc:ecc-guide",
+        "visualize:visualize",
+        "domain-modeling",
+        "migrate-to-shoehorn",
+        "ecc:source-command-learn",
+        "prototype",
+        "ecc:ito-baskets",
+        "grilling",
+        "setup-pre-commit",
+        "openai-docs",
+        "ecc:tasteforge-video"
+      ]
+    },
+    {
+      "id": "positive-094:3",
+      "query": "Only promote principles that recur across skills and preserve existing rule ownership.",
+      "relevant": [
+        "ecc:rules-distill"
+      ],
+      "ranked": [
+        "impeccable",
+        "skill-creator",
+        "domain-modeling",
+        "research",
+        "tdd",
+        "code-review",
+        "prototype",
+        "ecc:article-writing",
+        "template-creator:template-creator",
+        "ecc:hookify-rules",
+        "ecc:source-command-feature-dev",
+        "migrate-to-shoehorn",
+        "resolving-merge-conflicts",
+        "ecc:safety-guard",
+        "grilling",
+        "codebase-design",
+        "ecc:source-command-promote",
+        "writing-for-agents",
+        "plugin-creator",
+        "verify-this"
+      ]
+    },
+    {
+      "id": "positive-098:1",
+      "query": "Rank warm paths through a professional social graph.",
+      "relevant": [
+        "ecc:social-graph-ranker"
+      ],
+      "ranked": [
+        "research",
+        "domain-modeling",
+        "ecc:social-graph-ranker",
+        "visualize:visualize",
+        "grilling",
+        "ecc:source-command-projects",
+        "wizard",
+        "impeccable",
+        "prototype",
+        "tdd",
+        "migrate-to-shoehorn",
+        "ecc:source-command-review-pr",
+        "code-review",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-promote",
+        "ecc:benchmark",
+        "diagnosing-bugs",
+        "ecc:source-command-instinct-status",
+        "scaffold-exercises",
+        "setup-pre-commit"
+      ]
+    },
+    {
+      "id": "positive-098:2",
+      "query": "Calculate weighted bridge and connection scores across X and LinkedIn and surface network gaps.",
+      "relevant": [
+        "ecc:social-graph-ranker"
+      ],
+      "ranked": [
+        "domain-modeling",
+        "ecc:social-graph-ranker",
+        "research",
+        "grilling",
+        "ecc:benchmark",
+        "ecc:source-command-feature-dev",
+        "code-review",
+        "resolving-merge-conflicts",
+        "ecc:connections-optimizer",
+        "ecc:ito-baskets",
+        "scaffold-exercises",
+        "migrate-to-shoehorn",
+        "ecc:nasiko-control-plane",
+        "visualize:visualize",
+        "diagnosing-bugs",
+        "wizard",
+        "ecc:source-command-projects",
+        "prototype",
+        "tdd",
+        "ecc:benchmark-methodology"
+      ]
+    },
+    {
+      "id": "positive-098:3",
+      "query": "Focus on the graph-ranking engine itself rather than broad outreach or network maintenance.",
+      "relevant": [
+        "ecc:social-graph-ranker"
+      ],
+      "ranked": [
+        "domain-modeling",
+        "research",
+        "ecc:social-graph-ranker",
+        "code-review",
+        "grilling",
+        "visualize:visualize",
+        "ecc:source-command-feature-dev",
+        "prototype",
+        "impeccable",
+        "resolving-merge-conflicts",
+        "ecc:source-command-review-pr",
+        "migrate-to-shoehorn",
+        "diagnosing-bugs",
+        "wizard",
+        "ecc:ito-compute",
+        "imagegen",
+        "ecc:source-command-projects",
+        "writing-for-agents",
+        "codebase-design",
+        "ecc:benchmark"
+      ]
+    },
+    {
+      "id": "positive-100:1",
+      "query": "Decompose an epic into task children.",
+      "relevant": [
+        "ecc:source-command-epic-decompose"
+      ],
+      "ranked": [
+        "ecc:source-command-epic-decompose",
+        "visualize:visualize",
+        "ecc:source-command-epic-validate",
+        "ecc:source-command-epic-unblock",
+        "wizard",
+        "impeccable",
+        "ecc:source-command-epic-claim",
+        "domain-modeling",
+        "resolving-merge-conflicts",
+        "grilling",
+        "research",
+        "ecc:source-command-epic-sync",
+        "ecc:source-command-feature-dev",
+        "prototype",
+        "skill-creator",
+        "setup-pre-commit",
+        "ecc:source-command-epic-publish",
+        "code-review",
+        "ecc:source-command-hookify",
+        "template-creator:template-creator"
+      ]
+    },
+    {
+      "id": "positive-100:2",
+      "query": "Use the source command to create and structure child tasks from the epic.",
+      "relevant": [
+        "ecc:source-command-epic-decompose"
+      ],
+      "ranked": [
+        "ecc:source-command-epic-decompose",
+        "ecc:source-command-epic-sync",
+        "ecc:source-command-epic-claim",
+        "ecc:source-command-epic-unblock",
+        "ecc:source-command-epic-publish",
+        "ecc:source-command-epic-validate",
+        "ecc:source-command-epic-review",
+        "ecc:source-command-hookify-help",
+        "wizard",
+        "ecc:source-command-feature-dev",
+        "template-creator:template-creator",
+        "setup-pre-commit",
+        "skill-creator",
+        "ecc:source-command-promote",
+        "ecc:source-command-auto-update",
+        "ecc:source-command-update-codemaps",
+        "visualize:visualize",
+        "skill-installer",
+        "ecc:source-command-projects",
+        "ecc:source-command-setup-pm"
+      ]
+    },
+    {
+      "id": "positive-100:3",
+      "query": "Do not create task branches during decomposition; keep the issue hierarchy explicit.",
+      "relevant": [
+        "ecc:source-command-epic-decompose"
+      ],
+      "ranked": [
+        "resolving-merge-conflicts",
+        "ecc:source-command-epic-decompose",
+        "setup-pre-commit",
+        "domain-modeling",
+        "diagnosing-bugs",
+        "wizard",
+        "deslop",
+        "ecc:source-command-feature-dev",
+        "codebase-design",
+        "skill-creator",
+        "code-review",
+        "visualize:visualize",
+        "prototype",
+        "migrate-to-shoehorn",
+        "tdd",
+        "template-creator:template-creator",
+        "writing-for-agents",
+        "research",
+        "ecc:ito-baskets",
+        "openai-docs"
+      ]
+    },
+    {
+      "id": "positive-103:1",
+      "query": "Inspect known projects and their instinct statistics.",
+      "relevant": [
+        "ecc:source-command-projects"
+      ],
+      "ranked": [
+        "ecc:source-command-projects",
+        "ecc:source-command-instinct-status",
+        "research",
+        "code-review",
+        "diagnosing-bugs",
+        "ecc:source-command-feature-dev",
+        "codebase-design",
+        "prototype",
+        "impeccable",
+        "ecc:source-command-promote",
+        "visualize:visualize",
+        "migrate-to-shoehorn",
+        "grilling",
+        "wizard",
+        "setup-pre-commit",
+        "ecc:source-command-hookify",
+        "domain-modeling",
+        "ecc:source-command-instinct-import",
+        "ecc:source-command-instinct-export",
+        "ecc:ecc-guide"
+      ]
+    },
+    {
+      "id": "positive-103:2",
+      "query": "Use the source command that enumerates projects and reports their associated instinct data.",
+      "relevant": [
+        "ecc:source-command-projects"
+      ],
+      "ranked": [
+        "ecc:source-command-projects",
+        "ecc:source-command-instinct-status",
+        "ecc:source-command-instinct-export",
+        "ecc:source-command-promote",
+        "ecc:source-command-instinct-import",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-review-pr",
+        "ecc:source-command-hookify-list",
+        "setup-pre-commit",
+        "research",
+        "ecc:source-command-update-codemaps",
+        "ecc:source-command-ecc-guide",
+        "wizard",
+        "ecc:source-command-hookify",
+        "ecc:source-command-prune",
+        "visualize:visualize",
+        "ecc:source-command-learn",
+        "ecc:source-command-hookify-configure",
+        "ecc:source-command-auto-update"
+      ]
+    },
+    {
+      "id": "positive-103:3",
+      "query": "Return project inventory and statistics rather than changing project state.",
+      "relevant": [
+        "ecc:source-command-projects"
+      ],
+      "ranked": [
+        "research",
+        "ecc:source-command-projects",
+        "code-review",
+        "prototype",
+        "domain-modeling",
+        "tdd",
+        "visualize:visualize",
+        "resolving-merge-conflicts",
+        "diagnosing-bugs",
+        "codebase-design",
+        "setup-pre-commit",
+        "migrate-to-shoehorn",
+        "impeccable",
+        "wizard",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-promote",
+        "template-creator:template-creator",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-update-codemaps",
+        "ecc:ito-compute"
+      ]
+    },
+    {
+      "id": "positive-105:1",
+      "query": "Set a preferred JavaScript package manager for a project.",
+      "relevant": [
+        "ecc:source-command-setup-pm"
+      ],
+      "ranked": [
+        "setup-pre-commit",
+        "prototype",
+        "ecc:source-command-setup-pm",
+        "wizard",
+        "ecc:nextjs-turbopack",
+        "template-creator:template-creator",
+        "code-review",
+        "ecc:source-command-hookify-help",
+        "resolving-merge-conflicts",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-promote",
+        "codebase-design",
+        "domain-modeling",
+        "skill-creator",
+        "ecc:source-command-plan-canvas",
+        "ecc:source-command-auto-update",
+        "plugin-creator",
+        "aws-sdk-js-v3-usage",
+        "ecc:source-command-hookify-configure",
+        "deslop"
+      ]
+    },
+    {
+      "id": "positive-105:2",
+      "query": "Use the setup package-manager command to configure npm, pnpm, yarn, or bun preference.",
+      "relevant": [
+        "ecc:source-command-setup-pm"
+      ],
+      "ranked": [
+        "ecc:source-command-setup-pm",
+        "setup-pre-commit",
+        "wizard",
+        "ecc:bun-runtime",
+        "ecc:source-command-hookify-help",
+        "skill-installer",
+        "template-creator:template-creator",
+        "resolving-merge-conflicts",
+        "skill-creator",
+        "codebase-design",
+        "ecc:source-command-hookify-configure",
+        "ecc:source-command-feature-dev",
+        "jupyter-notebook",
+        "ecc:nextjs-turbopack",
+        "ecc:source-command-auto-update",
+        "ecc:configure-ecc",
+        "ecc:source-command-hookify-list",
+        "ecc:vite-patterns",
+        "git-guardrails-claude-code",
+        "firebase-basics"
+      ]
+    },
+    {
+      "id": "positive-105:3",
+      "query": "Choose one supported package manager and update project configuration consistently.",
+      "relevant": [
+        "ecc:source-command-setup-pm"
+      ],
+      "ranked": [
+        "setup-pre-commit",
+        "resolving-merge-conflicts",
+        "ecc:source-command-auto-update",
+        "wizard",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-setup-pm",
+        "code-review",
+        "ecc:source-command-gradle-build",
+        "template-creator:template-creator",
+        "migrate-to-shoehorn",
+        "ecc:source-command-hookify-configure",
+        "skill-installer",
+        "deslop",
+        "ecc:source-command-build-fix",
+        "domain-modeling",
+        "codebase-design",
+        "ecc:source-command-update-codemaps",
+        "ecc:source-command-hookify-list",
+        "skill-creator"
+      ]
+    },
+    {
+      "id": "positive-106:1",
+      "query": "Improve a project toward its target test coverage.",
+      "relevant": [
+        "ecc:source-command-test-coverage"
+      ],
+      "ranked": [
+        "migrate-to-shoehorn",
+        "prototype",
+        "code-review",
+        "research",
+        "diagnosing-bugs",
+        "setup-pre-commit",
+        "domain-modeling",
+        "ecc:source-command-test-coverage",
+        "resolving-merge-conflicts",
+        "ecc:source-command-feature-dev",
+        "tdd",
+        "grilling",
+        "wizard",
+        "visualize:visualize",
+        "ecc:source-command-promote",
+        "impeccable",
+        "ecc:benchmark",
+        "verify-this",
+        "codebase-design",
+        "ecc:nasiko-control-plane"
+      ]
+    },
+    {
+      "id": "positive-106:2",
+      "query": "Use the coverage command to find gaps and generate focused missing tests.",
+      "relevant": [
+        "ecc:source-command-test-coverage"
+      ],
+      "ranked": [
+        "ecc:source-command-test-coverage",
+        "migrate-to-shoehorn",
+        "setup-pre-commit",
+        "wizard",
+        "resolving-merge-conflicts",
+        "research",
+        "diagnosing-bugs",
+        "grilling",
+        "prototype",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-hookify-help",
+        "visualize:visualize",
+        "deslop",
+        "code-review",
+        "ecc:source-command-review-pr",
+        "domain-modeling",
+        "ecc:source-command-projects",
+        "ecc:source-command-auto-update",
+        "ecc:source-command-hookify",
+        "ecc:source-command-promote"
+      ]
+    },
+    {
+      "id": "positive-106:3",
+      "query": "Target uncovered behavior and the declared threshold instead of adding duplicate implementation-shaped tests.",
+      "relevant": [
+        "ecc:source-command-test-coverage"
+      ],
+      "ranked": [
+        "prototype",
+        "code-review",
+        "migrate-to-shoehorn",
+        "tdd",
+        "research",
+        "impeccable",
+        "ecc:source-command-feature-dev",
+        "domain-modeling",
+        "resolving-merge-conflicts",
+        "wizard",
+        "codebase-design",
+        "deslop",
+        "diagnosing-bugs",
+        "grilling",
+        "setup-pre-commit",
+        "verify-this",
+        "visualize:visualize",
+        "template-creator:template-creator",
+        "ecc:source-command-hookify",
+        "ecc:ito-baskets"
+      ]
+    },
+    {
+      "id": "positive-113:1",
+      "query": "Execute and verify a repository operation with evidence.",
+      "relevant": [
+        "ecc:terminal-ops"
+      ],
+      "ranked": [
+        "setup-pre-commit",
+        "verify-this",
+        "research",
+        "code-review",
+        "migrate-to-shoehorn",
+        "resolving-merge-conflicts",
+        "ecc:source-command-feature-dev",
+        "prototype",
+        "domain-modeling",
+        "template-creator:template-creator",
+        "wizard",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-refactor-clean",
+        "ecc:source-command-epic-validate",
+        "impeccable",
+        "skill-installer",
+        "ecc:terminal-ops",
+        "tdd",
+        "ecc:source-command-review-pr",
+        "ecc:source-command-hookify"
+      ]
+    },
+    {
+      "id": "positive-113:2",
+      "query": "Follow an evidence-first terminal workflow for commands, CI failures, and narrow fixes.",
+      "relevant": [
+        "ecc:terminal-ops"
+      ],
+      "ranked": [
+        "setup-pre-commit",
+        "ecc:terminal-opener",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-feature-dev",
+        "resolving-merge-conflicts",
+        "ecc:terminal-ops",
+        "code-review",
+        "wizard",
+        "prototype",
+        "ecc:source-command-review-pr",
+        "git-guardrails-claude-code",
+        "ecc:source-command-instinct-status",
+        "research",
+        "ecc:source-command-hookify-configure",
+        "diagnosing-bugs",
+        "migrate-to-shoehorn",
+        "deslop",
+        "ecc:source-command-hookify",
+        "ecc:source-command-projects",
+        "visualize:visualize"
+      ]
+    },
+    {
+      "id": "positive-113:3",
+      "query": "Record the exact command and proof while keeping the change tightly scoped.",
+      "relevant": [
+        "ecc:terminal-ops"
+      ],
+      "ranked": [
+        "ecc:source-command-hookify-help",
+        "setup-pre-commit",
+        "prototype",
+        "ecc:source-command-promote",
+        "code-review",
+        "research",
+        "migrate-to-shoehorn",
+        "ecc:source-command-feature-dev",
+        "resolving-merge-conflicts",
+        "template-creator:template-creator",
+        "ecc:terminal-opener",
+        "ecc:source-command-review-pr",
+        "ecc:source-command-hookify",
+        "wizard",
+        "ecc:source-command-instinct-status",
+        "ecc:source-command-hookify-configure",
+        "domain-modeling",
+        "grilling",
+        "ecc:source-command-hookify-list",
+        "ecc:source-command-refactor-clean"
+      ]
+    },
+    {
+      "id": "positive-114:1",
+      "query": "Manage an Uncloud cluster and its services.",
+      "relevant": [
+        "ecc:uncloud"
+      ],
+      "ranked": [
+        "ecc:uncloud",
+        "ecc:source-command-hookify-help",
+        "resolving-merge-conflicts",
+        "domain-modeling",
+        "setup-pre-commit",
+        "template-creator:template-creator",
+        "ecc:source-command-feature-dev",
+        "gke-cluster-autoscaler",
+        "ecc:ito-compute",
+        "aws-compute",
+        "gcloud",
+        "aws-storage",
+        "gke-observability",
+        "gke-compute-classes",
+        "migrate-to-shoehorn",
+        "gke-networking",
+        "impeccable",
+        "code-review",
+        "gke-basics",
+        "research"
+      ]
+    },
+    {
+      "id": "positive-114:2",
+      "query": "Use the uc CLI for deployment, Caddy ingress, static proxy routes, ports, scaling, logs, machines, and volumes.",
+      "relevant": [
+        "ecc:uncloud"
+      ],
+      "ranked": [
+        "ecc:uncloud",
+        "ecc:source-command-feature-dev",
+        "ecc:deployment-patterns",
+        "ecc:ecc-guide",
+        "domain-modeling",
+        "ecc:source-command-hookify-help",
+        "ecc:configure-ecc",
+        "setup-pre-commit",
+        "ecc:source-command-review-pr",
+        "ecc:source-command-fastapi-review",
+        "code-review",
+        "ecc:source-command-ecc-guide",
+        "resolving-merge-conflicts",
+        "ecc:source-command-update-codemaps",
+        "research",
+        "codebase-design",
+        "ecc:source-command-projects",
+        "aws-deployment",
+        "wizard",
+        "ecc:nasiko-control-plane"
+      ]
+    },
+    {
+      "id": "positive-114:3",
+      "query": "Keep the operations Uncloud-specific and account for cluster machines and volumes.",
+      "relevant": [
+        "ecc:uncloud"
+      ],
+      "ranked": [
+        "ecc:ito-compute",
+        "domain-modeling",
+        "code-review",
+        "research",
+        "ecc:data-throughput-accelerator",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-feature-dev",
+        "setup-pre-commit",
+        "wizard",
+        "template-creator:template-creator",
+        "ecc:uncloud",
+        "resolving-merge-conflicts",
+        "writing-for-agents",
+        "gke-cluster-autoscaler",
+        "ecc:ito-baskets",
+        "gke-compute-classes",
+        "impeccable",
+        "ecc:source-command-update-codemaps",
+        "ecc:nanoclaw-repl",
+        "plugin-creator"
+      ]
+    },
+    {
+      "id": "positive-118:1",
+      "query": "Integrate with the X or Twitter API.",
+      "relevant": [
+        "ecc:x-api"
+      ],
+      "ranked": [
+        "prototype",
+        "wizard",
+        "ecc:x-api",
+        "visualize:visualize",
+        "template-creator:template-creator",
+        "code-review",
+        "ecc:source-command-hookify-help",
+        "migrate-to-shoehorn",
+        "research",
+        "deslop",
+        "domain-modeling",
+        "setup-pre-commit",
+        "plugin-creator",
+        "impeccable",
+        "skill-creator",
+        "skill-installer",
+        "tdd",
+        "resolving-merge-conflicts",
+        "jupyter-notebook",
+        "codebase-design"
+      ]
+    },
+    {
+      "id": "positive-118:2",
+      "query": "Apply OAuth, posting, timeline, search, analytics, and rate-limit patterns for X.",
+      "relevant": [
+        "ecc:x-api"
+      ],
+      "ranked": [
+        "research",
+        "code-review",
+        "prototype",
+        "wizard",
+        "template-creator:template-creator",
+        "domain-modeling",
+        "setup-pre-commit",
+        "codebase-design",
+        "migrate-to-shoehorn",
+        "deslop",
+        "visualize:visualize",
+        "plugin-creator",
+        "ecc:source-command-hookify-help",
+        "openai-docs",
+        "ecc:x-api",
+        "diagnosing-bugs",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-projects",
+        "skill-installer",
+        "writing-for-agents"
+      ]
+    },
+    {
+      "id": "positive-118:3",
+      "query": "Keep platform operations within the X API and handle authentication and rate limits explicitly.",
+      "relevant": [
+        "ecc:x-api"
+      ],
+      "ranked": [
+        "code-review",
+        "ecc:x-api",
+        "prototype",
+        "domain-modeling",
+        "agent-platform-tuning",
+        "deslop",
+        "agent-platform-tuning-management",
+        "ecc:source-command-feature-dev",
+        "setup-pre-commit",
+        "ecc:source-command-update-codemaps",
+        "resolving-merge-conflicts",
+        "ecc:contract-first",
+        "ecc:source-command-hookify-help",
+        "research",
+        "codebase-design",
+        "agent-platform-endpoint-management",
+        "writing-for-agents",
+        "ecc:ito-compute",
+        "ecc:content-engine",
+        "find-docs"
+      ]
+    },
+    {
+      "id": "positive-119:1",
+      "query": "Integrate a Gemini LiveAPI websocket client.",
+      "relevant": [
+        "gemini-live-api"
+      ],
+      "ranked": [
+        "gemini-live-api",
+        "gemini-interactions-api",
+        "prototype",
+        "gemini-api",
+        "gemini-agents-api",
+        "wizard",
+        "setup-pre-commit",
+        "ecc:source-command-hookify-help",
+        "resolving-merge-conflicts",
+        "visualize:visualize",
+        "ecc:source-command-feature-dev",
+        "template-creator:template-creator",
+        "ecc:source-command-promote",
+        "codebase-design",
+        "skill-creator",
+        "code-review",
+        "domain-modeling",
+        "git-guardrails-claude-code",
+        "research",
+        "plugin-creator"
+      ]
+    },
+    {
+      "id": "positive-119:2",
+      "query": "Generate a service class that handles session setup, resumption, bearer refresh, and ClientMessage or ServerMessage protos.",
+      "relevant": [
+        "gemini-live-api"
+      ],
+      "ranked": [
+        "gemini-live-api",
+        "wizard",
+        "domain-modeling",
+        "prototype",
+        "ecc:source-command-feature-dev",
+        "template-creator:template-creator",
+        "ecc:source-command-hookify-help",
+        "ecc:contract-first",
+        "code-review",
+        "impeccable",
+        "ecc:source-command-learn",
+        "skill-creator",
+        "ecc:source-command-hookify",
+        "ecc:source-command-update-codemaps",
+        "codebase-design",
+        "ecc:source-command-plan-canvas",
+        "setup-pre-commit",
+        "ecc:tasteforge-video",
+        "resolving-merge-conflicts",
+        "ecc:tinystruct-patterns"
+      ]
+    },
+    {
+      "id": "positive-119:3",
+      "query": "Target the live bidirectional endpoint; one-shot generateContent and media generation are separate workflows.",
+      "relevant": [
+        "gemini-live-api"
+      ],
+      "ranked": [
+        "prototype",
+        "wizard",
+        "domain-modeling",
+        "research",
+        "ecc:source-command-feature-dev",
+        "visualize:visualize",
+        "resolving-merge-conflicts",
+        "ecc:tasteforge-video",
+        "ecc:source-command-promote",
+        "template-creator:template-creator",
+        "migrate-to-shoehorn",
+        "tdd",
+        "ecc:source-command-hookify-help",
+        "imagegen",
+        "ecc:videodb",
+        "code-review",
+        "setup-pre-commit",
+        "codebase-design",
+        "skill-creator",
+        "deslop"
+      ]
+    },
+    {
+      "id": "positive-122:1",
+      "query": "Onboard an application onto GKE.",
+      "relevant": [
+        "gke-app-onboarding"
+      ],
+      "ranked": [
+        "prototype",
+        "gke-app-onboarding",
+        "wizard",
+        "gke-cluster-creation",
+        "ecc:source-command-hookify-help",
+        "template-creator:template-creator",
+        "code-review",
+        "setup-pre-commit",
+        "ecc:source-command-feature-dev",
+        "gke-batch-hpc",
+        "gke-productionize",
+        "domain-modeling",
+        "impeccable",
+        "ecc:nasiko-control-plane",
+        "research",
+        "gke-manifest-generation",
+        "migrate-to-shoehorn",
+        "codebase-design",
+        "resolving-merge-conflicts",
+        "ecc:source-command-promote"
+      ]
+    },
+    {
+      "id": "positive-122:2",
+      "query": "Use the GKE application onboarding workflow for containerization, manifests, deployment, and migration.",
+      "relevant": [
+        "gke-app-onboarding"
+      ],
+      "ranked": [
+        "gke-app-onboarding",
+        "gke-manifest-generation",
+        "gke-cluster-creation",
+        "gke-productionize",
+        "gke-batch-hpc",
+        "gke-cluster-autoscaler",
+        "gke-workload-troubleshooting",
+        "gke-basics",
+        "gke-upgrades",
+        "ecc:deployment-patterns",
+        "gke-inference",
+        "gke-golden-path",
+        "gke-observability",
+        "gke-service-networking",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "gke-compute-classes",
+        "google-cloud-solution-guided-gke-ai-migration",
+        "gke-multitenancy",
+        "ecc:source-command-feature-dev",
+        "gke-workload-scaling"
+      ]
+    },
+    {
+      "id": "positive-122:3",
+      "query": "Target a first-time application deployment and leave cluster administration or upgrades to their specialized workflows.",
+      "relevant": [
+        "gke-app-onboarding"
+      ],
+      "ranked": [
+        "ecc:source-command-feature-dev",
+        "setup-pre-commit",
+        "ecc:deployment-patterns",
+        "resolving-merge-conflicts",
+        "domain-modeling",
+        "gke-cluster-autoscaler",
+        "wizard",
+        "gke-basics",
+        "migrate-to-shoehorn",
+        "gke-cluster-creation",
+        "ecc:source-command-auto-update",
+        "research",
+        "ecc:source-command-promote",
+        "gke-productionize",
+        "code-review",
+        "ecc:source-command-hookify-help",
+        "gke-app-onboarding",
+        "ecc:source-command-update-codemaps",
+        "ecc:data-throughput-accelerator",
+        "impeccable"
+      ]
+    },
+    {
+      "id": "positive-125:1",
+      "query": "Set up GKE observability.",
+      "relevant": [
+        "gke-observability"
+      ],
+      "ranked": [
+        "gke-observability",
+        "code-review",
+        "prototype",
+        "ecc:source-command-hookify-help",
+        "setup-pre-commit",
+        "gke-reliability",
+        "gke-workload-troubleshooting",
+        "template-creator:template-creator",
+        "wizard",
+        "gke-productionize",
+        "domain-modeling",
+        "gke-ai-troubleshooting-tpu-vbar-oom",
+        "ecc:nasiko-control-plane",
+        "gke-compute-classes",
+        "gke-inference",
+        "resolving-merge-conflicts",
+        "research",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "gke-cluster-autoscaler",
+        "migrate-to-shoehorn"
+      ]
+    },
+    {
+      "id": "positive-125:2",
+      "query": "Configure GKE logging, monitoring, and managed Prometheus collection and integration.",
+      "relevant": [
+        "gke-observability"
+      ],
+      "ranked": [
+        "gke-observability",
+        "gke-alert-configuration",
+        "gke-ai-troubleshooting-tpu-metrics-monitoring",
+        "cloud-logging-configuration-basics",
+        "gke-reliability",
+        "gke-node-notready",
+        "gke-productionize",
+        "ecc:source-command-hookify-help",
+        "gke-cluster-creation",
+        "cloud-logging-cross-project-configuration",
+        "gke-service-networking",
+        "setup-pre-commit",
+        "gke-manifest-generation",
+        "gke-backup-dr",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "gke-inference",
+        "ecc:source-command-feature-dev",
+        "gke-compute-classes",
+        "gke-cluster-autoscaler",
+        "gke-basics"
+      ]
+    },
+    {
+      "id": "positive-125:3",
+      "query": "Keep the observability setup on GKE and distinguish it from local logging or external APM configuration.",
+      "relevant": [
+        "gke-observability"
+      ],
+      "ranked": [
+        "gke-observability",
+        "gke-reliability",
+        "gke-productionize",
+        "setup-pre-commit",
+        "gke-workload-troubleshooting",
+        "code-review",
+        "ecc:source-command-hookify-help",
+        "gke-ai-troubleshooting-tpu-vbar-oom",
+        "gke-node-notready",
+        "gke-basics",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "gke-cluster-creation",
+        "gke-manifest-generation",
+        "gke-compute-classes",
+        "gke-golden-path",
+        "prototype",
+        "gke-service-networking",
+        "gke-backup-dr",
+        "research",
+        "ecc:nasiko-control-plane"
+      ]
+    },
+    {
+      "id": "positive-127:1",
+      "query": "Review GKE production readiness.",
+      "relevant": [
+        "gke-productionize"
+      ],
+      "ranked": [
+        "gke-productionize",
+        "code-review",
+        "gke-cluster-creation",
+        "gke-golden-path",
+        "gke-reliability",
+        "research",
+        "prototype",
+        "gke-manifest-generation",
+        "gke-workload-troubleshooting",
+        "setup-pre-commit",
+        "gke-inference",
+        "gke-cluster-autoscaler",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "domain-modeling",
+        "ecc:source-command-feature-dev",
+        "wizard",
+        "migrate-to-shoehorn",
+        "impeccable",
+        "ecc:ito-compute",
+        "ecc:nasiko-control-plane"
+      ]
+    },
+    {
+      "id": "positive-127:2",
+      "query": "Run a comprehensive productionization assessment across the cluster and workloads.",
+      "relevant": [
+        "gke-productionize"
+      ],
+      "ranked": [
+        "gke-productionize",
+        "code-review",
+        "research",
+        "wizard",
+        "domain-modeling",
+        "visualize:visualize",
+        "ecc:source-command-feature-dev",
+        "resolving-merge-conflicts",
+        "setup-pre-commit",
+        "migrate-to-shoehorn",
+        "diagnosing-bugs",
+        "prototype",
+        "ecc:ito-compute",
+        "ecc:data-throughput-accelerator",
+        "tdd",
+        "ecc:source-command-hookify-help",
+        "template-creator:template-creator",
+        "ecc:ito-baskets",
+        "skill-creator",
+        "ecc:source-command-update-codemaps"
+      ]
+    },
+    {
+      "id": "positive-127:3",
+      "query": "Cover the cross-domain readiness review and defer deep implementation to the relevant specialist skill.",
+      "relevant": [
+        "gke-productionize"
+      ],
+      "ranked": [
+        "domain-modeling",
+        "code-review",
+        "research",
+        "ecc:source-command-feature-dev",
+        "prototype",
+        "codebase-design",
+        "ecc:source-command-review-pr",
+        "tdd",
+        "impeccable",
+        "gke-productionize",
+        "ecc:source-command-epic-validate",
+        "ecc:nasiko-control-plane",
+        "migrate-to-shoehorn",
+        "grilling",
+        "resolving-merge-conflicts",
+        "wizard",
+        "verify-this",
+        "scaffold-exercises",
+        "ecc:benchmark",
+        "template-creator:template-creator"
+      ]
+    },
+    {
+      "id": "positive-128:1",
+      "query": "Configure GKE edge and service networking.",
+      "relevant": [
+        "gke-service-networking"
+      ],
+      "ranked": [
+        "gke-service-networking",
+        "gke-networking",
+        "gke-reliability",
+        "gke-compute-classes",
+        "gke-observability",
+        "gke-basics",
+        "domain-modeling",
+        "wizard",
+        "ecc:source-command-hookify-help",
+        "gke-cluster-autoscaler",
+        "gke-golden-path",
+        "gke-manifest-generation",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "setup-pre-commit",
+        "gke-workload-troubleshooting",
+        "gke-inference",
+        "gke-backup-dr",
+        "resolving-merge-conflicts",
+        "gke-custom-golden-image-discovery",
+        "gke-batch-hpc"
+      ]
+    },
+    {
+      "id": "positive-128:2",
+      "query": "Use Gateway or Ingress manifests, Cloud Armor, container-native load balancing, PSC, and managed SSL patterns.",
+      "relevant": [
+        "gke-service-networking"
+      ],
+      "ranked": [
+        "gke-service-networking",
+        "google-cloud-solution-multi-agent-security",
+        "ecc:deployment-patterns",
+        "wizard",
+        "domain-modeling",
+        "ecc:content-engine",
+        "ecc:source-command-hookify-help",
+        "google-cloud-solution-n-tier-serverless-web-app",
+        "google-cloud-global-frontend-configuration",
+        "ecc:kubernetes-patterns",
+        "ecc:source-command-feature-dev",
+        "ecc:canary-watch",
+        "code-review",
+        "ecc:videodb",
+        "ecc:uncloud",
+        "template-creator:template-creator",
+        "gke-manifest-generation",
+        "research",
+        "ecc:tasteforge-video",
+        "ecc:configure-ecc"
+      ]
+    },
+    {
+      "id": "positive-128:3",
+      "query": "Stay at edge routing and private service endpoints; do not solve core IP planning or node NAT.",
+      "relevant": [
+        "gke-service-networking"
+      ],
+      "ranked": [
+        "gke-service-networking",
+        "domain-modeling",
+        "setup-pre-commit",
+        "resolving-merge-conflicts",
+        "migrate-to-shoehorn",
+        "gke-networking",
+        "research",
+        "prototype",
+        "code-review",
+        "wizard",
+        "ecc:source-command-feature-dev",
+        "ecc:network-bgp-diagnostics",
+        "ecc:nasiko-control-plane",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-review-pr",
+        "aws-networking",
+        "template-creator:template-creator",
+        "ecc:ito-compute",
+        "ecc:terminal-opener",
+        "agent-platform-tuning"
+      ]
+    },
+    {
+      "id": "positive-129:1",
+      "query": "Query Google Analytics reporting data through the Data API.",
+      "relevant": [
+        "google-analytics-data-api-basics"
+      ],
+      "ranked": [
+        "google-analytics-data-api-basics",
+        "google-analytics-admin-api-basics",
+        "cloud-monitoring-metric-selection",
+        "data-manager-api-event-ingestion",
+        "bigquery-ai-ml",
+        "visualize:visualize",
+        "cloud-logging-query-generation",
+        "research",
+        "google-ads-api-account-diagnostics",
+        "prototype",
+        "cloud-logging-configuration-basics",
+        "retrieving-developer-knowledge",
+        "aws-billing-and-cost-management",
+        "data-manager-api-audience-ingestion",
+        "cloud-monitoring-chart-generation",
+        "google-cloud-solution-agentic-analytics-spark-knowledge-catalog",
+        "gke-cost-analysis",
+        "spreadsheets:Spreadsheets",
+        "diagnosing-bugs",
+        "google-ads-api-quickstart"
+      ]
+    },
+    {
+      "id": "positive-129:2",
+      "query": "Use the v1beta Analytics Data API, validate metric and dimension compatibility, and enable it with the cloud CLI.",
+      "relevant": [
+        "google-analytics-data-api-basics"
+      ],
+      "ranked": [
+        "google-analytics-data-api-basics",
+        "bigquery-ai-ml",
+        "setup-pre-commit",
+        "visualize:visualize",
+        "code-review",
+        "agent-platform-inference",
+        "prototype",
+        "domain-modeling",
+        "cloud-logging-configuration-basics",
+        "migrate-to-shoehorn",
+        "ecc:dashboard-builder",
+        "wizard",
+        "diagnosing-bugs",
+        "bigtable-basics",
+        "data-manager-api-setup",
+        "gke-observability",
+        "research",
+        "ecc:benchmark",
+        "codebase-design",
+        "gcloud"
+      ]
+    },
+    {
+      "id": "positive-129:3",
+      "query": "Keep the task on reporting data; Admin API and front-end tracking setup are outside scope.",
+      "relevant": [
+        "google-analytics-data-api-basics"
+      ],
+      "ranked": [
+        "setup-pre-commit",
+        "google-analytics-data-api-basics",
+        "wizard",
+        "visualize:visualize",
+        "code-review",
+        "data-manager-api-setup",
+        "research",
+        "ecc:dashboard-builder",
+        "template-creator:template-creator",
+        "diagnosing-bugs",
+        "prototype",
+        "ecc:source-command-promote",
+        "plugin-creator",
+        "google-analytics-admin-api-basics",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-hookify-help",
+        "domain-modeling",
+        "agent-platform-endpoint-management",
+        "find-docs",
+        "openai-docs"
+      ]
+    },
+    {
+      "id": "positive-149:1",
+      "query": "Retrieve official OpenAI and Codex documentation.",
+      "relevant": [
+        "openai-docs"
+      ],
+      "ranked": [
+        "openai-docs",
+        "skill-installer",
+        "ecc:source-command-hookify-help",
+        "prototype",
+        "code-review",
+        "deslop",
+        "template-creator:template-creator",
+        "pdf:pdf",
+        "research",
+        "codebase-design",
+        "ecc:source-command-feature-dev",
+        "skill-creator",
+        "plugin-creator",
+        "setup-pre-commit",
+        "domain-modeling",
+        "humanizer:humanizer",
+        "ecc:source-command-review-pr",
+        "visualize:visualize",
+        "ecc:terminal-opener",
+        "resolving-merge-conflicts"
+      ]
+    },
+    {
+      "id": "positive-149:2",
+      "query": "Search the OpenAI and Codex documentation surface for current model, skill, task, and setup instructions.",
+      "relevant": [
+        "openai-docs"
+      ],
+      "ranked": [
+        "openai-docs",
+        "skill-installer",
+        "skill-creator",
+        "wizard",
+        "domain-modeling",
+        "visualize:visualize",
+        "prototype",
+        "ecc:source-command-feature-dev",
+        "code-review",
+        "ecc:ecc-guide",
+        "template-creator:template-creator",
+        "codebase-design",
+        "deslop",
+        "jupyter-notebook",
+        "humanizer:humanizer",
+        "research",
+        "ecc:source-command-ecc-guide",
+        "setup-pre-commit",
+        "ecc:source-command-hookify-help",
+        "pdf:pdf"
+      ]
+    },
+    {
+      "id": "positive-149:3",
+      "query": "Use current official documentation and keep the lookup focused on OpenAI or Codex behavior.",
+      "relevant": [
+        "openai-docs"
+      ],
+      "ranked": [
+        "openai-docs",
+        "skill-installer",
+        "deslop",
+        "research",
+        "setup-pre-commit",
+        "code-review",
+        "prototype",
+        "visualize:visualize",
+        "template-creator:template-creator",
+        "codebase-design",
+        "ecc:source-command-hookify-help",
+        "resolving-merge-conflicts",
+        "find-docs",
+        "domain-modeling",
+        "ecc:documentation-lookup",
+        "ecc:source-command-feature-dev",
+        "wizard",
+        "skill-creator",
+        "impeccable",
+        "plugin-creator"
+      ]
+    },
+    {
+      "id": "positive-150:1",
+      "query": "Read, create, render, and verify a PDF document.",
+      "relevant": [
+        "pdf:pdf"
+      ],
+      "ranked": [
+        "pdf:pdf",
+        "skill-creator",
+        "prototype",
+        "template-creator:template-creator",
+        "impeccable",
+        "writing-for-agents",
+        "visualize:visualize",
+        "research",
+        "code-review",
+        "wizard",
+        "domain-modeling",
+        "openai-docs",
+        "documents:documents",
+        "ecc:source-command-plan-canvas",
+        "setup-pre-commit",
+        "jupyter-notebook",
+        "spreadsheets:Spreadsheets",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-hookify-help",
+        "plugin-creator"
+      ]
+    },
+    {
+      "id": "positive-150:2",
+      "query": "Use the PDF workflow to extract content, generate the document, render pages, and inspect the result.",
+      "relevant": [
+        "pdf:pdf"
+      ],
+      "ranked": [
+        "pdf:pdf",
+        "visualize:visualize",
+        "writing-for-agents",
+        "openai-docs",
+        "documents:documents",
+        "prototype",
+        "find-docs",
+        "research",
+        "ecc:source-command-plan-canvas",
+        "ecc:source-command-learn",
+        "skill-creator",
+        "template-creator:template-creator",
+        "wizard",
+        "ecc:source-command-hookify-help",
+        "ecc:source-command-feature-dev",
+        "ecc:search-first",
+        "ecc:source-command-ecc-guide",
+        "domain-modeling",
+        "impeccable",
+        "ecc:ecc-guide"
+      ]
+    },
+    {
+      "id": "positive-150:3",
+      "query": "Verify the rendered output and keep the deliverable a PDF rather than a Word or slide file.",
+      "relevant": [
+        "pdf:pdf"
+      ],
+      "ranked": [
+        "pdf:pdf",
+        "code-review",
+        "prototype",
+        "impeccable",
+        "template-creator:template-creator",
+        "writing-for-agents",
+        "wizard",
+        "ecc:source-command-hookify-help",
+        "setup-pre-commit",
+        "skill-creator",
+        "domain-modeling",
+        "research",
+        "ecc:article-writing",
+        "migrate-to-shoehorn",
+        "visualize:visualize",
+        "ecc:source-command-plan-canvas",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-review-pr",
+        "ecc:source-command-hookify",
+        "verify-this"
+      ]
+    },
+    {
+      "id": "positive-158:1",
+      "query": "Install a curated agent skill.",
+      "relevant": [
+        "skill-installer"
+      ],
+      "ranked": [
+        "skill-installer",
+        "wizard",
+        "skill-creator",
+        "writing-for-agents",
+        "domain-modeling",
+        "plugin-creator",
+        "template-creator:template-creator",
+        "setup-pre-commit",
+        "ecc:source-command-feature-dev",
+        "ecc:source-command-review-pr",
+        "ecc:source-command-hookify-help",
+        "research",
+        "prototype",
+        "impeccable",
+        "code-review",
+        "deslop",
+        "agent-platform-skill-registry",
+        "codebase-design",
+        "ecc:openclaw-persona-forge",
+        "visualize:visualize"
+      ]
+    },
+    {
+      "id": "positive-158:2",
+      "query": "Fetch the requested capability package from the curated repository and register it with the coding agent.",
+      "relevant": [
+        "skill-installer"
+      ],
+      "ranked": [
+        "skill-installer",
+        "ecc:source-command-feature-dev",
+        "wizard",
+        "ecc:source-command-hookify-help",
+        "setup-pre-commit",
+        "plugin-creator",
+        "ecc:source-command-auto-update",
+        "template-creator:template-creator",
+        "prototype",
+        "ecc:source-command-ecc-guide",
+        "code-review",
+        "domain-modeling",
+        "codebase-design",
+        "deslop",
+        "resolving-merge-conflicts",
+        "ecc:configure-ecc",
+        "skill-creator",
+        "ecc:source-command-update-codemaps",
+        "ecc:source-command-review-pr",
+        "research"
+      ]
+    },
+    {
+      "id": "positive-158:3",
+      "query": "Install only the requested reviewed skill and verify availability after installation.",
+      "relevant": [
+        "skill-installer"
+      ],
+      "ranked": [
+        "setup-pre-commit",
+        "code-review",
+        "wizard",
+        "skill-creator",
+        "skill-installer",
+        "migrate-to-shoehorn",
+        "template-creator:template-creator",
+        "ecc:source-command-review-pr",
+        "ecc:source-command-feature-dev",
+        "verify-this",
+        "research",
+        "ecc:nasiko-control-plane",
+        "impeccable",
+        "prototype",
+        "ecc:source-command-hookify-help",
+        "ecc:configure-ecc",
+        "ecc:source-command-instinct-status",
+        "diagnosing-bugs",
+        "resolving-merge-conflicts",
+        "ecc:ito-compute"
+      ]
+    }
+  ],
+  "design": "Arctic XS query prefix and pooling are owned by fastembed 0.8.0; top-20 cosine retrieval"
+}

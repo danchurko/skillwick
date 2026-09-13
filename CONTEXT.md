@@ -24,6 +24,45 @@ _Avoid_: Selected skill
 An installed skill the calling agent chooses to read and use for the current task.
 _Avoid_: Automatically activated skill
 
+**Filesystem record**:
+
+A metadata record discovered under an authorized filesystem root.
+_Avoid_: Native inventory
+
+**Native inventory**:
+
+Records returned by the supported agent-native inventory contract, scoped to a
+normalized workspace and agent home.
+_Avoid_: Filesystem scan
+
+**Raw record**:
+
+One source record before public canonical deduplication.
+_Avoid_: Public candidate
+
+**Model-discoverable**:
+
+Enabled inventory state that passes invocation-policy checks and may appear in
+public search, list, count, read, or inspect results.
+_Avoid_: User-invocable
+
+**Workspace coverage**:
+
+A valid native snapshot for the exact normalized workspace and Codex home.
+_Avoid_: Global native cache
+
+**Invocation policy**:
+
+The normalized rule that decides whether an installed skill may be suggested to
+the model.
+_Avoid_: Permission to execute
+
+**Package inspection**:
+
+A bounded listing of package paths and types without reading or executing their
+contents.
+_Avoid_: Safety approval
+
 **Integration**:
 The configuration and usage instructions that make Skillwick available to a
 coding agent. It does not determine the agent's general workflow.

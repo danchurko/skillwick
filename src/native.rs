@@ -3,7 +3,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
     fs,
-    io::{BufRead, BufReader, Read, Write},
+    io::{self, BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::mpsc,
@@ -106,19 +106,13 @@ pub fn inventory(codex: &Codex, codex_home: &Path, cwd: &Path) -> Result<Vec<Ski
     let parse_context = context.clone();
     thread::spawn(move || {
         let mut reader = BufReader::new(stdout);
-        let mut line = String::new();
         loop {
-            line.clear();
-            match reader.read_line(&mut line) {
-                Ok(0) => {
+            match read_bounded_line(&mut reader, MAX_MESSAGE) {
+                Ok(None) => {
                     let _ = sender.send(Err("Codex inventory reached EOF".into()));
                     break;
                 }
-                Ok(_) if line.len() > MAX_MESSAGE => {
-                    let _ = sender.send(Err("Codex inventory message exceeds 1 MiB".into()));
-                    break;
-                }
-                Ok(_) => match serde_json::from_str::<Response>(&line) {
+                Ok(Some(line)) => match serde_json::from_slice::<Response>(&line) {
                     Ok(response) if response.id == Some(2) => {
                         let _ = sender.send(parse_inventory(response, &parse_context));
                         break;
@@ -129,6 +123,10 @@ pub fn inventory(codex: &Codex, codex_home: &Path, cwd: &Path) -> Result<Vec<Ski
                         break;
                     }
                 },
+                Err(error) if error.kind() == io::ErrorKind::InvalidData => {
+                    let _ = sender.send(Err("Codex inventory message exceeds 1 MiB".into()));
+                    break;
+                }
                 Err(error) => {
                     let _ = sender.send(Err(error.to_string()));
                     break;
@@ -174,6 +172,36 @@ pub fn inventory(codex: &Codex, codex_home: &Path, cwd: &Path) -> Result<Vec<Ski
     })?
 }
 
+fn read_bounded_line<R: BufRead>(reader: &mut R, limit: usize) -> io::Result<Option<Vec<u8>>> {
+    let mut line = Vec::new();
+    loop {
+        let buffer = reader.fill_buf()?;
+        if buffer.is_empty() {
+            return if line.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(line))
+            };
+        }
+
+        let take = buffer
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .map_or(buffer.len(), |position| position + 1);
+        if line.len().saturating_add(take) > limit {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "line exceeds configured limit",
+            ));
+        }
+        line.extend_from_slice(&buffer[..take]);
+        reader.consume(take);
+        if take > 0 && line.last() == Some(&b'\n') {
+            return Ok(Some(line));
+        }
+    }
+}
+
 fn parse_inventory(response: Response, context: &config::Context) -> Result<Vec<Skill>, String> {
     if let Some(error) = response.error {
         return Err(format!("Codex inventory failed: {}", error.message));
@@ -193,8 +221,7 @@ fn parse_inventory(response: Response, context: &config::Context) -> Result<Vec<
             ));
         }
         for native in cwd.skills {
-            let canonical = fs::canonicalize(&native.path)
-                .map_err(|e| format!("{}: {e}", native.path.display()))?;
+            let canonical = validate_native_path(&native.path)?;
             let mut parsed = metadata::parse(&canonical)?;
             parsed.name = native.name;
             parsed.description = native
@@ -224,6 +251,35 @@ fn parse_inventory(response: Response, context: &config::Context) -> Result<Vec<
     Ok(output)
 }
 
+fn validate_native_path(path: &Path) -> Result<PathBuf, String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| format!("native skill path has no package: {}", path.display()))?;
+    let canonical_parent = fs::canonicalize(parent)
+        .map_err(|e| format!("native skill package {}: {e}", parent.display()))?;
+    let canonical =
+        fs::canonicalize(path).map_err(|e| format!("native skill path {}: {e}", path.display()))?;
+    if !canonical.is_file() {
+        return Err(format!(
+            "native skill path is not a file: {}",
+            path.display()
+        ));
+    }
+    if canonical.file_name().and_then(|name| name.to_str()) != Some("SKILL.md") {
+        return Err(format!(
+            "native skill path is not SKILL.md: {}",
+            path.display()
+        ));
+    }
+    if !canonical.starts_with(&canonical_parent) {
+        return Err(format!(
+            "native skill path escapes package: {}",
+            path.display()
+        ));
+    }
+    Ok(canonical)
+}
+
 fn terminate(child: &mut Child) {
     let _ = child.kill();
     let _ = child.wait();
@@ -239,11 +295,44 @@ fn find_in_path(name: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
+
     #[test]
     fn compatibility_is_explicit() {
         assert!(supports_native_catalog("0.154.0"));
         assert!(!supports_native_catalog("0.155.0"));
     }
+
+    #[test]
+    fn protocol_lines_are_bounded_before_json_parsing() {
+        let mut reader = BufReader::new(Cursor::new(b"{}\n".to_vec()));
+        assert_eq!(
+            read_bounded_line(&mut reader, MAX_MESSAGE).unwrap(),
+            Some(b"{}\n".to_vec())
+        );
+
+        let mut reader = BufReader::new(Cursor::new(vec![b'x'; MAX_MESSAGE + 1]));
+        let error = read_bounded_line(&mut reader, MAX_MESSAGE).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn native_path_rejects_a_symlink_escape() {
+        use std::os::unix::fs::symlink;
+
+        let temp = tempfile::tempdir().unwrap();
+        let package = temp.path().join("package");
+        let outside = temp.path().join("outside");
+        fs::create_dir_all(&package).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join("SKILL.md"), "---\nname: outside\n---\n").unwrap();
+        symlink(outside.join("SKILL.md"), package.join("SKILL.md")).unwrap();
+
+        let error = validate_native_path(&package.join("SKILL.md")).unwrap_err();
+        assert!(error.contains("escapes package"));
+    }
+
     #[test]
     fn parses_interleaved_release_fixture() {
         let line = include_str!("../tests/fixtures/codex/0.154.0/skills-list.jsonl")

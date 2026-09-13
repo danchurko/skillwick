@@ -1,0 +1,2540 @@
+{
+  "version": 1,
+  "kind": "skillwick-reranker-experiment",
+  "measured_at": "2026-09-13T23:08:15.041463+00:00",
+  "status": "research-only; no production behavior changed",
+  "profile_sha256": "f398dcba56af7f64061ab13a95cd12cfdd35ce96a643165a0ba4b1ecea10f959",
+  "model": {
+    "name": "cross-encoder/ms-marco-TinyBERT-L2-v2",
+    "revision": "81d1926f67cb8eee2c2be17ca9f793c7c3bd20cc",
+    "file": "onnx/model_qint8_arm64.onnx",
+    "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
+    "bytes": 4518071,
+    "license": "Apache-2.0"
+  },
+  "runtime": {
+    "python": "3.10.21",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "fastembed": "0.8.0",
+    "onnxruntime": "1.23.2"
+  },
+  "measurements": {
+    "cold_model_load_ms": 214.785208,
+    "index_or_candidate_build_ms": 7940.702459,
+    "warm_query_ms": {
+      "samples": 312,
+      "min": 0.593666,
+      "median": 24.0669375,
+      "p95": 53.502417,
+      "max": 153.223584
+    },
+    "peak_rss_kib": 210544,
+    "artifact_bytes": 4518071
+  },
+  "quality": {
+    "queries": 105,
+    "recall_at_5": 0.9523809523809523,
+    "mrr_at_5": 0.9288888888888889,
+    "ndcg_at_5": 0.9347496410893091
+  },
+  "failure_behavior": {
+    "missing": "model artifact missing",
+    "corrupt": "model artifact checksum mismatch",
+    "verified_before_offline_model_load": true,
+    "lexical_search_affected": false
+  },
+  "rankings": [
+    {
+      "id": "positive-004:1",
+      "query": "Author and deploy a reliable AWS CDK stack in TypeScript.",
+      "relevant": [
+        "aws-cdk"
+      ],
+      "ranked": [
+        "aws-cdk",
+        "aws-deployment",
+        "aws-serverless",
+        "aws-cloudformation",
+        "launch-with-aws",
+        "aws-blocks",
+        "aws-storage",
+        "aws-containers",
+        "aws-ai-ml",
+        "aws-compute",
+        "aws-auth",
+        "aws-observability",
+        "aws-networking",
+        "aws-iam",
+        "agent-platform-troubleshooting"
+      ]
+    },
+    {
+      "id": "positive-004:2",
+      "query": "Use CDK constructs, synth or diff, deployment, and CloudFormation troubleshooting patterns.",
+      "relevant": [
+        "aws-cdk"
+      ],
+      "ranked": [
+        "aws-cdk",
+        "aws-cloudformation",
+        "ecc:deployment-patterns",
+        "application-design-center-design-deploy",
+        "aws-serverless",
+        "aws-deployment",
+        "agent-platform-troubleshooting",
+        "managed-airflow-dag-troubleshooting",
+        "gke-ai-troubleshooting-jobset-interruption",
+        "gke-ai-troubleshooting-tpu-dynamic-slices-monitoring",
+        "gke-manifest-generation",
+        "gke-workload-troubleshooting",
+        "agent-platform-endpoint-management",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "gke-ai-troubleshooting-tpu-metrics-monitoring",
+        "ecc:network-bgp-diagnostics",
+        "gke-ai-troubleshooting-tpu-vbar-oom",
+        "ecc:django-security",
+        "ecc:laravel-security",
+        "ponytail:ponytail-audit"
+      ]
+    },
+    {
+      "id": "positive-004:3",
+      "query": "Stay within AWS CDK and preserve existing resources while resolving drift or deployment errors.",
+      "relevant": [
+        "aws-cdk"
+      ],
+      "ranked": [
+        "aws-cdk",
+        "aws-serverless",
+        "ecc:living-docs-governance",
+        "aws-deployment",
+        "aws-cloudformation",
+        "signing-in-to-aws",
+        "google-cloud-global-frontend-configuration",
+        "launch-with-aws",
+        "aws-ai-ml",
+        "aws-sdk-python-usage",
+        "google-cloud-solution-guided-gke-ai-migration",
+        "aws-blocks",
+        "aws-auth",
+        "agent-platform-endpoint-management",
+        "agent-platform-deploy",
+        "aws-sdk-js-v3-usage",
+        "aws-sdk-swift-usage",
+        "application-design-center-design-deploy",
+        "ecc:investor-materials",
+        "ecc:configure-ecc"
+      ]
+    },
+    {
+      "id": "positive-008:1",
+      "query": "Analyze BigQuery data with the Python BigFrames API.",
+      "relevant": [
+        "bigquery-bigframes"
+      ],
+      "ranked": [
+        "bigquery-bigframes",
+        "datalineage-bigquery-asset-impact-analysis",
+        "bigquery-basics",
+        "bigquery-ai-ml",
+        "bigtable-basics",
+        "gke-cost-analysis",
+        "datalineage-summary",
+        "google-cloud-storage-bucket-architect",
+        "google-cloud-storage-basics",
+        "workload-manager-basics",
+        "gemini-api",
+        "ecc:gget",
+        "data-manager-api-setup",
+        "data-manager-api-event-ingestion",
+        "data-manager-api-audience-ingestion",
+        "ecc:source-command-jira"
+      ]
+    },
+    {
+      "id": "positive-008:2",
+      "query": "Generate BigQuery DataFrames code using the pandas and scikit-learn style interface.",
+      "relevant": [
+        "bigquery-bigframes"
+      ],
+      "ranked": [
+        "bigquery-bigframes",
+        "datalineage-bigquery-asset-impact-analysis",
+        "google-cloud-storage-basics",
+        "developing-genkit-go",
+        "gke-cost-analysis",
+        "ecc:taste-application",
+        "ecc:angular-developer",
+        "workload-manager-basics",
+        "deslop",
+        "ecc:inherit-legacy-style",
+        "ecc:ai-first-engineering",
+        "ecc:codebase-onboarding",
+        "ecc:source-command-update-codemaps",
+        "agent-platform-inference",
+        "ecc:accessibility",
+        "google-ads-api-mcp-setup",
+        "ecc:security-scan",
+        "ecc:dmux-workflows",
+        "ecc:swift-protocol-di-testing",
+        "ecc:plankton-code-quality"
+      ]
+    },
+    {
+      "id": "positive-008:3",
+      "query": "Use BigFrames for the notebook workflow rather than SQL-first code or the low-level BigQuery client.",
+      "relevant": [
+        "bigquery-bigframes"
+      ],
+      "ranked": [
+        "bigquery-bigframes",
+        "dbt-sf-to-bq-translator",
+        "ecc:mle-workflow",
+        "ecc:messages-ops",
+        "ecc:tdd-workflow",
+        "launch-with-aws",
+        "aws-iam",
+        "ecc:dmux-workflows",
+        "ecc:workspace-surface-audit",
+        "ecc:pubmed-database",
+        "ecc:finance-billing-ops",
+        "google-cloud-storage-bucket-architect",
+        "ecc:eval-harness",
+        "google-cloud-solution-agentic-ai-data-science-workflow",
+        "ecc:ai-regression-testing",
+        "ecc:agent-eval",
+        "ecc:skill-comply",
+        "ecc:token-budget-advisor",
+        "ecc:manim-video",
+        "ecc:frontend-slides"
+      ]
+    },
+    {
+      "id": "positive-009:1",
+      "query": "Reduce an answer to a compact, technically accurate form.",
+      "relevant": [
+        "caveman"
+      ],
+      "ranked": []
+    },
+    {
+      "id": "positive-009:2",
+      "query": "Apply the compressed communication mode at an appropriate lite, full, or ultra level.",
+      "relevant": [
+        "caveman"
+      ],
+      "ranked": [
+        "caveman",
+        "ponytail:ponytail",
+        "google-cloud-storage-fuse",
+        "ecc:skill-comply",
+        "ecc:skill-stocktake",
+        "aws-ai-ml",
+        "ecc:perl-security",
+        "aws-cloudformation",
+        "ecc:dynamic-workflow-mode",
+        "gke-workload-scaling",
+        "ecc:homelab-wireguard-vpn",
+        "aws-messaging-and-streaming",
+        "ecc:tasteforge-video",
+        "ecc:make-interfaces-feel-better",
+        "ecc:counterparty-channel-discipline",
+        "ecc:unified-notifications-ops",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+        "amazon-bedrock",
+        "ecc:vite-patterns",
+        "ponytail:ponytail-help"
+      ]
+    },
+    {
+      "id": "positive-009:3",
+      "query": "Preserve technical meaning while minimizing output tokens and use the requested concise voice.",
+      "relevant": [
+        "caveman"
+      ],
+      "ranked": [
+        "caveman",
+        "ecc:token-budget-advisor",
+        "ecc:agent-self-evaluation",
+        "ecc:motion-foundations",
+        "google-cloud-slo-alert-configuration",
+        "ecc:cost-tracking",
+        "ecc:strategic-compact",
+        "ecc:data-throughput-accelerator",
+        "ecc:seo",
+        "ecc:santa-method",
+        "ecc:ai-first-engineering",
+        "ecc:manim-video",
+        "ecc:continuous-learning",
+        "ecc:investor-outreach",
+        "ecc:literature-review",
+        "ecc:connections-optimizer",
+        "ecc:gateguard",
+        "gemini-interactions-api",
+        "ecc:project-flow-ops",
+        "sites:sites-hosting"
+      ]
+    },
+    {
+      "id": "positive-030:1",
+      "query": "Optimize a ClickHouse analytical workload.",
+      "relevant": [
+        "ecc:clickhouse-io"
+      ],
+      "ranked": [
+        "ecc:clickhouse-io",
+        "google-cloud-solution-hybrid-search-alloydb"
+      ]
+    },
+    {
+      "id": "positive-030:2",
+      "query": "Apply ClickHouse schema, query-planning, and data-engineering patterns for high-performance analytics.",
+      "relevant": [
+        "ecc:clickhouse-io"
+      ],
+      "ranked": [
+        "ecc:clickhouse-io",
+        "ecc:postgres-patterns",
+        "ecc:mysql-patterns",
+        "ecc:prisma-patterns",
+        "ecc:fastapi-patterns",
+        "aws-sdk-js-v3-usage",
+        "ecc:x-api"
+      ]
+    },
+    {
+      "id": "positive-030:3",
+      "query": "Keep the workload analytical and ClickHouse-specific rather than general SQL tuning.",
+      "relevant": [
+        "ecc:clickhouse-io"
+      ],
+      "ranked": [
+        "ecc:clickhouse-io",
+        "workload-manager-basics",
+        "aws-database",
+        "google-cloud-storage-bucket-architect",
+        "google-cloud-storage-fuse",
+        "ecc:pubmed-database",
+        "cloud-sql-basics",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "agent-platform-eval-flywheel",
+        "google-cloud-solution-hybrid-search-alloydb",
+        "bigquery-ai-ml",
+        "alloydb-basics",
+        "gke-ai-troubleshooting-jobset-interruption",
+        "gke-cost-optimization",
+        "ecc:content-hash-cache-pattern",
+        "ecc:skill-comply",
+        "ecc:manim-video",
+        "ecc:agent-eval",
+        "ecc:frontend-slides",
+        "ecc:strategic-compact"
+      ]
+    },
+    {
+      "id": "positive-031:1",
+      "query": "Produce a step-by-step CodeTour for a codebase.",
+      "relevant": [
+        "ecc:code-tour"
+      ],
+      "ranked": [
+        "ecc:code-tour"
+      ]
+    },
+    {
+      "id": "positive-031:2",
+      "query": "Generate a .tour file with anchored steps for an onboarding, architecture, or review walkthrough.",
+      "relevant": [
+        "ecc:code-tour"
+      ],
+      "ranked": [
+        "ecc:code-tour",
+        "ecc:codebase-onboarding",
+        "google-cloud-recipe-onboarding",
+        "ecc:master-agreement-generator",
+        "google-cloud-solution-architecture",
+        "ecc:dev-team",
+        "ecc:design-system",
+        "ecc:inherit-legacy-style",
+        "ecc:dart-flutter-patterns",
+        "google-cloud-recipe-foundation-builder",
+        "ecc:source-command-fastapi-review",
+        "ecc:ai-first-engineering",
+        "google-cloud-solution-build-deploy-agents",
+        "google-cloud-storage-basics",
+        "astra-orchestrator",
+        "ecc:flutter-dart-code-review",
+        "ecc:ecc-guide",
+        "cloud-sql-basics",
+        "ecc:agentic-os",
+        "ecc:codehealth-mcp"
+      ]
+    },
+    {
+      "id": "positive-031:3",
+      "query": "Include actual file and line references and keep the deliverable a CodeTour rather than prose documentation alone.",
+      "relevant": [
+        "ecc:code-tour"
+      ],
+      "ranked": [
+        "ecc:living-docs-governance",
+        "ecc:code-tour",
+        "find-docs",
+        "ecc:documentation-lookup",
+        "ponytail:ponytail",
+        "google-cloud-storage-fuse",
+        "ecc:blueprint",
+        "ecc:token-budget-advisor",
+        "ecc:content-hash-cache-pattern",
+        "ecc:source-command-update-docs",
+        "retrieving-developer-knowledge",
+        "ecc:customs-trade-compliance",
+        "ecc:pubmed-database",
+        "ecc:strategic-compact",
+        "ecc:agent-eval",
+        "ecc:rules-distill",
+        "ecc:skill-comply",
+        "ecc:manim-video",
+        "ecc:frontend-slides",
+        "ecc:production-scheduling"
+      ]
+    },
+    {
+      "id": "positive-037:1",
+      "query": "Harden a Django application against common web threats.",
+      "relevant": [
+        "ecc:django-security"
+      ],
+      "ranked": [
+        "find-docs",
+        "ecc:database-migrations",
+        "launch-with-aws",
+        "ecc:taste-application",
+        "ecc:ui-demo",
+        "google-cloud-solution-n-tier-serverless-web-app",
+        "aws-blocks",
+        "ecc:healthcare-phi-compliance",
+        "ecc:frontend-design-direction",
+        "ecc:deployment-patterns",
+        "gke-batch-hpc"
+      ]
+    },
+    {
+      "id": "positive-037:2",
+      "query": "Apply Django security patterns for auth, authorization, CSRF, SQL injection, XSS, and deployment configuration.",
+      "relevant": [
+        "ecc:django-security"
+      ],
+      "ranked": [
+        "ecc:django-security",
+        "ecc:laravel-security",
+        "ecc:django-verification",
+        "ecc:quarkus-security",
+        "ecc:django-celery",
+        "ecc:perl-security",
+        "ecc:springboot-security",
+        "ecc:fastapi-patterns",
+        "ecc:network-config-validation",
+        "ecc:llm-trading-agent-security",
+        "ecc:database-migrations",
+        "aws-storage",
+        "ecc:django-patterns",
+        "ecc:security-scan",
+        "gke-platform-security",
+        "ecc:postgres-patterns",
+        "aws-iam",
+        "ecc:security-review",
+        "gke-workload-security",
+        "ecc:source-command-fastapi-review"
+      ]
+    },
+    {
+      "id": "positive-037:3",
+      "query": "Focus on Django security controls rather than general framework architecture or product functionality.",
+      "relevant": [
+        "ecc:django-security"
+      ],
+      "ranked": [
+        "ecc:django-security",
+        "ecc:django-patterns",
+        "google-cloud-waf-security",
+        "ecc:django-tdd",
+        "google-cloud-solution-architecture",
+        "google-cloud-solution-build-deploy-agents",
+        "ecc:django-verification",
+        "google-cloud-recipe-foundation-builder",
+        "google-cloud-solution-agentic-ai-data-science-workflow",
+        "google-cloud-storage-bucket-architect",
+        "ecc:dart-flutter-patterns",
+        "aws-security",
+        "gke-workload-security",
+        "ecc:manim-video",
+        "ecc:source-command-fastapi-review",
+        "ecc:pubmed-database",
+        "ecc:defi-amm-security",
+        "ecc:frontend-slides",
+        "ecc:skill-comply",
+        "ecc:agent-eval"
+      ]
+    },
+    {
+      "id": "positive-038:1",
+      "query": "Create a secure, portable Docker and Compose workflow.",
+      "relevant": [
+        "ecc:docker-patterns"
+      ],
+      "ranked": [
+        "ecc:docker-patterns",
+        "google-cloud-storage-bucket-architect",
+        "ecc:skill-scout",
+        "cloud-sql-basics"
+      ]
+    },
+    {
+      "id": "positive-038:2",
+      "query": "Use container, networking, volumes, Compose orchestration, and installer-harness patterns.",
+      "relevant": [
+        "ecc:docker-patterns"
+      ],
+      "ranked": [
+        "ecc:docker-patterns",
+        "ecc:dmux-workflows",
+        "gke-service-networking",
+        "ecc:compose-multiplatform-patterns",
+        "gke-manifest-generation",
+        "ecc:uncloud",
+        "ecc:dart-flutter-patterns",
+        "ecc:tinystruct-patterns",
+        "ecc:hexagonal-architecture",
+        "aws-containers",
+        "cloud-run-alert-configuration",
+        "ecc:ralphinho-rfc-pipeline",
+        "gke-basics",
+        "ecc:marketing-campaign",
+        "aws-networking",
+        "ecc:team-agent-orchestration",
+        "aws-deployment",
+        "gke-networking",
+        "google-cloud-filestore-nfs-browser",
+        "google-cloud-networking-observability"
+      ]
+    },
+    {
+      "id": "positive-038:3",
+      "query": "Account for native macOS and Windows validation and avoid assuming Linux-only behavior.",
+      "relevant": [
+        "ecc:docker-patterns"
+      ],
+      "ranked": [
+        "ecc:docker-patterns",
+        "ecc:flox-environments",
+        "ecc:windows-desktop-e2e"
+      ]
+    },
+    {
+      "id": "positive-044:1",
+      "query": "Prevent token decimal mismatches across EVM chains.",
+      "relevant": [
+        "ecc:evm-token-decimals"
+      ],
+      "ranked": [
+        "ecc:evm-token-decimals",
+        "ecc:loop-design-check",
+        "ecc:context-budget",
+        "iam-helper-for-policy-simulator",
+        "agent-platform-alert-configuration",
+        "google-cloud-filestore-autoscale"
+      ]
+    },
+    {
+      "id": "positive-044:2",
+      "query": "Look up decimals at runtime, cache them by chain and token, and normalize amounts without precision drift.",
+      "relevant": [
+        "ecc:evm-token-decimals"
+      ],
+      "ranked": [
+        "ecc:evm-token-decimals",
+        "dpop-adoption",
+        "ecc:content-hash-cache-pattern",
+        "aws-auth",
+        "aws-ai-ml",
+        "ecc:context-budget",
+        "signing-in-to-aws",
+        "ecc:plan-orchestrate",
+        "ecc:cost-tracking",
+        "ecc:bun-runtime",
+        "aws-billing-and-cost-management",
+        "ecc:flox-environments",
+        "google-cloud-storage-bucket-architect",
+        "ecc:google-workspace-ops",
+        "ecc:swift-actor-persistence",
+        "agent-platform-deploy",
+        "gke-node-notready",
+        "ecc:source-command-update-codemaps",
+        "ecc:api-connector-builder",
+        "ecc:source-command-epic-publish"
+      ]
+    },
+    {
+      "id": "positive-044:3",
+      "query": "Handle bridged tokens and chain identity explicitly; never assume one global decimal value.",
+      "relevant": [
+        "ecc:evm-token-decimals"
+      ],
+      "ranked": [
+        "ecc:evm-token-decimals",
+        "ecc:token-budget-advisor",
+        "ecc:prompt-optimizer",
+        "ecc:loop-design-check",
+        "aws-auth",
+        "ecc:plan-orchestrate",
+        "gemini-live-api",
+        "ponytail:ponytail",
+        "launch-with-aws",
+        "ecc:flox-environments",
+        "google-cloud-storage-bucket-architect",
+        "ecc:taste",
+        "ponytail:ponytail-debt",
+        "astra-orchestrator"
+      ]
+    },
+    {
+      "id": "positive-047:1",
+      "query": "Audit revenue and billing operations with evidence.",
+      "relevant": [
+        "ecc:finance-billing-ops"
+      ],
+      "ranked": [
+        "ecc:finance-billing-ops",
+        "ecc:ecc-tools-cost-audit",
+        "ecc:customer-billing-ops",
+        "aws-billing-and-cost-management"
+      ]
+    },
+    {
+      "id": "positive-047:2",
+      "query": "Trace pricing, refunds, team billing, duplicate charges, and billing-model behavior to source records and code.",
+      "relevant": [
+        "ecc:finance-billing-ops"
+      ],
+      "ranked": [
+        "ecc:finance-billing-ops",
+        "ecc:ecc-tools-cost-audit",
+        "ecc:customer-billing-ops",
+        "aws-billing-and-cost-management",
+        "aws-iam",
+        "ecc:ck",
+        "ecc:source-command-hookify",
+        "google-cloud-recipe-onboarding",
+        "google-cloud-recipe-foundation-builder"
+      ]
+    },
+    {
+      "id": "positive-047:3",
+      "query": "Prefer verifiable billing reality over generic payment recommendations.",
+      "relevant": [
+        "ecc:finance-billing-ops"
+      ],
+      "ranked": [
+        "ecc:finance-billing-ops",
+        "ecc:living-docs-governance",
+        "ecc:customer-billing-ops",
+        "amazon-bedrock",
+        "find-docs",
+        "google-cloud-recipe-onboarding",
+        "aws-messaging-and-streaming"
+      ]
+    },
+    {
+      "id": "positive-050:1",
+      "query": "Perform quick reproducible bioinformatics lookups.",
+      "relevant": [
+        "ecc:gget"
+      ],
+      "ranked": [
+        "ecc:gget"
+      ]
+    },
+    {
+      "id": "positive-050:2",
+      "query": "Use the gget CLI or Python package for sequence retrieval, BLAST-like queries, and enrichment checks.",
+      "relevant": [
+        "ecc:gget"
+      ],
+      "ranked": [
+        "ecc:gget",
+        "cloud-monitoring-chart-generation",
+        "bigtable-basics",
+        "firebase-basics",
+        "bigquery-bigframes",
+        "aws-sdk-python-usage",
+        "ecc:uspto-database",
+        "ecc:pubmed-database",
+        "google-cloud-global-frontend-configuration",
+        "google-cloud-storage-bucket-architect",
+        "ecc:generating-python-installer",
+        "ecc:python-testing",
+        "ecc:research-ops",
+        "ecc:iterative-retrieval",
+        "developing-genkit-python",
+        "ecc:clickhouse-io",
+        "ecc:python-patterns",
+        "spanner-basics",
+        "google-cloud-filestore-nfs-browser",
+        "ecc:click-path-audit"
+      ]
+    },
+    {
+      "id": "positive-050:3",
+      "query": "Keep the workflow focused on genomic reference databases and preserve evidence logs.",
+      "relevant": [
+        "ecc:gget"
+      ],
+      "ranked": [
+        "ecc:gget",
+        "ecc:uspto-database",
+        "ecc:messages-ops",
+        "ecc:automation-audit-ops",
+        "ecc:research-ops",
+        "ecc:literature-review",
+        "ecc:terminal-ops",
+        "ecc:email-ops",
+        "ecc:finance-billing-ops",
+        "ecc:ecc-tools-cost-audit",
+        "aws-storage"
+      ]
+    },
+    {
+      "id": "positive-054:1",
+      "query": "Extract reusable engineering lessons after a complex task or failure.",
+      "relevant": [
+        "ecc:growth-log"
+      ],
+      "ranked": [
+        "ecc:growth-log",
+        "ecc:dynamic-workflow-mode",
+        "ecc:source-command-learn",
+        "ecc:blueprint",
+        "ecc:agent-self-evaluation",
+        "ecc:intent-driven-development",
+        "google-cloud-solution-architecture",
+        "ecc:rules-distill",
+        "ecc:canary-watch",
+        "agent-platform-eval-flywheel",
+        "ecc:continuous-learning-v2",
+        "ecc:agentic-engineering",
+        "detection-engineering-coverage-evaluation",
+        "ponytail:ponytail",
+        "ecc:ai-first-engineering",
+        "ponytail:ponytail-review",
+        "ecc:nutrient-document-processing",
+        "ecc:benchmark",
+        "ecc:cost-aware-llm-pipeline",
+        "ecc:source-command-refactor-clean"
+      ]
+    },
+    {
+      "id": "positive-054:2",
+      "query": "Distill the event into repeatable patterns, causes, and actions in a growth log.",
+      "relevant": [
+        "ecc:growth-log"
+      ],
+      "ranked": [
+        "ecc:growth-log",
+        "ecc:taste-distillation",
+        "ecc:rules-distill",
+        "ecc:tinystruct-patterns",
+        "ecc:react-patterns",
+        "ecc:taste-application",
+        "ecc:kotlin-exposed-patterns",
+        "ecc:quarkus-patterns",
+        "ecc:healthcare-cdss-patterns",
+        "ecc:jpa-patterns",
+        "ecc:taste",
+        "ecc:laravel-patterns",
+        "ecc:prisma-patterns",
+        "google-cloud-filestore-autoscale",
+        "ecc:loop-design-check",
+        "detection-engineering-coverage-evaluation",
+        "aws-blocks",
+        "ecc:continuous-learning-v2",
+        "aws-messaging-and-streaming",
+        "ima-dai-sdk"
+      ]
+    },
+    {
+      "id": "positive-054:3",
+      "query": "Write a reusable learning record rather than a chronological personal diary.",
+      "relevant": [
+        "ecc:growth-log"
+      ],
+      "ranked": [
+        "ecc:growth-log",
+        "ecc:manim-video",
+        "ecc:article-writing",
+        "bigquery-ai-ml",
+        "ecc:skill-comply",
+        "ecc:token-budget-advisor",
+        "ecc:pubmed-database",
+        "ecc:strategic-compact",
+        "ecc:frontend-slides",
+        "ecc:content-hash-cache-pattern",
+        "ecc:agent-eval"
+      ]
+    },
+    {
+      "id": "positive-058:1",
+      "query": "Segment a home network into secure VLANs.",
+      "relevant": [
+        "ecc:homelab-vlan-segmentation"
+      ],
+      "ranked": [
+        "ecc:homelab-vlan-segmentation",
+        "ecc:homelab-network-readiness",
+        "ecc:homelab-network-setup",
+        "ecc:homelab-pihole-dns",
+        "ecc:homelab-wireguard-vpn",
+        "google-cloud-solution-n-tier-serverless-web-app"
+      ]
+    },
+    {
+      "id": "positive-058:2",
+      "query": "Configure switch trunks, firewall rules, and SSID mappings on UniFi, pfSense, OPNsense, or MikroTik.",
+      "relevant": [
+        "ecc:homelab-vlan-segmentation"
+      ],
+      "ranked": [
+        "ecc:homelab-vlan-segmentation",
+        "aws-networking",
+        "ecc:source-command-hookify-configure",
+        "ecc:network-config-validation",
+        "ecc:configure-ecc",
+        "gke-observability",
+        "aws-serverless",
+        "google-analytics-admin-api-basics",
+        "iam-helper-for-policy-management",
+        "ecc:homelab-network-readiness",
+        "ecc:homelab-network-setup",
+        "google-cloud-networking-observability",
+        "ecc:hookify-rules",
+        "gemini-agents-api",
+        "ecc:rules-distill",
+        "ecc:context-budget",
+        "workload-manager-basics",
+        "ecc:ecc-guide",
+        "ecc:source-command-hookify-list",
+        "ecc:skill-comply"
+      ]
+    },
+    {
+      "id": "positive-058:3",
+      "query": "Cover home-network segmentation and its four traffic classes rather than generic subnet planning.",
+      "relevant": [
+        "ecc:homelab-vlan-segmentation"
+      ],
+      "ranked": [
+        "ecc:homelab-vlan-segmentation",
+        "aws-networking",
+        "gke-networking",
+        "aws-iam",
+        "ecc:manim-video",
+        "ecc:brand-discovery",
+        "google-cloud-storage-basics",
+        "ecc:skill-comply",
+        "ecc:agentic-os",
+        "aws-compute",
+        "ecc:llm-trading-agent-security",
+        "ecc:strategic-compact",
+        "ecc:token-budget-advisor",
+        "ecc:tasteforge-video",
+        "ecc:content-hash-cache-pattern",
+        "ecc:pubmed-database",
+        "ecc:frontend-slides",
+        "ecc:agent-eval"
+      ]
+    },
+    {
+      "id": "positive-065:1",
+      "query": "Design a latency-sensitive system around freshness and p95 goals.",
+      "relevant": [
+        "ecc:latency-critical-systems"
+      ],
+      "ranked": [
+        "ecc:latency-critical-systems",
+        "google-cloud-solution-agentic-analytics-spark-knowledge-catalog",
+        "ecc:recsys-pipeline-architect",
+        "ecc:design-system",
+        "aws-compute",
+        "ecc:hexagonal-architecture",
+        "google-cloud-solution-agentic-ai-bidirectional-streaming",
+        "google-cloud-solution-architecture",
+        "ecc:liquid-glass-design",
+        "google-cloud-solution-hybrid-search-alloydb",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb"
+      ]
+    },
+    {
+      "id": "positive-065:2",
+      "query": "Analyze real-time dashboards, market data, streaming agents, queues, and caches with latency-focused patterns.",
+      "relevant": [
+        "ecc:latency-critical-systems"
+      ],
+      "ranked": [
+        "ecc:latency-critical-systems",
+        "ecc:prediction-market-oracle-research",
+        "google-cloud-solution-agentic-ai-bidirectional-streaming",
+        "datalineage-bigquery-asset-impact-analysis",
+        "aws-observability",
+        "cloud-monitoring-chart-generation",
+        "google-cloud-storage-fuse",
+        "ecc:prediction-market-risk-review",
+        "aws-storage",
+        "ecc:prompt-optimizer",
+        "aws-messaging-and-streaming",
+        "google-cloud-storage-bucket-architect",
+        "agent-platform-eval-flywheel",
+        "google-cloud-solution-agentic-ai-borderless-data-lakehouse",
+        "developing-genkit-go",
+        "ecc:ml-adoption-playbook",
+        "ecc:gateguard",
+        "ecc:android-clean-architecture",
+        "ecc:agentic-os"
+      ]
+    },
+    {
+      "id": "positive-065:3",
+      "query": "Make p95 latency and data freshness explicit success criteria for the design.",
+      "relevant": [
+        "ecc:latency-critical-systems"
+      ],
+      "ranked": [
+        "ecc:latency-critical-systems",
+        "ecc:intent-driven-development",
+        "ecc:swift-actor-persistence",
+        "ecc:benchmark-optimization-loop",
+        "aws-ai-ml",
+        "aws-database",
+        "google-cloud-storage-bucket-architect"
+      ]
+    },
+    {
+      "id": "positive-066:1",
+      "query": "Run an AI-native lead intelligence and outreach workflow.",
+      "relevant": [
+        "ecc:lead-intelligence"
+      ],
+      "ranked": [
+        "ecc:lead-intelligence",
+        "ecc:connections-optimizer",
+        "ecc:ecc-tools-cost-audit"
+      ]
+    },
+    {
+      "id": "positive-066:2",
+      "query": "Score signals, rank mutual connections, discover warm paths, model source-derived voice, and adapt outreach by channel.",
+      "relevant": [
+        "ecc:lead-intelligence"
+      ],
+      "ranked": [
+        "ecc:lead-intelligence",
+        "ecc:connections-optimizer",
+        "ecc:social-graph-ranker",
+        "ecc:brand-voice",
+        "ecc:benchmark-methodology",
+        "ecc:brand-discovery",
+        "ecc:investor-outreach",
+        "ecc:council",
+        "ecc:council-multi-model",
+        "aws-ai-ml",
+        "ecc:carrier-relationship-management",
+        "agent-platform-deploy",
+        "ecc:frontend-slides",
+        "google-cloud-solution-hybrid-search-alloydb",
+        "ecc:recsys-pipeline-architect",
+        "aws-messaging-and-streaming",
+        "ecc:cost-aware-llm-pipeline",
+        "ecc:ai-first-engineering",
+        "ecc:ecc-tools-cost-audit",
+        "ecc:cost-tracking"
+      ]
+    },
+    {
+      "id": "positive-066:3",
+      "query": "Target high-value contacts and keep email, LinkedIn, and X outreach distinct.",
+      "relevant": [
+        "ecc:lead-intelligence"
+      ],
+      "ranked": [
+        "ecc:lead-intelligence",
+        "ecc:connections-optimizer",
+        "ecc:social-graph-ranker",
+        "ecc:investor-outreach",
+        "ecc:social-publisher",
+        "ecc:content-engine",
+        "ecc:crosspost",
+        "ecc:mailtrap-email-integration",
+        "ecc:living-docs-governance",
+        "google-cloud-storage-fuse",
+        "ecc:email-ops",
+        "ecc:api-connector-builder",
+        "ecc:marketing-campaign"
+      ]
+    },
+    {
+      "id": "positive-077:1",
+      "query": "Validate network device configuration before deployment.",
+      "relevant": [
+        "ecc:network-config-validation"
+      ],
+      "ranked": [
+        "ecc:network-config-validation",
+        "ecc:homelab-network-readiness",
+        "google-mobile-ads-validate",
+        "ecc:homelab-wireguard-vpn",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "gke-multitenancy",
+        "google-cloud-storage-bucket-architect",
+        "ecc:product-lens",
+        "gke-basics",
+        "gke-productionize",
+        "ecc:netmiko-ssh-automation"
+      ]
+    },
+    {
+      "id": "positive-077:2",
+      "query": "Run pre-deployment checks for addresses, overlaps, references, management-plane exposure, and IOS-style security hygiene.",
+      "relevant": [
+        "ecc:network-config-validation"
+      ],
+      "ranked": [
+        "ecc:network-config-validation",
+        "google-cloud-global-frontend-configuration",
+        "aws-security",
+        "google-cloud-scc-query",
+        "gke-upgrades",
+        "ecc:django-verification",
+        "ecc:laravel-verification",
+        "agent-platform-alert-configuration",
+        "gke-workload-security",
+        "google-cloud-filestore-auditing",
+        "gke-platform-security",
+        "ecc:enterprise-agent-ops",
+        "aws-observability",
+        "ecc:security-scan"
+      ]
+    },
+    {
+      "id": "positive-077:3",
+      "query": "Review the configuration without deploying it and surface dangerous commands explicitly.",
+      "relevant": [
+        "ecc:network-config-validation"
+      ],
+      "ranked": [
+        "ecc:network-config-validation",
+        "agent-platform-alert-configuration",
+        "aws-security",
+        "gke-alert-configuration",
+        "ecc:laravel-security",
+        "cloud-run-alert-configuration",
+        "ecc:cisco-ios-patterns",
+        "google-cloud-global-frontend-configuration",
+        "ecc:config-gc",
+        "aws-ai-ml",
+        "git-guardrails-claude-code",
+        "ecc:ecc-guide",
+        "aws-containers",
+        "ecc:google-workspace-ops",
+        "ecc:orch-refine-code",
+        "ecc:production-audit",
+        "ecc:agentic-os",
+        "workload-manager-basics",
+        "ecc:source-command-ecc-guide",
+        "ecc:plan-canvas"
+      ]
+    },
+    {
+      "id": "positive-086:1",
+      "query": "Perform a local-evidence production readiness audit.",
+      "relevant": [
+        "ecc:production-audit"
+      ],
+      "ranked": [
+        "ecc:production-audit",
+        "gke-productionize",
+        "gke-cluster-creation",
+        "gke-manifest-generation",
+        "ecc:deployment-patterns",
+        "gke-golden-path",
+        "aws-ai-ml",
+        "aws-serverless"
+      ]
+    },
+    {
+      "id": "positive-086:2",
+      "query": "Inspect shipped behavior, pre-launch checks, and post-merge risks without sending repository data to an external service.",
+      "relevant": [
+        "ecc:production-audit"
+      ],
+      "ranked": [
+        "ecc:production-audit",
+        "google-mobile-ads-validate",
+        "google-cloud-filestore-nfs-browser",
+        "aws-security",
+        "google-cloud-scc-query",
+        "google-cloud-global-frontend-configuration",
+        "find-docs",
+        "aws-iam",
+        "ecc:agentic-os",
+        "ecc:security-scan",
+        "ecc:orch-refine-code",
+        "ecc:council-multi-model",
+        "aws-observability",
+        "google-cloud-solution-agentic-ai-bidirectional-streaming",
+        "ecc:prediction-market-oracle-research",
+        "google-cloud-solution-agentic-ai-borderless-data-lakehouse",
+        "ecc:uspto-database",
+        "firebase-basics",
+        "ecc:gget",
+        "cloud-logging-query-generation"
+      ]
+    },
+    {
+      "id": "positive-086:3",
+      "query": "Use local evidence and frame findings as production readiness risks, not a generic code review.",
+      "relevant": [
+        "ecc:production-audit"
+      ],
+      "ranked": [
+        "ecc:production-audit",
+        "ecc:finance-billing-ops",
+        "gke-productionize",
+        "verify-this",
+        "ecc:benchmark-methodology",
+        "agent-platform-alert-configuration",
+        "google-cloud-scc-query",
+        "ecc:coding-standards",
+        "ecc:recursive-decision-ledger",
+        "ecc:messages-ops",
+        "ecc:deployment-patterns",
+        "aws-ai-ml",
+        "ecc:videodb",
+        "ecc:plan-canvas",
+        "find-docs",
+        "ecc:inherit-legacy-style",
+        "ecc:dart-flutter-patterns",
+        "aws-blocks",
+        "ecc:unified-memory",
+        "bigquery-bigframes"
+      ]
+    },
+    {
+      "id": "positive-093:1",
+      "query": "Bootstrap the repo-scan audit capability.",
+      "relevant": [
+        "ecc:repo-scan"
+      ],
+      "ranked": [
+        "ecc:repo-scan"
+      ]
+    },
+    {
+      "id": "positive-093:2",
+      "query": "Install the external repo-scan skill from its pinned, reviewable commit before invoking the audit.",
+      "relevant": [
+        "ecc:repo-scan"
+      ],
+      "ranked": [
+        "ecc:repo-scan",
+        "ecc:production-audit",
+        "skill-installer",
+        "ecc:council-multi-model",
+        "ecc:nasiko-control-plane",
+        "ecc:intent-driven-development",
+        "ecc:agent-architecture-audit",
+        "ecc:orch-pipeline",
+        "ecc:codehealth-mcp",
+        "ecc:delivery-gate",
+        "ecc:orch-change-feature",
+        "ecc:product-lens",
+        "google-cloud-scc-query",
+        "agent-platform-deploy",
+        "ecc:ecc-guide",
+        "ecc:skill-scout",
+        "ecc:agentic-os",
+        "finding-google-skills",
+        "ecc:source-command-ecc-guide",
+        "agent-platform-migrate-from-ai-studio"
+      ]
+    },
+    {
+      "id": "positive-093:3",
+      "query": "This pointer only prepares the audit skill; do not claim that the source audit itself has run.",
+      "relevant": [
+        "ecc:repo-scan"
+      ],
+      "ranked": [
+        "ecc:repo-scan",
+        "ecc:skill-stocktake",
+        "workload-manager-basics",
+        "ecc:design-system",
+        "ecc:accessibility",
+        "ponytail:ponytail-audit",
+        "ecc:prompt-optimizer",
+        "find-docs",
+        "aws-database",
+        "ecc:inherit-legacy-style",
+        "aws-iam",
+        "ecc:recsys-pipeline-architect",
+        "ecc:intent-driven-development",
+        "ecc:token-budget-advisor",
+        "aws-sdk-python-usage",
+        "ima-sdk-client-side",
+        "codebase-memory",
+        "ponytail:ponytail",
+        "ecc:blueprint",
+        "ecc:plan-orchestrate"
+      ]
+    },
+    {
+      "id": "positive-094:1",
+      "query": "Extract cross-cutting principles into reusable rules.",
+      "relevant": [
+        "ecc:rules-distill"
+      ],
+      "ranked": [
+        "ecc:rules-distill",
+        "ecc:source-command-learn",
+        "ecc:dynamic-workflow-mode",
+        "ecc:growth-log",
+        "ecc:taste-distillation"
+      ]
+    },
+    {
+      "id": "positive-094:2",
+      "query": "Scan skills, identify recurring guidance, and append, revise, or create a rule file.",
+      "relevant": [
+        "ecc:rules-distill"
+      ],
+      "ranked": [
+        "ecc:rules-distill",
+        "ecc:skill-comply",
+        "workload-manager-basics",
+        "ecc:hookify-rules",
+        "ecc:prompt-optimizer",
+        "google-cloud-waf-operational-excellence",
+        "ecc:skill-stocktake",
+        "google-cloud-waf-security",
+        "ecc:context-budget",
+        "google-cloud-waf-performance-optimization",
+        "ecc:config-gc",
+        "google-cloud-waf-sustainability",
+        "google-cloud-waf-cost-optimization",
+        "gemini-agents-api",
+        "ecc:continuous-learning-v2",
+        "ecc:source-command-learn",
+        "google-cloud-solution-agentic-ai-bidirectional-streaming",
+        "ecc:agent-sort",
+        "agent-platform-skill-registry",
+        "ecc:ecc-guide"
+      ]
+    },
+    {
+      "id": "positive-094:3",
+      "query": "Only promote principles that recur across skills and preserve existing rule ownership.",
+      "relevant": [
+        "ecc:rules-distill"
+      ],
+      "ranked": [
+        "ecc:rules-distill",
+        "ecc:react-performance",
+        "google-cloud-solution-agentic-analytics-spark-knowledge-catalog",
+        "ecc:context-budget",
+        "ecc:prompt-optimizer",
+        "ecc:orch-pipeline",
+        "ecc:skill-comply",
+        "ecc:continuous-learning-v2",
+        "ecc:skill-stocktake",
+        "ecc:investor-materials",
+        "ecc:hermes-imports",
+        "ecc:coding-standards",
+        "gke-productionize",
+        "google-cloud-solution-agentic-ai-borderless-data-lakehouse",
+        "google-cloud-solution-hybrid-search-alloydb",
+        "ecc:counterparty-channel-discipline",
+        "ecc:ml-adoption-playbook",
+        "ecc:brand-voice",
+        "aws-messaging-and-streaming",
+        "ecc:security-bounty-hunter"
+      ]
+    },
+    {
+      "id": "positive-098:1",
+      "query": "Rank warm paths through a professional social graph.",
+      "relevant": [
+        "ecc:social-graph-ranker"
+      ],
+      "ranked": [
+        "ecc:social-graph-ranker",
+        "ecc:connections-optimizer",
+        "ecc:recsys-pipeline-architect",
+        "ecc:lead-intelligence",
+        "aws-ai-ml",
+        "ecc:ui-demo"
+      ]
+    },
+    {
+      "id": "positive-098:2",
+      "query": "Calculate weighted bridge and connection scores across X and LinkedIn and surface network gaps.",
+      "relevant": [
+        "ecc:social-graph-ranker"
+      ],
+      "ranked": [
+        "ecc:social-graph-ranker",
+        "ecc:benchmark-methodology",
+        "ecc:connections-optimizer",
+        "ecc:lead-intelligence",
+        "ecc:crosspost",
+        "ecc:social-publisher",
+        "ecc:content-engine",
+        "aws-networking",
+        "ecc:google-workspace-ops",
+        "ecc:unified-notifications-ops",
+        "ecc:kotlin-exposed-patterns",
+        "ecc:docker-patterns",
+        "ecc:homelab-network-setup",
+        "ecc:network-interface-health",
+        "ecc:prisma-patterns",
+        "bigquery-ai-ml",
+        "ecc:network-bgp-diagnostics",
+        "ecc:email-ops",
+        "ecc:mysql-patterns",
+        "developer-device-platform-basics"
+      ]
+    },
+    {
+      "id": "positive-098:3",
+      "query": "Focus on the graph-ranking engine itself rather than broad outreach or network maintenance.",
+      "relevant": [
+        "ecc:social-graph-ranker"
+      ],
+      "ranked": [
+        "ecc:social-graph-ranker",
+        "ecc:connections-optimizer",
+        "ecc:lead-intelligence",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "gke-upgrades",
+        "ecc:investor-outreach",
+        "ecc:frontend-a11y",
+        "ecc:manim-video",
+        "ecc:blueprint",
+        "gke-workload-security",
+        "google-cloud-waf-security",
+        "ecc:content-hash-cache-pattern",
+        "ecc:frontend-slides",
+        "ecc:strategic-compact",
+        "ponytail:ponytail-review",
+        "ecc:skill-comply",
+        "ecc:pubmed-database",
+        "ecc:token-budget-advisor",
+        "ecc:agent-eval",
+        "ecc:swift-protocol-di-testing"
+      ]
+    },
+    {
+      "id": "positive-100:1",
+      "query": "Decompose an epic into task children.",
+      "relevant": [
+        "ecc:source-command-epic-decompose"
+      ],
+      "ranked": [
+        "ecc:source-command-epic-decompose",
+        "ecc:plan-orchestrate",
+        "ecc:blueprint",
+        "ecc:autonomous-agent-harness"
+      ]
+    },
+    {
+      "id": "positive-100:2",
+      "query": "Use the source command to create and structure child tasks from the epic.",
+      "relevant": [
+        "ecc:source-command-epic-decompose"
+      ],
+      "ranked": [
+        "ecc:source-command-epic-decompose",
+        "ecc:source-command-epic-sync",
+        "ecc:source-command-update-codemaps",
+        "ecc:source-command-learn",
+        "ecc:source-command-hookify",
+        "ecc:source-command-ecc-guide",
+        "ecc:living-docs-governance",
+        "ecc:source-command-update-docs",
+        "ecc:source-command-jira",
+        "ecc:continuous-learning-v2",
+        "ecc:source-command-instinct-export",
+        "aws-iam",
+        "ecc:ios-icon-gen",
+        "ecc:source-command-instinct-import",
+        "ecc:content-engine",
+        "ecc:article-writing",
+        "ecc:frontend-slides",
+        "ecc:video-editing",
+        "cloud-monitoring-list-time-series-request",
+        "cloud-monitoring-promql-query"
+      ]
+    },
+    {
+      "id": "positive-100:3",
+      "query": "Do not create task branches during decomposition; keep the issue hierarchy explicit.",
+      "relevant": [
+        "ecc:source-command-epic-decompose"
+      ],
+      "ranked": [
+        "ecc:source-command-epic-decompose",
+        "ecc:living-docs-governance",
+        "ecc:prompt-optimizer",
+        "aws-iam",
+        "ecc:blueprint",
+        "ecc:orch-refine-code",
+        "ponytail:ponytail",
+        "ecc:github-ops",
+        "aws-database",
+        "iam-helper-for-privileged-access-management",
+        "gke-cluster-autoscaler",
+        "google-cloud-solution-guided-gke-ai-migration",
+        "ecc:ecc-recipes",
+        "ecc:inherit-legacy-style",
+        "ecc:unified-memory",
+        "google-cloud-storage-basics",
+        "find-docs",
+        "aws-networking",
+        "aws-deployment",
+        "ponytail:ponytail-help"
+      ]
+    },
+    {
+      "id": "positive-103:1",
+      "query": "Inspect known projects and their instinct statistics.",
+      "relevant": [
+        "ecc:source-command-projects"
+      ],
+      "ranked": [
+        "ecc:source-command-projects",
+        "google-cloud-filestore-autoscale",
+        "ecc:claude-devfleet"
+      ]
+    },
+    {
+      "id": "positive-103:2",
+      "query": "Use the source command that enumerates projects and reports their associated instinct data.",
+      "relevant": [
+        "ecc:source-command-projects"
+      ],
+      "ranked": [
+        "ecc:source-command-projects",
+        "ecc:source-command-instinct-status",
+        "ecc:source-command-instinct-export",
+        "ecc:source-command-instinct-import",
+        "ecc:source-command-promote",
+        "ecc:continuous-learning-v2",
+        "ecc:deep-research",
+        "ecc:claude-devfleet",
+        "ecc:source-command-prune",
+        "ecc:source-command-gradle-build",
+        "ecc:security-bounty-hunter",
+        "gke-cost-analysis",
+        "google-cloud-solution-agentic-ai-borderless-data-lakehouse",
+        "ecc:source-command-jira",
+        "ecc:market-research",
+        "google-cloud-recipe-onboarding",
+        "ecc:opensource-pipeline",
+        "google-mobile-ads-validate",
+        "google-ads-api-mcp-setup",
+        "ecc:ios-icon-gen"
+      ]
+    },
+    {
+      "id": "positive-103:3",
+      "query": "Return project inventory and statistics rather than changing project state.",
+      "relevant": [
+        "ecc:source-command-projects"
+      ],
+      "ranked": [
+        "cloud-logging-cross-project-configuration",
+        "google-cloud-storage-bucket-architect",
+        "ecc:project-flow-ops",
+        "cloud-logging-configuration-basics",
+        "ecc:source-command-projects",
+        "ecc:compose-multiplatform-patterns",
+        "ecc:blueprint",
+        "ecc:unified-memory",
+        "ecc:ck",
+        "firebase-basics",
+        "google-cloud-recipe-onboarding",
+        "ecc:flutter-dart-code-review",
+        "ecc:source-command-instinct-status",
+        "ecc:source-command-promote",
+        "ecc:content-hash-cache-pattern",
+        "ecc:frontend-slides",
+        "ecc:strategic-compact",
+        "ecc:manim-video",
+        "ecc:agent-eval",
+        "ecc:pubmed-database"
+      ]
+    },
+    {
+      "id": "positive-105:1",
+      "query": "Set a preferred JavaScript package manager for a project.",
+      "relevant": [
+        "ecc:source-command-setup-pm"
+      ],
+      "ranked": [
+        "ecc:source-command-setup-pm",
+        "ecc:flox-environments",
+        "data-manager-api-setup",
+        "aws-sdk-js-v3-usage",
+        "aws-compute",
+        "ecc:bun-runtime",
+        "google-cloud-global-frontend-configuration",
+        "amazon-bedrock",
+        "gke-workload-security",
+        "google-mobile-ads-get-started"
+      ]
+    },
+    {
+      "id": "positive-105:2",
+      "query": "Use the setup package-manager command to configure npm, pnpm, yarn, or bun preference.",
+      "relevant": [
+        "ecc:source-command-setup-pm"
+      ],
+      "ranked": [
+        "ecc:source-command-setup-pm",
+        "ecc:flox-environments",
+        "ecc:source-command-hookify-configure",
+        "google-cloud-solution-multi-agent-security",
+        "google-cloud-recipe-onboarding",
+        "google-ads-api-mcp-setup",
+        "gke-workload-security",
+        "cloud-logging-configuration-basics",
+        "gemini-agents-api",
+        "data-manager-api-setup",
+        "gke-observability",
+        "google-mobile-ads-banner",
+        "google-cloud-slo-alert-configuration",
+        "ecc:homelab-network-setup",
+        "google-analytics-admin-api-basics",
+        "ecc:hookify-rules",
+        "ecc:source-command-jira",
+        "ecc:agent-sort",
+        "ecc:ecc-recipes",
+        "gke-upgrades"
+      ]
+    },
+    {
+      "id": "positive-105:3",
+      "query": "Choose one supported package manager and update project configuration consistently.",
+      "relevant": [
+        "ecc:source-command-setup-pm"
+      ],
+      "ranked": [
+        "ecc:flox-environments",
+        "google-cloud-global-frontend-configuration",
+        "data-manager-api-audience-ingestion",
+        "find-docs",
+        "data-manager-api-event-ingestion",
+        "ecc:bun-runtime",
+        "google-cloud-storage-bucket-architect",
+        "workload-manager-basics",
+        "ecc:investor-materials",
+        "ecc:source-command-setup-pm",
+        "aws-containers",
+        "cloud-run-alert-configuration",
+        "cloud-logging-configuration-basics",
+        "cloud-logging-cross-project-configuration",
+        "iam-helper-for-privileged-access-management",
+        "iam-helper-for-policy-management",
+        "ecc:source-command-update-codemaps",
+        "ecc:inherit-legacy-style",
+        "ecc:opensource-pipeline",
+        "ecc:configure-ecc"
+      ]
+    },
+    {
+      "id": "positive-106:1",
+      "query": "Improve a project toward its target test coverage.",
+      "relevant": [
+        "ecc:source-command-test-coverage"
+      ],
+      "ranked": [
+        "ecc:source-command-test-coverage",
+        "ecc:laravel-verification",
+        "ecc:quarkus-verification",
+        "ecc:orch-refine-code",
+        "ecc:django-verification",
+        "ecc:springboot-verification",
+        "ecc:rust-testing",
+        "ecc:golang-testing",
+        "ecc:perl-testing",
+        "ecc:prompt-optimizer",
+        "ecc:csharp-testing",
+        "ecc:python-testing",
+        "ecc:orch-change-feature",
+        "ecc:agent-self-evaluation",
+        "ecc:kotlin-testing",
+        "ecc:laravel-tdd",
+        "ecc:inherit-legacy-style",
+        "ecc:hexagonal-architecture",
+        "firebase-basics",
+        "ecc:brand-discovery"
+      ]
+    },
+    {
+      "id": "positive-106:2",
+      "query": "Use the coverage command to find gaps and generate focused missing tests.",
+      "relevant": [
+        "ecc:source-command-test-coverage"
+      ],
+      "ranked": [
+        "ecc:source-command-test-coverage",
+        "detection-engineering-coverage-evaluation",
+        "ecc:laravel-verification",
+        "ecc:prompt-optimizer",
+        "ecc:cpp-testing",
+        "ecc:rust-testing",
+        "ecc:tdd-workflow",
+        "ecc:golang-testing",
+        "google-cloud-waf-security",
+        "aws-compute",
+        "ecc:perl-testing",
+        "google-cloud-waf-sustainability",
+        "google-cloud-scc-query",
+        "google-cloud-waf-operational-excellence",
+        "ecc:python-testing",
+        "google-cloud-waf-performance-optimization",
+        "ecc:kotlin-testing",
+        "ponytail:ponytail-review",
+        "ecc:source-command-update-codemaps",
+        "ecc:laravel-tdd"
+      ]
+    },
+    {
+      "id": "positive-106:3",
+      "query": "Target uncovered behavior and the declared threshold instead of adding duplicate implementation-shaped tests.",
+      "relevant": [
+        "ecc:source-command-test-coverage"
+      ],
+      "ranked": [
+        "ecc:source-command-test-coverage",
+        "ecc:api-connector-builder",
+        "ecc:finance-billing-ops",
+        "google-cloud-solution-build-deploy-agents",
+        "ecc:ck"
+      ]
+    },
+    {
+      "id": "positive-113:1",
+      "query": "Execute and verify a repository operation with evidence.",
+      "relevant": [
+        "ecc:terminal-ops"
+      ],
+      "ranked": [
+        "google-cloud-scc-query",
+        "ecc:github-ops",
+        "google-analytics-data-api-basics"
+      ]
+    },
+    {
+      "id": "positive-113:2",
+      "query": "Follow an evidence-first terminal workflow for commands, CI failures, and narrow fixes.",
+      "relevant": [
+        "ecc:terminal-ops"
+      ],
+      "ranked": [
+        "ecc:terminal-ops",
+        "ecc:email-ops",
+        "ecc:messages-ops",
+        "ecc:automation-audit-ops",
+        "ecc:research-ops",
+        "ecc:ecc-tools-cost-audit",
+        "ecc:deployment-patterns",
+        "ecc:finance-billing-ops",
+        "ecc:terminal-opener",
+        "ecc:agent-architecture-audit",
+        "ecc:agent-introspection-debugging",
+        "ecc:ecc-recipes",
+        "google-cloud-solution-build-deploy-agents",
+        "ecc:healthcare-eval-harness",
+        "ecc:mle-workflow",
+        "ecc:github-ops",
+        "application-design-center-design-deploy",
+        "ecc:git-workflow",
+        "ecc:agentic-os",
+        "ecc:investor-outreach"
+      ]
+    },
+    {
+      "id": "positive-113:3",
+      "query": "Record the exact command and proof while keeping the change tightly scoped.",
+      "relevant": [
+        "ecc:terminal-ops"
+      ],
+      "ranked": [
+        "ecc:terminal-ops",
+        "ecc:flox-environments",
+        "ecc:source-command-refactor-clean",
+        "ecc:source-command-build-fix",
+        "ecc:source-command-auto-update",
+        "ecc:source-command-epic-review",
+        "ecc:project-flow-ops",
+        "ecc:cisco-ios-patterns",
+        "caveman",
+        "dpop-adoption"
+      ]
+    },
+    {
+      "id": "positive-114:1",
+      "query": "Manage an Uncloud cluster and its services.",
+      "relevant": [
+        "ecc:uncloud"
+      ],
+      "ranked": [
+        "ecc:uncloud",
+        "gke-upgrades",
+        "gke-networking",
+        "gke-platform-security",
+        "gke-cluster-creation",
+        "gke-basics",
+        "gke-workload-security",
+        "gke-alert-configuration",
+        "gke-manifest-generation",
+        "gke-service-networking",
+        "gke-app-onboarding",
+        "gke-workload-troubleshooting",
+        "gke-ai-troubleshooting-tpu-dynamic-slices-monitoring",
+        "gke-custom-golden-image-discovery",
+        "gke-workload-scaling",
+        "aws-storage",
+        "aws-containers",
+        "data-manager-api-audience-ingestion",
+        "data-manager-api-event-ingestion",
+        "ecc:agentic-os"
+      ]
+    },
+    {
+      "id": "positive-114:2",
+      "query": "Use the uc CLI for deployment, Caddy ingress, static proxy routes, ports, scaling, logs, machines, and volumes.",
+      "relevant": [
+        "ecc:uncloud"
+      ],
+      "ranked": [
+        "ecc:uncloud",
+        "agent-platform-troubleshooting",
+        "ecc:tinystruct-patterns",
+        "ecc:gget",
+        "google-cloud-global-frontend-configuration",
+        "gke-manifest-generation",
+        "google-cloud-storage-basics",
+        "google-cloud-solution-multi-agent-security",
+        "launch-with-aws",
+        "ecc:deployment-patterns",
+        "aws-ai-ml",
+        "gke-workload-scaling",
+        "ecc:laravel-verification",
+        "google-cloud-filestore-autoscale",
+        "ecc:kubernetes-patterns",
+        "google-cloud-filestore-nfs-browser",
+        "cloud-logging-configuration-basics",
+        "gke-golden-path",
+        "ecc:hexagonal-architecture",
+        "ecc:source-command-update-docs"
+      ]
+    },
+    {
+      "id": "positive-114:3",
+      "query": "Keep the operations Uncloud-specific and account for cluster machines and volumes.",
+      "relevant": [
+        "ecc:uncloud"
+      ],
+      "ranked": [
+        "ecc:uncloud",
+        "gke-upgrades",
+        "gke-manifest-generation",
+        "alloydb-basics"
+      ]
+    },
+    {
+      "id": "positive-118:1",
+      "query": "Integrate with the X or Twitter API.",
+      "relevant": [
+        "ecc:x-api"
+      ],
+      "ranked": [
+        "ecc:x-api",
+        "ecc:quarkus-patterns",
+        "ecc:api-connector-builder",
+        "retrieving-developer-knowledge",
+        "gemini-api",
+        "gemini-live-api",
+        "google-ads-api-account-diagnostics",
+        "aws-observability",
+        "data-manager-api-setup",
+        "ecc:nutrient-document-processing",
+        "google-ads-api-quickstart",
+        "gemini-interactions-api",
+        "google-mobile-ads-get-started",
+        "workload-manager-basics",
+        "ecc:quarkus-tdd",
+        "ecc:mcp-server-patterns",
+        "google-mobile-ads-banner",
+        "ecc:crosspost",
+        "alloydb-basics",
+        "developing-genkit-dart"
+      ]
+    },
+    {
+      "id": "positive-118:2",
+      "query": "Apply OAuth, posting, timeline, search, analytics, and rate-limit patterns for X.",
+      "relevant": [
+        "ecc:x-api"
+      ],
+      "ranked": [
+        "ecc:x-api",
+        "ecc:search-first",
+        "ecc:kotlin-ktor-patterns",
+        "bigquery-ai-ml",
+        "ecc:videodb",
+        "aws-storage",
+        "ecc:clickhouse-io",
+        "ecc:prediction-market-oracle-research",
+        "aws-messaging-and-streaming",
+        "finding-google-skills"
+      ]
+    },
+    {
+      "id": "positive-118:3",
+      "query": "Keep platform operations within the X API and handle authentication and rate limits explicitly.",
+      "relevant": [
+        "ecc:x-api"
+      ],
+      "ranked": [
+        "ecc:x-api",
+        "gemini-api",
+        "agent-platform-deploy",
+        "ecc:laravel-security",
+        "gcloud",
+        "gemini-agents-api",
+        "gemini-interactions-api",
+        "gke-manifest-generation",
+        "gke-platform-security",
+        "launch-with-aws",
+        "agent-platform-migrate-from-ai-studio",
+        "google-cloud-solution-guided-gke-ai-migration",
+        "ecc:mailtrap-email-integration",
+        "aws-auth",
+        "finding-google-skills",
+        "dpop-adoption",
+        "retrieving-developer-knowledge",
+        "agent-platform-inference",
+        "gke-upgrades",
+        "ecc:fastapi-patterns"
+      ]
+    },
+    {
+      "id": "positive-119:1",
+      "query": "Integrate a Gemini LiveAPI websocket client.",
+      "relevant": [
+        "gemini-live-api"
+      ],
+      "ranked": [
+        "gemini-live-api",
+        "retrieving-developer-knowledge"
+      ]
+    },
+    {
+      "id": "positive-119:2",
+      "query": "Generate a service class that handles session setup, resumption, bearer refresh, and ClientMessage or ServerMessage protos.",
+      "relevant": [
+        "gemini-live-api"
+      ],
+      "ranked": [
+        "gemini-live-api",
+        "dpop-adoption",
+        "google-cloud-storage-bucket-architect",
+        "aws-iam",
+        "aws-compute",
+        "aws-sdk-python-usage",
+        "ecc:flox-environments",
+        "aws-containers",
+        "gke-upgrades",
+        "dbt-sf-to-bq-translator",
+        "cloud-sql-basics",
+        "google-cloud-recipe-onboarding",
+        "ecc:blueprint",
+        "aws-database",
+        "ecc:continuous-learning-v2",
+        "find-docs",
+        "aws-messaging-and-streaming",
+        "ecc:product-capability",
+        "ecc:accessibility",
+        "ecc:design-system"
+      ]
+    },
+    {
+      "id": "positive-119:3",
+      "query": "Target the live bidirectional endpoint; one-shot generateContent and media generation are separate workflows.",
+      "relevant": [
+        "gemini-live-api"
+      ],
+      "ranked": [
+        "gemini-live-api",
+        "gke-manifest-generation",
+        "google-cloud-solution-agentic-ai-bidirectional-streaming",
+        "aws-iam",
+        "aws-observability",
+        "gemini-api",
+        "ecc:videodb",
+        "ecc:fal-ai-media",
+        "ecc:automation-audit-ops",
+        "gke-productionize",
+        "ecc:healthcare-emr-patterns",
+        "ecc:healthcare-cdss-patterns",
+        "ima-dai-sdk",
+        "ecc:blender-motion-state-inspection",
+        "ecc:workspace-surface-audit",
+        "gke-node-notready",
+        "ima-sdk-client-side",
+        "cloud-logging-query-generation",
+        "ecc:social-publisher",
+        "ponytail:ponytail-gain"
+      ]
+    },
+    {
+      "id": "positive-122:1",
+      "query": "Onboard an application onto GKE.",
+      "relevant": [
+        "gke-app-onboarding"
+      ],
+      "ranked": [
+        "gke-app-onboarding",
+        "gke-cluster-creation",
+        "gke-batch-hpc",
+        "gke-upgrades",
+        "gke-multitenancy",
+        "gke-observability",
+        "aws-observability",
+        "ecc:inherit-legacy-style"
+      ]
+    },
+    {
+      "id": "positive-122:2",
+      "query": "Use the GKE application onboarding workflow for containerization, manifests, deployment, and migration.",
+      "relevant": [
+        "gke-app-onboarding"
+      ],
+      "ranked": [
+        "gke-app-onboarding",
+        "gke-manifest-generation",
+        "google-cloud-solution-guided-gke-ai-migration",
+        "launch-with-aws",
+        "gke-service-networking",
+        "ecc:deployment-patterns",
+        "gke-batch-hpc",
+        "application-design-center-design-deploy",
+        "gke-cluster-creation",
+        "gke-ai-troubleshooting-jobset-interruption",
+        "gke-multitenancy",
+        "gke-ai-troubleshooting-tpu-dynamic-slices-monitoring",
+        "google-cloud-global-frontend-configuration",
+        "ecc:healthcare-eval-harness",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+        "ecc:mle-workflow",
+        "gke-upgrades",
+        "gke-cost-analysis",
+        "gke-observability",
+        "google-cloud-solution-n-tier-serverless-web-app"
+      ]
+    },
+    {
+      "id": "positive-122:3",
+      "query": "Target a first-time application deployment and leave cluster administration or upgrades to their specialized workflows.",
+      "relevant": [
+        "gke-app-onboarding"
+      ],
+      "ranked": [
+        "gke-app-onboarding",
+        "gke-basics",
+        "application-design-center-design-deploy",
+        "google-cloud-recipe-onboarding",
+        "gke-manifest-generation",
+        "gke-upgrades",
+        "gke-ai-troubleshooting-jobset-interruption",
+        "ecc:healthcare-eval-harness",
+        "gke-cluster-creation",
+        "ecc:deployment-patterns",
+        "google-cloud-solution-architecture",
+        "gke-workload-security",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+        "gke-networking",
+        "gke-multitenancy",
+        "ecc:workspace-surface-audit",
+        "gke-node-notready",
+        "bigtable-basics",
+        "agent-platform-model-registry"
+      ]
+    },
+    {
+      "id": "positive-125:1",
+      "query": "Set up GKE observability.",
+      "relevant": [
+        "gke-observability"
+      ],
+      "ranked": [
+        "gke-observability",
+        "gke-productionize",
+        "gke-reliability",
+        "gke-networking",
+        "gke-workload-security",
+        "gke-storage",
+        "gke-multitenancy",
+        "gke-golden-path",
+        "gke-manifest-generation",
+        "google-cloud-solution-guided-gke-ai-migration",
+        "gke-batch-hpc",
+        "gke-upgrades",
+        "gke-ai-troubleshooting-jobset-interruption",
+        "gke-node-notready",
+        "gke-app-onboarding",
+        "gke-ai-troubleshooting-tpu-vbar-oom",
+        "gke-cluster-autoscaler",
+        "google-cloud-global-frontend-configuration",
+        "signing-in-to-aws",
+        "google-mobile-ads-get-started"
+      ]
+    },
+    {
+      "id": "positive-125:2",
+      "query": "Configure GKE logging, monitoring, and managed Prometheus collection and integration.",
+      "relevant": [
+        "gke-observability"
+      ],
+      "ranked": [
+        "gke-observability",
+        "gke-alert-configuration",
+        "gke-workload-security",
+        "gke-service-networking",
+        "cloud-logging-configuration-basics",
+        "aws-observability",
+        "cloud-monitoring-chart-generation",
+        "gke-backup-dr",
+        "google-cloud-storage-fuse",
+        "cloud-logging-cross-project-configuration",
+        "gke-multitenancy",
+        "gke-ai-troubleshooting-tpu-metrics-monitoring",
+        "gke-cost-optimization",
+        "gke-ai-troubleshooting-tpu-dynamic-slices-monitoring",
+        "gemini-agents-api",
+        "gke-cost-analysis",
+        "gke-ai-troubleshooting-tpu-vbar-oom",
+        "aws-messaging-and-streaming",
+        "google-cloud-recipe-foundation-builder",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb"
+      ]
+    },
+    {
+      "id": "positive-125:3",
+      "query": "Keep the observability setup on GKE and distinguish it from local logging or external APM configuration.",
+      "relevant": [
+        "gke-observability"
+      ],
+      "ranked": [
+        "gke-observability",
+        "aws-observability",
+        "cloud-logging-configuration-basics",
+        "gke-workload-security",
+        "ecc:config-gc",
+        "google-cloud-global-frontend-configuration",
+        "google-cloud-storage-fuse",
+        "gke-productionize",
+        "gke-upgrades",
+        "gke-reliability",
+        "ecc:homelab-wireguard-vpn",
+        "ecc:homelab-pihole-dns",
+        "google-cloud-scc-query",
+        "ecc:living-docs-governance",
+        "data-manager-api-setup",
+        "ecc:council-multi-model",
+        "ecc:repo-scan",
+        "ecc:production-audit",
+        "google-ads-api-quickstart",
+        "ecc:source-command-epic-sync"
+      ]
+    },
+    {
+      "id": "positive-127:1",
+      "query": "Review GKE production readiness.",
+      "relevant": [
+        "gke-productionize"
+      ],
+      "ranked": [
+        "gke-productionize",
+        "gke-manifest-generation",
+        "gke-golden-path",
+        "gke-cluster-creation",
+        "ecc:production-audit",
+        "google-cloud-global-frontend-configuration",
+        "ecc:mle-workflow",
+        "ecc:kubernetes-patterns",
+        "aws-serverless",
+        "ecc:dart-flutter-patterns",
+        "ecc:redis-patterns",
+        "ecc:nestjs-patterns",
+        "ecc:laravel-patterns",
+        "ecc:api-design",
+        "ecc:django-patterns"
+      ]
+    },
+    {
+      "id": "positive-127:2",
+      "query": "Run a comprehensive productionization assessment across the cluster and workloads.",
+      "relevant": [
+        "gke-productionize"
+      ],
+      "ranked": [
+        "gke-productionize",
+        "gke-cost-analysis",
+        "gke-workload-security",
+        "gke-platform-security",
+        "gke-upgrades",
+        "gke-alert-configuration",
+        "google-cloud-solution-agentic-ai-borderless-data-lakehouse",
+        "ecc:evm-token-decimals",
+        "ecc:dmux-workflows",
+        "agent-platform-alert-configuration",
+        "ecc:ck"
+      ]
+    },
+    {
+      "id": "positive-127:3",
+      "query": "Cover the cross-domain readiness review and defer deep implementation to the relevant specialist skill.",
+      "relevant": [
+        "gke-productionize"
+      ],
+      "ranked": [
+        "gke-productionize",
+        "aws-networking",
+        "ecc:intent-driven-development",
+        "ecc:ml-adoption-playbook",
+        "google-cloud-filestore-auditing",
+        "ecc:agentic-os",
+        "ecc:production-audit",
+        "ecc:orch-add-feature",
+        "ecc:pytorch-patterns",
+        "gke-reliability",
+        "ecc:laravel-verification",
+        "ecc:flutter-dart-code-review",
+        "astra-orchestrator",
+        "ecc:orch-change-feature",
+        "ecc:django-verification",
+        "ecc:ai-first-engineering",
+        "ecc:quarkus-verification",
+        "cloud-monitoring-metric-selection",
+        "ecc:springboot-verification",
+        "aws-storage"
+      ]
+    },
+    {
+      "id": "positive-128:1",
+      "query": "Configure GKE edge and service networking.",
+      "relevant": [
+        "gke-service-networking"
+      ],
+      "ranked": [
+        "gke-service-networking",
+        "gke-networking",
+        "gke-platform-security",
+        "gke-alert-configuration",
+        "aws-networking",
+        "cloud-run-alert-configuration",
+        "gke-workload-security",
+        "gke-multitenancy",
+        "gke-observability",
+        "gke-compute-classes",
+        "google-cloud-slo-alert-configuration",
+        "gke-productionize",
+        "google-cloud-global-frontend-configuration",
+        "aws-messaging-and-streaming",
+        "gke-backup-dr",
+        "gke-cost-optimization",
+        "google-cloud-solution-n-tier-serverless-web-app",
+        "aws-iam",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+        "gke-workload-troubleshooting"
+      ]
+    },
+    {
+      "id": "positive-128:2",
+      "query": "Use Gateway or Ingress manifests, Cloud Armor, container-native load balancing, PSC, and managed SSL patterns.",
+      "relevant": [
+        "gke-service-networking"
+      ],
+      "ranked": [
+        "gke-service-networking",
+        "google-cloud-solution-multi-agent-security",
+        "gke-manifest-generation",
+        "google-cloud-global-frontend-configuration",
+        "agent-platform-troubleshooting",
+        "gke-networking",
+        "google-cloud-storage-fuse",
+        "aws-networking",
+        "ecc:uncloud",
+        "aws-containers",
+        "ecc:kubernetes-patterns",
+        "ecc:production-scheduling",
+        "managed-airflow-migrations",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+        "gke-alert-configuration",
+        "aws-auth",
+        "managed-airflow-dag-troubleshooting",
+        "gke-observability",
+        "managed-airflow-dag-authoring",
+        "gke-cost-analysis"
+      ]
+    },
+    {
+      "id": "positive-128:3",
+      "query": "Stay at edge routing and private service endpoints; do not solve core IP planning or node NAT.",
+      "relevant": [
+        "gke-service-networking"
+      ],
+      "ranked": [
+        "gke-service-networking",
+        "aws-networking",
+        "gke-networking",
+        "aws-iam",
+        "cloud-build-basics",
+        "aws-compute",
+        "aws-ai-ml",
+        "aws-database",
+        "gke-compute-classes",
+        "aws-messaging-and-streaming",
+        "gke-cluster-autoscaler",
+        "google-cloud-solution-n-tier-serverless-web-app",
+        "aws-observability",
+        "find-docs",
+        "gke-alert-configuration",
+        "amazon-bedrock",
+        "dpop-adoption",
+        "aws-deployment",
+        "ponytail:ponytail",
+        "gke-workload-scaling"
+      ]
+    },
+    {
+      "id": "positive-129:1",
+      "query": "Query Google Analytics reporting data through the Data API.",
+      "relevant": [
+        "google-analytics-data-api-basics"
+      ],
+      "ranked": [
+        "google-analytics-data-api-basics",
+        "data-manager-api-event-ingestion",
+        "google-analytics-admin-api-basics",
+        "google-cloud-solution-agentic-analytics-spark-knowledge-catalog",
+        "data-manager-api-audience-ingestion",
+        "google-ads-api-mcp-setup",
+        "data-manager-api-setup",
+        "google-cloud-storage-basics",
+        "google-cloud-storage-bucket-architect",
+        "cloud-monitoring-chart-generation",
+        "google-cloud-scc-query",
+        "datalineage-summary",
+        "cloud-logging-query-generation",
+        "ecc:clickhouse-io",
+        "cloud-databases-onboarding",
+        "google-cloud-solution-agentic-ai-data-science-workflow",
+        "workload-manager-basics",
+        "aws-storage",
+        "bigquery-ai-ml",
+        "agent-platform-rag-engine-management"
+      ]
+    },
+    {
+      "id": "positive-129:2",
+      "query": "Use the v1beta Analytics Data API, validate metric and dimension compatibility, and enable it with the cloud CLI.",
+      "relevant": [
+        "google-analytics-data-api-basics"
+      ],
+      "ranked": [
+        "google-analytics-data-api-basics",
+        "cloud-monitoring-chart-generation",
+        "google-analytics-admin-api-basics",
+        "data-manager-api-event-ingestion",
+        "gcloud",
+        "google-cloud-storage-basics",
+        "google-cloud-storage-fuse",
+        "google-cloud-storage-bucket-architect",
+        "google-cloud-solution-agentic-analytics-spark-knowledge-catalog",
+        "gke-service-networking",
+        "cloud-build-basics",
+        "aws-observability",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+        "agent-platform-eval-flywheel",
+        "aws-ai-ml",
+        "bigquery-bigframes",
+        "google-cloud-solution-agentic-ai-data-science-workflow",
+        "gke-cost-analysis",
+        "gke-upgrades",
+        "dpop-adoption"
+      ]
+    },
+    {
+      "id": "positive-129:3",
+      "query": "Keep the task on reporting data; Admin API and front-end tracking setup are outside scope.",
+      "relevant": [
+        "google-analytics-data-api-basics"
+      ],
+      "ranked": [
+        "google-analytics-data-api-basics",
+        "data-manager-api-setup",
+        "google-analytics-admin-api-basics",
+        "data-manager-api-audience-ingestion",
+        "data-manager-api-event-ingestion",
+        "find-docs",
+        "ecc:cost-aware-llm-pipeline",
+        "google-cloud-solution-agentic-analytics-spark-knowledge-catalog",
+        "gemini-live-api",
+        "ecc:documentation-lookup",
+        "cloud-monitoring-chart-generation",
+        "google-ads-api-quickstart",
+        "google-cloud-storage-fuse",
+        "google-ads-api-mcp-setup",
+        "google-cloud-storage-basics",
+        "ecc:pubmed-database",
+        "ecc:workspace-surface-audit",
+        "gke-node-notready",
+        "gke-storage",
+        "ecc:orch-refine-code"
+      ]
+    },
+    {
+      "id": "positive-149:1",
+      "query": "Retrieve official OpenAI and Codex documentation.",
+      "relevant": [
+        "openai-docs"
+      ],
+      "ranked": [
+        "openai-docs",
+        "retrieving-developer-knowledge",
+        "ecc:council-multi-model",
+        "google-ads-api-mcp-setup"
+      ]
+    },
+    {
+      "id": "positive-149:2",
+      "query": "Search the OpenAI and Codex documentation surface for current model, skill, task, and setup instructions.",
+      "relevant": [
+        "openai-docs"
+      ],
+      "ranked": [
+        "openai-docs",
+        "ecc:council-multi-model",
+        "find-docs",
+        "skill-installer",
+        "ecc:ecc-guide",
+        "ecc:recsys-pipeline-architect",
+        "ecc:source-command-ecc-guide",
+        "ecc:unified-memory",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+        "retrieving-developer-knowledge",
+        "ecc:workspace-surface-audit",
+        "google-cloud-solution-hybrid-search-alloydb",
+        "ecc:documentation-lookup",
+        "ecc:agent-eval",
+        "ecc:skill-scout",
+        "gke-upgrades",
+        "agent-platform-skill-registry",
+        "ecc:pubmed-database",
+        "ecc:inherit-legacy-style",
+        "aws-messaging-and-streaming"
+      ]
+    },
+    {
+      "id": "positive-149:3",
+      "query": "Use current official documentation and keep the lookup focused on OpenAI or Codex behavior.",
+      "relevant": [
+        "openai-docs"
+      ],
+      "ranked": [
+        "ecc:living-docs-governance",
+        "ecc:council-multi-model",
+        "openai-docs",
+        "ecc:documentation-lookup",
+        "sites:sites-hosting",
+        "sites:sites-building",
+        "find-docs",
+        "retrieving-developer-knowledge",
+        "ecc:orch-refine-code",
+        "ecc:uspto-database",
+        "ecc:research-ops",
+        "ecc:gget",
+        "ecc:exa-search",
+        "ponytail:ponytail-review",
+        "developing-genkit-dart",
+        "ecc:mcp-server-patterns",
+        "google-cloud-storage-fuse",
+        "ecc:ecc-guide",
+        "ecc:customs-trade-compliance",
+        "ecc:pubmed-database"
+      ]
+    },
+    {
+      "id": "positive-150:1",
+      "query": "Read, create, render, and verify a PDF document.",
+      "relevant": [
+        "pdf:pdf"
+      ],
+      "ranked": [
+        "pdf:pdf",
+        "ecc:visa-doc-translate",
+        "iam-helper-for-privileged-access-management",
+        "google-analytics-data-api-basics",
+        "spreadsheets:Spreadsheets",
+        "ecc:content-engine"
+      ]
+    },
+    {
+      "id": "positive-150:2",
+      "query": "Use the PDF workflow to extract content, generate the document, render pages, and inspect the result.",
+      "relevant": [
+        "pdf:pdf"
+      ],
+      "ranked": [
+        "pdf:pdf",
+        "ecc:nutrient-document-processing",
+        "ecc:messages-ops",
+        "ecc:dynamic-workflow-mode",
+        "aws-security",
+        "google-cloud-solution-build-deploy-agents",
+        "ecc:video-editing",
+        "ecc:master-agreement-generator",
+        "ecc:customer-billing-ops",
+        "ecc:google-workspace-ops",
+        "agent-platform-rag-engine-management",
+        "ecc:taste-application",
+        "ecc:visa-doc-translate",
+        "bigquery-bigframes",
+        "ecc:brand-voice",
+        "ecc:videodb",
+        "developing-genkit-dart",
+        "dbt-sf-to-bq-translator",
+        "gemini-live-api",
+        "ecc:taste"
+      ]
+    },
+    {
+      "id": "positive-150:3",
+      "query": "Verify the rendered output and keep the deliverable a PDF rather than a Word or slide file.",
+      "relevant": [
+        "pdf:pdf"
+      ],
+      "ranked": [
+        "pdf:pdf",
+        "verify-this",
+        "ecc:living-docs-governance",
+        "ecc:frontend-slides",
+        "ecc:canary-watch",
+        "google-cloud-storage-fuse",
+        "ecc:santa-method",
+        "ecc:skill-comply",
+        "google-cloud-storage-bucket-architect",
+        "ecc:visa-doc-translate",
+        "caveman",
+        "ecc:content-hash-cache-pattern",
+        "ecc:token-budget-advisor",
+        "ecc:orch-refine-code",
+        "ecc:strategic-compact",
+        "ecc:codehealth-mcp",
+        "ecc:agent-eval",
+        "documents:documents",
+        "ecc:pubmed-database",
+        "ecc:manim-video"
+      ]
+    },
+    {
+      "id": "positive-158:1",
+      "query": "Install a curated agent skill.",
+      "relevant": [
+        "skill-installer"
+      ],
+      "ranked": [
+        "skill-installer",
+        "ecc:agent-sort",
+        "ecc:ecc-guide",
+        "ecc:source-command-ecc-guide",
+        "ecc:inherit-legacy-style",
+        "ecc:intent-driven-development",
+        "ecc:flox-environments"
+      ]
+    },
+    {
+      "id": "positive-158:2",
+      "query": "Fetch the requested capability package from the curated repository and register it with the coding agent.",
+      "relevant": [
+        "skill-installer"
+      ],
+      "ranked": [
+        "agent-platform-skill-registry",
+        "ecc:search-first",
+        "ecc:living-docs-governance",
+        "ecc:flox-environments",
+        "ecc:orch-add-feature",
+        "launch-with-aws",
+        "ecc:ml-adoption-playbook",
+        "ecc:claude-devfleet",
+        "detection-engineering-coverage-evaluation",
+        "ecc:source-command-ecc-guide",
+        "ecc:agent-eval",
+        "ecc:react-performance",
+        "ecc:inherit-legacy-style",
+        "aws-blocks",
+        "skill-installer",
+        "ecc:product-capability",
+        "ecc:cpp-coding-standards",
+        "google-cloud-scc-query",
+        "ecc:plan-orchestrate",
+        "ecc:videodb"
+      ]
+    },
+    {
+      "id": "positive-158:3",
+      "query": "Install only the requested reviewed skill and verify availability after installation.",
+      "relevant": [
+        "skill-installer"
+      ],
+      "ranked": [
+        "ecc:canary-watch",
+        "skill-installer",
+        "data-manager-api-setup",
+        "ecc:browser-qa",
+        "ecc:skill-stocktake",
+        "ecc:ito-training",
+        "ecc:agent-sort",
+        "ecc:ito-inference",
+        "ecc:benchmark",
+        "firebase-basics",
+        "ecc:ecc-guide",
+        "google-mobile-ads-get-started",
+        "google-analytics-data-api-basics",
+        "ecc:competitive-report-structure",
+        "ecc:codehealth-mcp",
+        "ecc:inherit-legacy-style",
+        "ecc:source-command-ecc-guide",
+        "sites:sites-hosting",
+        "ecc:continuous-learning",
+        "google-cloud-solution-hybrid-search-alloydb"
+      ]
+    }
+  ],
+  "design": "TinyBERT independently reranks the bounded top-20 pool from skillwick-lexical-baseline",
+  "candidate_source_sha256": "07546aac1dde4c7b1e7c63f2b8c6182f414f6a9865491dc57b857580ba9ac58c"
+}
