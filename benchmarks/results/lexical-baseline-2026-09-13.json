@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "skillwick-lexical-baseline",
-  "measured_at": "2026-09-13T23:01:34.561634+00:00",
+  "measured_at": "2026-09-13T23:24:13.335560+00:00",
   "profile_sha256": "f398dcba56af7f64061ab13a95cd12cfdd35ce96a643165a0ba4b1ecea10f959",
   "corpus_sha256": "12181c8c7efb6d603bfb1677758213a87789b5109f38ad450c98adec41d8bf15",
   "corpus_total": 531,
@@ -19,29 +19,29 @@
   },
   "executable": {
     "path": "target/release/skillwick",
-    "version": "skillwick 0.1.5",
-    "sha256": "eed120e79d8b4f38366308c97cb7f7588d701368e591b482b2b0f1b9616ba1d7",
-    "bytes": 4197792
+    "version": "skillwick 0.2.0",
+    "sha256": "c6ed24c969c912d84ae88e4b16ad15d094ddb6b43e9c6e8536f076befad4a4fb",
+    "bytes": 4214432
   },
   "measurements": {
     "startup_ms": {
       "samples": 5,
-      "min": 2.921334,
-      "median": 3.313708,
-      "p95": 12.55175,
-      "max": 12.55175
+      "min": 4.371334,
+      "median": 9.490584,
+      "p95": 614.972833,
+      "max": 614.972833
     },
-    "cold_search_ms": 60.557,
+    "cold_search_ms": 61.64625,
     "warm_search_ms": {
       "samples": 525,
-      "min": 48.145583,
-      "median": 60.067917,
-      "p95": 93.785709,
-      "max": 122.247166
+      "min": 48.468708,
+      "median": 59.518416,
+      "p95": 116.195542,
+      "max": 268.823625
     },
-    "refresh_ms": 91.688291,
+    "refresh_ms": 89.648792,
     "index_bytes": 1196032,
-    "search_max_rss_kib": 13040
+    "search_max_rss_kib": 12912
   },
   "quality": {
     "queries": 105,

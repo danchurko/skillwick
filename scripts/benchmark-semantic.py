@@ -24,6 +24,13 @@ ARCTIC = {
     "sha256": "cf2698d30ff05da02c70a088313bad56e5c2f401d734cb24a8390d446111936c",
     "bytes": 90_387_631,
     "license": "Apache-2.0",
+    "required_files": {
+        "config.json": {"sha256": "d7d071046ab952af96b7abad788db7ab3fc997b465e1b9914ff39707092254ec", "bytes": 737},
+        "tokenizer.json": {"sha256": "91f1def9b9391fdabe028cd3f3fcc4efd34e5d1f08c3bf2de513ebb5911a1854", "bytes": 711_649},
+        "tokenizer_config.json": {"sha256": "9ca59277519f6e3692c8685e26b94d4afca2d5438deff66483db495e48735810", "bytes": 1_433},
+        "special_tokens_map.json": {"sha256": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a", "bytes": 695},
+        "onnx/model.onnx": {"sha256": "cf2698d30ff05da02c70a088313bad56e5c2f401d734cb24a8390d446111936c", "bytes": 90_387_631},
+    },
 }
 TINYBERT = {
     "name": "cross-encoder/ms-marco-TinyBERT-L2-v2",
@@ -32,6 +39,10 @@ TINYBERT = {
     "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
     "bytes": 4_518_071,
     "license": "Apache-2.0",
+    "required_files": {
+        "tokenizer.json": {"sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66", "bytes": 711_396},
+        "onnx/model_qint8_arm64.onnx": {"sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68", "bytes": 4_518_071},
+    },
 }
 
 
@@ -54,14 +65,24 @@ def verify_artifact(path: Path, expected: dict) -> None:
         raise ValueError(f"model artifact checksum mismatch: {path}")
 
 
-def locate(cache: Path, filename: str, size: int) -> Path | None:
-    matches = [path for path in cache.rglob(Path(filename).name) if path.is_file() and path.stat().st_size == size]
-    return matches[0] if matches else None
-
-
 def pinned_path(cache: Path, model: dict) -> Path:
     repository = model["name"].replace("/", "--")
     return cache / f"models--{repository}" / "snapshots" / model["revision"] / model["file"]
+
+
+def pinned_model(cache: Path, model: dict, offline: bool) -> Path:
+    from huggingface_hub import hf_hub_download
+
+    root = pinned_path(cache, model).parents[len(Path(model["file"]).parts) - 1]
+    for filename, expected in model["required_files"].items():
+        path = Path(hf_hub_download(
+            model["name"], filename, revision=model["revision"], cache_dir=cache,
+            local_files_only=offline,
+        ))
+        verify_artifact(path, expected)
+        if not path.absolute().is_relative_to(root.absolute()):
+            raise ValueError(f"model artifact resolved outside pinned revision: {path}")
+    return root
 
 
 def rss_kib() -> int:
@@ -141,16 +162,13 @@ def embedding(args: argparse.Namespace) -> None:
     profile = read_json(args.profile)
     records = profile["corpus"]["records"]
     texts = [f"{record['name']}: {record['description']}" for record in records]
-    if args.offline:
-        verify_artifact(pinned_path(args.cache, ARCTIC), ARCTIC)
+    model_dir = pinned_model(args.cache, ARCTIC, args.offline)
     started = time.perf_counter_ns()
     model = TextEmbedding(
         model_name=ARCTIC["name"], cache_dir=str(args.cache), threads=args.threads,
-        local_files_only=args.offline,
+        local_files_only=True, specific_model_path=str(model_dir),
     )
     load_ms = (time.perf_counter_ns() - started) / 1_000_000
-    artifact = locate(args.cache, ARCTIC["file"], ARCTIC["bytes"])
-    verify_artifact(artifact or args.cache / ARCTIC["file"], ARCTIC)
     started = time.perf_counter_ns()
     corpus = np.asarray(list(model.embed(texts, batch_size=64)), dtype=np.float32)
     corpus /= np.linalg.norm(corpus, axis=1, keepdims=True).clip(min=1e-12)
@@ -179,23 +197,13 @@ def embedding(args: argparse.Namespace) -> None:
 def tinybert_model(cache: Path, offline: bool):
     import numpy as np
     import onnxruntime as ort
-    from huggingface_hub import hf_hub_download
     from tokenizers import Tokenizer
 
-    if offline:
-        verify_artifact(pinned_path(cache, TINYBERT), TINYBERT)
-    files = {
-        filename: Path(hf_hub_download(
-            TINYBERT["name"], filename, revision=TINYBERT["revision"], cache_dir=cache,
-            local_files_only=offline,
-        ))
-        for filename in (TINYBERT["file"], "tokenizer.json")
-    }
-    verify_artifact(files[TINYBERT["file"]], TINYBERT)
-    tokenizer = Tokenizer.from_file(str(files["tokenizer.json"]))
+    model_dir = pinned_model(cache, TINYBERT, offline)
+    tokenizer = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
     tokenizer.enable_truncation(max_length=512)
     tokenizer.enable_padding()
-    session = ort.InferenceSession(str(files[TINYBERT["file"]]), providers=["CPUExecutionProvider"])
+    session = ort.InferenceSession(str(model_dir / TINYBERT["file"]), providers=["CPUExecutionProvider"])
 
     def score(query: str, documents: list[str]) -> np.ndarray:
         encodings = tokenizer.encode_batch([(query, document) for document in documents])

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "skillwick-reranker-experiment",
-  "measured_at": "2026-09-13T23:08:15.041463+00:00",
+  "measured_at": "2026-09-13T23:28:36.784059+00:00",
   "status": "research-only; no production behavior changed",
   "profile_sha256": "f398dcba56af7f64061ab13a95cd12cfdd35ce96a643165a0ba4b1ecea10f959",
   "model": {
@@ -10,7 +10,17 @@
     "file": "onnx/model_qint8_arm64.onnx",
     "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
     "bytes": 4518071,
-    "license": "Apache-2.0"
+    "license": "Apache-2.0",
+    "required_files": {
+      "tokenizer.json": {
+        "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+        "bytes": 711396
+      },
+      "onnx/model_qint8_arm64.onnx": {
+        "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
+        "bytes": 4518071
+      }
+    }
   },
   "runtime": {
     "python": "3.10.21",
@@ -19,16 +29,16 @@
     "onnxruntime": "1.23.2"
   },
   "measurements": {
-    "cold_model_load_ms": 214.785208,
-    "index_or_candidate_build_ms": 7940.702459,
+    "cold_model_load_ms": 195.551541,
+    "index_or_candidate_build_ms": 17107.446,
     "warm_query_ms": {
       "samples": 312,
-      "min": 0.593666,
-      "median": 24.0669375,
-      "p95": 53.502417,
-      "max": 153.223584
+      "min": 0.488083,
+      "median": 45.578770500000005,
+      "p95": 136.626,
+      "max": 266.286708
     },
-    "peak_rss_kib": 210544,
+    "peak_rss_kib": 188512,
     "artifact_bytes": 4518071
   },
   "quality": {
@@ -2536,5 +2546,5 @@
     }
   ],
   "design": "TinyBERT independently reranks the bounded top-20 pool from skillwick-lexical-baseline",
-  "candidate_source_sha256": "07546aac1dde4c7b1e7c63f2b8c6182f414f6a9865491dc57b857580ba9ac58c"
+  "candidate_source_sha256": "791caa83ba55bb59ff6132e18057c321f373f21938085636e9fab19cf55d33f1"
 }

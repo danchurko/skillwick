@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "skillwick-reranker-experiment",
-  "measured_at": "2026-09-13T23:08:34.931273+00:00",
+  "measured_at": "2026-09-13T23:29:02.671551+00:00",
   "status": "research-only; no production behavior changed",
   "profile_sha256": "f398dcba56af7f64061ab13a95cd12cfdd35ce96a643165a0ba4b1ecea10f959",
   "model": {
@@ -10,7 +10,17 @@
     "file": "onnx/model_qint8_arm64.onnx",
     "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
     "bytes": 4518071,
-    "license": "Apache-2.0"
+    "license": "Apache-2.0",
+    "required_files": {
+      "tokenizer.json": {
+        "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+        "bytes": 711396
+      },
+      "onnx/model_qint8_arm64.onnx": {
+        "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
+        "bytes": 4518071
+      }
+    }
   },
   "runtime": {
     "python": "3.10.21",
@@ -19,16 +29,16 @@
     "onnxruntime": "1.23.2"
   },
   "measurements": {
-    "cold_model_load_ms": 239.027333,
-    "index_or_candidate_build_ms": 6337.328667,
+    "cold_model_load_ms": 214.096584,
+    "index_or_candidate_build_ms": 5513.034125,
     "warm_query_ms": {
       "samples": 315,
-      "min": 4.128541,
-      "median": 14.22075,
-      "p95": 56.393541,
-      "max": 144.046917
+      "min": 2.602375,
+      "median": 13.9345,
+      "p95": 37.181208,
+      "max": 105.49625
     },
-    "peak_rss_kib": 181280,
+    "peak_rss_kib": 193136,
     "artifact_bytes": 4518071
   },
   "quality": {
@@ -3091,5 +3101,5 @@
     }
   ],
   "design": "TinyBERT independently reranks the bounded top-20 pool from skillwick-embedding-experiment",
-  "candidate_source_sha256": "823d2961c8f464c873cd01dca691a97ace5a0966b5f0185ec8057ec1ceb56993"
+  "candidate_source_sha256": "7937e54e4db058271eca8282af3ffee262698f33c196ef9559ca356495b3f032"
 }

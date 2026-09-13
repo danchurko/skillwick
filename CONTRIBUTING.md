@@ -65,6 +65,10 @@ remaining limits. Use Conventional Commits for commit and pull-request titles.
 Publish the arm64 and x86_64 archives with their per-file SHA-256 checksums.
 Keep build manifests in CI and use `scripts/install.sh` as the script installer.
 Update the Homebrew formula from verified published archive digests.
+The tag workflow therefore verifies archive layout, checksums, executable, and
+installer first; formula verification is the final post-publication gate after
+those real digests are committed to `Formula/skillwick.rb`. Main CI runs that
+gate whenever the formula and package versions match.
 
 The generated release workflow has one deliberate customization: the publication
 allowlist. `allow-dirty = ["ci"]` preserves it, so `dist generate --check` alone

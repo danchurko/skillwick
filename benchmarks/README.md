@@ -50,6 +50,8 @@ latency, memory, and per-query ranking evidence.
   requires SHA-256
   `cf2698d30ff05da02c70a088313bad56e5c2f401d734cb24a8390d446111936c`
   for the 90,387,631-byte ONNX artifact.
+  The runner also records and verifies the pinned configuration, tokenizer,
+  tokenizer configuration, and special-token map before loading that snapshot.
 - Reranker: `cross-encoder/ms-marco-TinyBERT-L2-v2` at revision
   `81d1926f67cb8eee2c2be17ca9f793c7c3bd20cc`. It was selected as the
   smallest English cross-encoder in the reviewed shortlist. The experiment
@@ -57,6 +59,7 @@ latency, memory, and per-query ranking evidence.
   SHA-256
   `7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68`
   for the 4,518,071-byte arm64 quantized ONNX artifact.
+  Its pinned tokenizer is recorded and verified before loading the ONNX session.
 
 The source shortlist also considered MiniLM, BGE, and Jina alternatives.
 Those larger candidates were not run because the smallest candidate already

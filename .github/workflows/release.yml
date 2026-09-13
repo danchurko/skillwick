@@ -45,6 +45,17 @@ on:
       - '**[0-9]+.[0-9]+.[0-9]+*'
 
 jobs:
+  dependency-assurance:
+    runs-on: "ubuntu-22.04"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo install --locked --version 0.20.2 cargo-deny
+      - run: cargo install --locked --version 0.19.0 cargo-outdated
+      - run: make dependency-assurance
+
   # Run 'dist plan' (or host) to determine what tasks we need to do
   plan:
     runs-on: "ubuntu-22.04"
@@ -225,10 +236,11 @@ jobs:
   # runs the native macOS installer and executable against the real assets.
   verify-release-artifacts:
     needs:
+      - dependency-assurance
       - plan
       - build-local-artifacts
       - build-global-artifacts
-    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
+    if: ${{ always() && needs.dependency-assurance.result == 'success' && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
     runs-on: "ubuntu-22.04"
     permissions:
       contents: read
@@ -251,7 +263,7 @@ jobs:
           python3 scripts/verify-release.py \
             --version "$version" \
             --archive-dir target/distrib \
-            --formula Formula/skillwick.rb \
+            --skip-formula \
             --skip-execution \
             --skip-installer
 
@@ -355,7 +367,7 @@ jobs:
           python3 scripts/verify-release.py \
             --version "$version" \
             --base-url "https://github.com/$RELEASE_REPOSITORY/releases/download/v$version" \
-            --formula Formula/skillwick.rb
+            --skip-formula
 
   announce:
     needs:

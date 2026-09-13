@@ -11,15 +11,15 @@ metadata-derived cases, not sampled user traffic.
 
 | Retrieval path | Recall@5 | MRR@5 | nDCG@5 | Median incremental/model query | Peak RSS | Stored model/index |
 |---|---:|---:|---:|---:|---:|---:|
-| Lexical FTS5 | 0.886 | 0.837 | 0.850 | 60.1 ms full CLI | 12.7 MiB | 1.14 MiB index |
-| Arctic XS embedding | 0.743 | 0.630 | 0.659 | 2.5 ms loaded model | 821 MiB | 86.2 MiB model |
-| Lexical top 20 + TinyBERT | 0.952 | 0.929 | 0.935 | 24.1 ms reranking | 206 MiB | 4.31 MiB model |
-| Arctic top 20 + TinyBERT | 0.905 | 0.895 | 0.898 | 14.2 ms reranking | 177 MiB | both models |
+| Lexical FTS5 | 0.886 | 0.837 | 0.850 | 59.5 ms full CLI | 12.6 MiB | 1.14 MiB index |
+| Arctic XS embedding | 0.743 | 0.630 | 0.659 | 4.0 ms loaded model | 812 MiB | 86.2 MiB model |
+| Lexical top 20 + TinyBERT | 0.952 | 0.929 | 0.935 | 45.6 ms reranking | 184 MiB | 4.31 MiB model |
+| Arctic top 20 + TinyBERT | 0.905 | 0.895 | 0.898 | 13.9 ms reranking | 189 MiB | both models |
 
 The timing columns are not interchangeable. Lexical timing includes a fresh
 covered CLI process and filesystem scan; model timing is inference inside an
-already loaded Python/ONNX process. Arctic corpus embedding took 20.5 seconds
-and its cold load took 145 ms. TinyBERT cold load took 215 ms for the lexical
+already loaded Python/ONNX process. Arctic corpus embedding took 24.9 seconds
+and its cold load took 140 ms. TinyBERT cold load took 196 ms for the lexical
 candidate experiment. Measurements are from one Apple Silicon machine and do
 not establish other-platform performance.
 
@@ -27,8 +27,8 @@ not establish other-platform performance.
   memory, indexing, and runtime costs therefore have no compensating benefit.
 - TinyBERT improves the frozen lexical ranking by 0.067 Recall@5, 0.092 MRR@5,
   and 0.085 nDCG@5. That is promising research evidence, but not sufficient to
-  add a Python/ONNX lifecycle, a model artifact, roughly 24 ms median loaded
-  inference, and roughly 206 MiB peak process memory to the shipped Rust CLI.
+  add a Python/ONNX lifecycle, a model artifact, roughly 46 ms median loaded
+  inference, and roughly 184 MiB peak process memory to the shipped Rust CLI.
 - Reranking Arctic candidates recovers much of the embedding loss but remains
   worse than reranking lexical candidates. There is no evidence for the
   combined path.

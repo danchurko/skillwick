@@ -24,3 +24,14 @@ jobs:
           cargo install --locked --version 0.19.0 cargo-outdated
       - name: Check dependency assurance
         run: make dependency-assurance
+      - name: Verify current published formula
+        run: |
+          package_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
+          formula_version=$(sed -n 's/^  version "\([^"]*\)"/\1/p' Formula/skillwick.rb)
+          if [ "$package_version" = "$formula_version" ]; then
+            python3 scripts/verify-release.py \
+              --version "$package_version" \
+              --base-url "https://github.com/${{ github.repository }}/releases/download/v$package_version"
+          else
+            echo "formula verification deferred until published v$package_version digests are committed"
+          fi

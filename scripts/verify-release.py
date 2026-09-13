@@ -60,6 +60,11 @@ def parser() -> argparse.ArgumentParser:
         help="Homebrew formula to verify (default: Formula/skillwick.rb)",
     )
     command.add_argument(
+        "--skip-formula",
+        action="store_true",
+        help="defer package-manager metadata until published archive digests are available",
+    )
+    command.add_argument(
         "--installer",
         type=Path,
         default=root / "scripts" / "install.sh",
@@ -367,7 +372,7 @@ def verify(arguments: argparse.Namespace) -> None:
         raise VerificationError(
             f"Cargo manifest version is {manifest_version_value}, expected release {version}"
         )
-    formula = formula_digests(arguments.formula, version)
+    formula = None if arguments.skip_formula else formula_digests(arguments.formula, version)
     host = host_target()
     execution_commands: dict[str, list[str]] = {}
     if arguments.skip_execution:
@@ -409,7 +414,7 @@ def verify(arguments: argparse.Namespace) -> None:
             checksum_name = f"{archive_name}.sha256"
             archive = assets[archive_name]
             digest = checksum_asset(archive, assets[checksum_name])
-            if formula[target] != digest:
+            if formula is not None and formula[target] != digest:
                 raise VerificationError(
                     f"formula checksum for {target} is {formula[target]}, archive is {digest}"
                 )
@@ -417,7 +422,8 @@ def verify(arguments: argparse.Namespace) -> None:
             if target in execution_commands:
                 version_output(executable, version, environment, execution_commands[target])
             execution_note = " executable OK" if target in execution_commands else " executable deferred"
-            print(f"archive {archive_name}: checksum, formula, and layout OK;{execution_note}")
+            formula_note = "formula deferred;" if formula is None else "formula OK;"
+            print(f"archive {archive_name}: checksum and layout OK; {formula_note}{execution_note}")
 
         if arguments.source_binary is not None:
             source_binary = require_file(arguments.source_binary, "tested source executable")

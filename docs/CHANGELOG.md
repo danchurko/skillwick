@@ -3,23 +3,26 @@
 User-visible changes are recorded here. Release artifacts and verification
 evidence live in [implementation history](IMPLEMENTATION.md).
 
-## Unreleased
+## 0.2.0 - 2026-09-14
 
-- Clarify the user-first documentation map, command reference, operations
-  guide, agent boundary, security contract, decisions, research, and history.
-- Keep search explicit, local, bounded, and lexical; document version-2 JSON
-  envelopes and current-context inventory behavior.
-- Add deterministic documentation and trust-boundary checks to normal
-  validation.
+- Partition native snapshots by normalized workspace and Codex home, refresh
+  missing coverage safely, and report truthful inventory diagnostics.
+- Respect model-invocation policy across search, list, counts, reads, and
+  inspection while retaining denied records for diagnostics.
+- Ship the breaking version-2 JSON contract, complete bounded human output,
+  search limits from 1 through 20 with a default of 5, and comprehensive help.
+- Reconstruct user, contributor, agent, decision, research, history, and
+  changelog documentation with deterministic drift checks.
+- Bound metadata, protocol, path, symlink, and package-inspection trust
+  boundaries; add dependency assurance and end-to-end release verification.
+- Freeze the lexical baseline, evaluate local embedding and reranking
+  candidates, and retain lexical-only production behavior from the recorded
+  adoption decision.
 
 ## 0.1.5
 
-- Keep native inventory snapshots partitioned by normalized workspace and Codex
-  home.
-- Distinguish filesystem, native, raw, duplicate, and model-discoverable
-  inventory diagnostics.
-- Normalize invocation visibility at ingestion and retain previous valid state
-  when native refresh fails.
+- Adapt the Codex integration when the selected skill invocation is
+  unavailable and publish the corrected Homebrew formula.
 
 ## 0.1.4
 

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "skillwick-embedding-experiment",
-  "measured_at": "2026-09-13T23:07:51.863887+00:00",
+  "measured_at": "2026-09-13T23:28:47.376366+00:00",
   "status": "research-only; no production behavior changed",
   "profile_sha256": "f398dcba56af7f64061ab13a95cd12cfdd35ce96a643165a0ba4b1ecea10f959",
   "model": {
@@ -10,7 +10,29 @@
     "file": "onnx/model.onnx",
     "sha256": "cf2698d30ff05da02c70a088313bad56e5c2f401d734cb24a8390d446111936c",
     "bytes": 90387631,
-    "license": "Apache-2.0"
+    "license": "Apache-2.0",
+    "required_files": {
+      "config.json": {
+        "sha256": "d7d071046ab952af96b7abad788db7ab3fc997b465e1b9914ff39707092254ec",
+        "bytes": 737
+      },
+      "tokenizer.json": {
+        "sha256": "91f1def9b9391fdabe028cd3f3fcc4efd34e5d1f08c3bf2de513ebb5911a1854",
+        "bytes": 711649
+      },
+      "tokenizer_config.json": {
+        "sha256": "9ca59277519f6e3692c8685e26b94d4afca2d5438deff66483db495e48735810",
+        "bytes": 1433
+      },
+      "special_tokens_map.json": {
+        "sha256": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+        "bytes": 695
+      },
+      "onnx/model.onnx": {
+        "sha256": "cf2698d30ff05da02c70a088313bad56e5c2f401d734cb24a8390d446111936c",
+        "bytes": 90387631
+      }
+    }
   },
   "runtime": {
     "python": "3.10.21",
@@ -19,16 +41,16 @@
     "onnxruntime": "1.23.2"
   },
   "measurements": {
-    "cold_model_load_ms": 145.474292,
-    "index_or_candidate_build_ms": 20462.6065,
+    "cold_model_load_ms": 140.390375,
+    "index_or_candidate_build_ms": 24932.131333,
     "warm_query_ms": {
       "samples": 315,
-      "min": 0.930833,
-      "median": 2.50425,
-      "p95": 4.614583,
-      "max": 6.490375
+      "min": 1.443583,
+      "median": 3.955834,
+      "p95": 11.458833,
+      "max": 46.447459
     },
-    "peak_rss_kib": 840464,
+    "peak_rss_kib": 831632,
     "artifact_bytes": 90387631
   },
   "quality": {
