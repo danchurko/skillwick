@@ -19,6 +19,10 @@ Use `skillwick inspect ID` to review selected skill metadata and
 `skillwick inspect ID --files` to list package references without reading them.
 Read selected instructions with `skillwick read ID`.
 
+If selected instructions ask to invoke another named skill through a skill tool
+that is unavailable, use `skillwick search` to find that skill and `skillwick
+read ID` to load it. Do not reinterpret ordinary tool references as skill names.
+
 ## Commands
 
 - `skillwick search "task and important technologies"` searches.

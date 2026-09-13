@@ -61,6 +61,7 @@ run inspect "$identifier" --files | grep -q 'truncated; max 256 entries'
 run | grep -q 'Usage:'
 run instructions | grep -q '^# Skillwick$'
 run instructions | grep -q 'skillwick search "task"'
+run instructions | grep -q 'another named skill through a skill tool'
 if run probe --limit 5 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 if run search test --bogus >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 run search --limit 1 C++ | grep -q 'C++@'
