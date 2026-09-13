@@ -390,6 +390,35 @@ mod tests {
     }
 
     #[test]
+    fn retains_native_snapshots_for_multiple_contexts() {
+        let workspace_a = tempfile::tempdir().unwrap();
+        let workspace_b = tempfile::tempdir().unwrap();
+        let home_a = tempfile::tempdir().unwrap();
+        let home_b = tempfile::tempdir().unwrap();
+        let db = open(Path::new(":memory:")).unwrap();
+
+        record_snapshot(
+            &db,
+            workspace_a.path(),
+            "0.154.0",
+            Path::new("/codex-a"),
+            home_a.path(),
+        )
+        .unwrap();
+        record_snapshot(
+            &db,
+            workspace_b.path(),
+            "0.154.0",
+            Path::new("/codex-b"),
+            home_b.path(),
+        )
+        .unwrap();
+
+        assert!(has_workspace_snapshot(&db, workspace_a.path(), home_a.path()).unwrap());
+        assert!(has_workspace_snapshot(&db, workspace_b.path(), home_b.path()).unwrap());
+    }
+
+    #[test]
     fn reports_raw_duplicate_and_model_discoverable_counts() {
         let mut db = open(Path::new(":memory:")).unwrap();
         let filesystem = skill("/skills/demo/SKILL.md", "filesystem");
