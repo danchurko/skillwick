@@ -407,24 +407,55 @@ def _selection_metrics(
 ) -> dict[str, float | int | None]:
     recalls: list[float] = []
     precisions: list[float] = []
+    reciprocal_ranks: list[float] = []
+    ndcgs: list[float] = []
     negative_total = negative_correct = 0
     for case in cases:
         case_id = str(case["id"])
-        chosen = set(selected[case_id][:5])
+        ranking = list(selected[case_id][:5])
+        chosen = set(ranking)
         expected = set(relevant[case_id])
         if expected:
             recalls.append(len(chosen & expected) / len(expected))
             precisions.append(len(chosen & expected) / len(chosen) if chosen else 0.0)
+            reciprocal_ranks.append(
+                next((1 / rank for rank, identifier in enumerate(ranking, 1) if identifier in expected), 0.0)
+            )
+            dcg = sum(1 / math.log2(rank + 1) for rank, identifier in enumerate(ranking, 1) if identifier in expected)
+            ideal = sum(1 / math.log2(rank + 1) for rank in range(1, min(len(expected), 5) + 1))
+            ndcgs.append(dcg / ideal)
         else:
             negative_total += 1
             negative_correct += not chosen
     return {
         "recall_at_5": sum(recalls) / len(recalls) if recalls else None,
         "precision_at_5": sum(precisions) / len(precisions) if precisions else None,
+        "mrr_at_5": sum(reciprocal_ranks) / len(reciprocal_ranks) if reciprocal_ranks else None,
+        "ndcg_at_5": sum(ndcgs) / len(ndcgs) if ndcgs else None,
         "no_skill_abstention": negative_correct / negative_total if negative_total else None,
         "positive_cases": len(recalls),
         "no_skill_cases": negative_total,
     }
+
+
+def _retrieval_metrics(
+    cases: Sequence[Mapping[str, Any]],
+    query_results: Mapping[str, Sequence[Mapping[str, Any]]],
+    relevant: Mapping[str, Sequence[str]],
+) -> dict[str, float | int | None]:
+    query_cases: list[dict[str, Any]] = []
+    rankings: dict[str, list[str]] = {}
+    query_relevant: dict[str, Sequence[str]] = {}
+    for case in cases:
+        case_id = str(case["id"])
+        for index, query in enumerate(query_results[case_id]):
+            query_id = f"{case_id}:{index}"
+            query_cases.append({"id": query_id})
+            rankings[query_id] = [str(result["id"]) for result in query["results"]]
+            query_relevant[query_id] = relevant[case_id]
+    metrics = _selection_metrics(query_cases, rankings, query_relevant)
+    metrics["queries"] = len(query_cases)
+    return metrics
 
 
 def score_evidence(
@@ -439,9 +470,19 @@ def score_evidence(
     usage_by_workflow: dict[str, Any] = {}
     for workflow in WORKFLOWS:
         selected = {case_id: list(record["selected_ids"]) for case_id, record in workflows[workflow].items()}
-        frozen[workflow] = {"selection": _selection_metrics(cases, selected, frozen_relevant)}
+        frozen[workflow] = {
+            "retrieval": _retrieval_metrics(
+                cases, evidence["query_results"][workflow], frozen_relevant
+            ),
+            "selection": _selection_metrics(cases, selected, frozen_relevant),
+        }
         reviewed = {case_id: list(value["relevant"]) for case_id, value in evidence["adjudication"][workflow].items()}
-        adjudicated[workflow] = {"selection": _selection_metrics(cases, selected, reviewed)}
+        adjudicated[workflow] = {
+            "retrieval": _retrieval_metrics(
+                cases, evidence["query_results"][workflow], reviewed
+            ),
+            "selection": _selection_metrics(cases, selected, reviewed),
+        }
         root_calls = [{"usage": record["usage"]["root"]} for record in workflows[workflow].values()]
         total_calls = [{"usage": record["usage"]["total"]} for record in workflows[workflow].values()]
         usage_by_workflow[workflow] = {

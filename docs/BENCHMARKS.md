@@ -219,8 +219,10 @@ uv run --script scripts/evaluate_skills.py score \
 
 `score` validates exact corpus, sample, dataset, query-budget, case, selection,
 usage, and adjudication identities across direct, delegated, and native arms. It
-reports frozen-label and adjudicated selection metrics separately and aggregates
-root and total usage per workflow (plus a combined total) without invoking a model,
+reports per-query position-sensitive retrieval metrics and workflow-level final
+selection metrics against frozen and adjudicated judgments separately. It
+aggregates root and total usage per
+workflow (plus a combined total) without invoking a model,
 searching, authenticating, building prompts, sequencing agents, or resuming runs.
 Incomplete work remains a caller-owned partial evidence artifact and is not
 accepted as a complete scored report. Semantic and reranking backends remain

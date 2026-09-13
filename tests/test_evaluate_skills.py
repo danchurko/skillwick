@@ -329,6 +329,8 @@ class EvaluationArtifactTests(unittest.TestCase):
         report = evaluate_skills.score_evidence(normalized, loaded_manifest, cases)
         self.assertEqual(report["status"], "complete")
         self.assertEqual(report["frozen"]["direct"]["selection"]["recall_at_5"], 1.0)
+        self.assertEqual(report["frozen"]["direct"]["retrieval"]["mrr_at_5"], 1.0)
+        self.assertEqual(report["frozen"]["direct"]["retrieval"]["ndcg_at_5"], 1.0)
         self.assertEqual(report["adjudicated"]["direct"]["selection"]["recall_at_5"], 0.5)
         self.assertEqual(report["frozen"]["delegated"]["selection"]["recall_at_5"], 1.0)
         self.assertEqual(report["frozen"]["native"]["selection"]["recall_at_5"], 1.0)
@@ -350,6 +352,21 @@ class EvaluationArtifactTests(unittest.TestCase):
         loaded_manifest = evaluate_skills.load_manifest(manifest)
         _, dataset_sha256, cases = evaluate_skills.validate_dataset(dataset, loaded_manifest)
         evaluate_skills.validate_evidence(evidence, loaded_manifest, dataset_sha256, cases)
+
+    def test_retrieval_scores_each_adaptive_query_at_its_actual_rank(self) -> None:
+        cases = [{"id": "case"}]
+        queries = {
+            "case": [
+                {"results": [{"id": "irrelevant"}]},
+                {"results": [{"id": "relevant"}]},
+            ]
+        }
+        metrics = evaluate_skills._retrieval_metrics(
+            cases, queries, {"case": ["relevant"]}
+        )
+        self.assertEqual(metrics["recall_at_5"], 0.5)
+        self.assertEqual(metrics["mrr_at_5"], 0.5)
+        self.assertEqual(metrics["queries"], 2)
 
     def test_usage_aggregation_is_pure_and_keeps_cache_separate(self) -> None:
         calls = [
@@ -381,6 +398,15 @@ class EvaluationArtifactTests(unittest.TestCase):
         _, dataset_sha256, cases = evaluate_skills.validate_dataset(dataset, loaded_manifest)
         with self.assertRaisesRegex(evaluate_skills.EvaluationError, "query evidence is missing"):
             evaluate_skills.validate_evidence(evidence, loaded_manifest, dataset_sha256, cases)
+
+    def test_self_labeled_dataset_is_rejected(self) -> None:
+        manifest = self._manifest()
+        dataset = self._dataset(manifest)
+        loaded = json.loads(dataset.read_text(encoding="utf-8"))
+        loaded["labeling"]["search_results_used"] = True
+        evaluate_skills.write_json(dataset, loaded)
+        with self.assertRaisesRegex(evaluate_skills.EvaluationError, "independently reviewed"):
+            evaluate_skills.validate_dataset(dataset, evaluate_skills.load_manifest(manifest))
 
     def test_score_command_accepts_only_recorded_artifacts(self) -> None:
         manifest = self._manifest()

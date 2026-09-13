@@ -184,7 +184,8 @@ sources coexist and non-managed hooks require review.
 On 13 September 2026, both published macOS archives were downloaded to a
 temporary directory. Their individual checksum files validated, both archives
 contained the expected target directory, executable, README, and two licences,
-and the arm64 archive passed the repository installer's real-archive smoke path.
+the arm64 archive passed the repository installer's real-archive smoke path, and
+the x86_64 binary reported `skillwick 0.1.4` under Rosetta.
 GitHub reports archive digests beginning `fc51722e2622` (arm64) and
 `0723cd48b632` (x86_64), matching `Formula/skillwick.rb`.
 
@@ -193,4 +194,5 @@ architecture archives and their individual checksums before upload. This is a
 future-release allowlist; historical v0.1.4 assets were not rewritten. A fresh
 arm64 build from this worktree passed. The Homebrew Rust installation lacks the
 x86_64 standard library, so the current x86_64 source build was not independently
-repeated locally; the downloaded x86_64 archive and checksum were verified.
+repeated locally; the downloaded x86_64 archive, checksum, and executable version
+were verified.
