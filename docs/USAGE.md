@@ -1,7 +1,8 @@
 # Usage and configuration
 
 Skillwick is a deliberate local lookup tool. Search is always an explicit
-command; a bare query is not interpreted as a search.
+command; a bare query is not interpreted as a search. Discovery reads the
+configured local snapshot and never executes a skill package.
 
 ## Search and read
 
@@ -13,8 +14,14 @@ skillwick inspect ID
 skillwick inspect ID --files
 ```
 
-Use an ID from search output. Search returns up to five compact candidates, and
-choosing none is valid. Read selected instructions before following them.
+Use an ID from search or list output. Search returns up to five candidates by
+default. `--limit N` accepts 1 through 20; choosing none is valid. Read
+selected instructions before following them.
+
+Text search output bounds each record to 2,000 bytes. A long description is
+truncated with `[truncated]`; later requested candidates remain visible. JSON
+search output has no presentation-byte limit and returns every selected result
+up to the requested limit.
 
 `read` prints the live `SKILL.md` with its package base directory. Resolve
 relative references against that directory, not the shell working directory.
@@ -39,7 +46,8 @@ skillwick refresh
 skillwick doctor --strict
 ```
 
-`list` reports the current-scope inventory and its total. Filesystem discovery
+`list` always reports every current-scope model-discoverable record and its
+total; it has no pagination or compatibility flags. Filesystem discovery
 covers `$HOME/.agents/skills` and applicable `.agents/skills` directories from
 `--cwd` through its ancestors. Add authorized roots with repeatable `--root
 PATH` during setup. Symlink escapes are rejected.
@@ -87,15 +95,42 @@ Skillwick honors `HOME`, `CODEX_HOME`, and XDG overrides:
 
 ```text
 $XDG_CONFIG_HOME/skillwick/config.toml
-$XDG_CACHE_HOME/skillwick/index-v2.sqlite
+$XDG_CACHE_HOME/skillwick/index-v3.sqlite
 $XDG_STATE_HOME/skillwick/integration.json
 $CODEX_HOME/SKILLWICK.md
 $CODEX_HOME/AGENTS.md
 $CODEX_HOME/config.toml
 ```
 
-`--json` emits a versioned envelope for machine consumers. Run
-`skillwick --help` for the complete command interface.
+`--json` is supported by `search`, `list`, `inspect`, and `doctor`. It emits a
+version-2 contract. Search and inspection results use this envelope:
 
-Exit codes: `0` success or no matches; `1` operational failure; `2` usage or
-configuration error; `3` stale, disabled, conflicting, or incomplete state.
+```json
+{"version":2,"results":[{"id":"name@abcdef","name":"name","description":"..."}]}
+```
+
+`list` adds `total` and returns the complete inventory:
+
+```json
+{"version":2,"total":1,"results":[...]}
+```
+
+`inspect ID --files` keeps the result envelope and adds the bounded `package`
+object. `doctor --json` returns its version-2 diagnostic object. Other commands
+print text and reject `--json` with exit code 2 rather than silently ignoring
+the option. Run `skillwick --help` and each subcommand's `--help` for the
+complete interface, defaults, ranges, output, side effects, and failures.
+
+Exit codes:
+
+- `0`: successful command, including a valid search with no matches.
+- `1`: operational, cache, configuration, or local database failure.
+- `2`: unknown command or option, invalid argument, unsupported output mode,
+  or non-interactive setup without `--yes`.
+- `3`: selected skill missing, stale, disabled, unavailable, or blocked by
+  native/provider state; the message identifies the failed boundary. Some
+  executable or database failures use code `1` and retain their specific text.
+
+Refresh may publish a new disposable snapshot and can call the configured
+native provider. Ordinary covered searches, list, read, and inspect operations
+use the cache and revalidate only the selected source for read/inspect.

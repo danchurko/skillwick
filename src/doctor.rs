@@ -102,7 +102,7 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
         && (!native_required || supported && snapshot)
         && (!integration_required || integration_present);
     Ok(Report {
-        version: 1,
+        version: 2,
         healthy,
         config: config_path.display().to_string(),
         cache: cache.display().to_string(),

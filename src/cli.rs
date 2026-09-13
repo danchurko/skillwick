@@ -12,18 +12,36 @@ use std::{
     time::Duration,
 };
 
+const SEARCH_DEFAULT_LIMIT: usize = 5;
+const SEARCH_MAX_LIMIT: usize = 20;
+
 #[derive(Parser)]
 #[command(
     name = "skillwick",
     version,
-    about = "Find the skill. Load only what matters."
+    about = "Find the skill. Load only what matters.",
+    long_about = "Find relevant installed skills without loading an entire catalogue. Search is explicit, bounded, local, and read-only until a setup or refresh command is requested."
 )]
 struct Args {
-    #[arg(long, global = true)]
+    #[arg(
+        long,
+        global = true,
+        help = "Emit version-2 JSON for search, list, inspect, or doctor"
+    )]
     json: bool,
-    #[arg(long, global = true)]
+    #[arg(
+        long,
+        global = true,
+        value_name = "PATH",
+        help = "Use PATH as the workspace context (default: current directory)"
+    )]
     cwd: Option<PathBuf>,
-    #[arg(long, global = true)]
+    #[arg(
+        long,
+        global = true,
+        value_name = "PATH",
+        help = "Read configuration from PATH (default: XDG config directory)"
+    )]
     config: Option<PathBuf>,
     #[command(subcommand)]
     command: Option<Command>,
@@ -31,66 +49,142 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Find relevant skills for a task.
+    /// Find relevant model-discoverable skills for a task.
+    ///
+    /// Returns up to five candidates by default. Use --limit to request 1-20
+    /// candidates. Exit code 0 also represents a valid no-match result.
     Search {
-        #[arg(required = true)]
+        #[arg(
+            required = true,
+            value_name = "QUERY",
+            help = "Task words to match; multiple values are joined with spaces"
+        )]
         query: Vec<String>,
-        #[arg(long, short)]
+        #[arg(
+            long,
+            short,
+            value_name = "N",
+            help = "Maximum candidates: 1-20 (default: 5); JSON returns all selected records"
+        )]
         limit: Option<usize>,
     },
+    /// Read one selected instruction file after revalidating its source.
+    ///
+    /// This command prints text, does not execute package content, and returns
+    /// exit code 3 when the ID is missing or its source is stale or unavailable.
     Read {
+        #[arg(value_name = "ID", help = "Exact ID returned by search or list")]
         id: String,
     },
+    /// Inspect selected metadata without reading package references.
+    ///
+    /// Add --files for a bounded live package listing. Source changes and
+    /// unavailable packages return exit code 3.
     Inspect {
+        #[arg(value_name = "ID", help = "Exact ID returned by search or list")]
         id: String,
         /// List bounded package entries without reading or executing them.
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "List at most the safe package-entry bound; does not execute files"
+        )]
         files: bool,
     },
-    /// Show the current-scope skill inventory and total count.
-    List {
-        #[arg(long, hide = true, conflicts_with = "all")]
-        limit: Option<usize>,
-        /// Compatibility flag; plain `list` is already exhaustive.
-        #[arg(long, hide = true)]
-        all: bool,
-    },
-    Refresh {
-        #[arg(long, hide = true)]
-        full: bool,
-    },
+    /// Show every current-scope model-discoverable skill and its total count.
+    ///
+    /// Output is exhaustive in text or version-2 JSON. The command reads the
+    /// local snapshot and returns an operational error if that snapshot fails.
+    List,
+    /// Rebuild the disposable local index from configured sources.
+    ///
+    /// Refresh may call the configured native provider and publishes state only
+    /// after a successful rebuild. Provider or source failures identify the
+    /// failed boundary and preserve the last valid snapshot.
+    Refresh,
     /// Print the canonical agent usage instructions.
+    ///
+    /// Writes Markdown to stdout and performs no indexing or configuration
+    /// changes.
     Instructions,
+    /// Preview or apply reversible agent integration and inventory settings.
+    ///
+    /// Without --yes, non-interactive setup fails with exit code 2. --dry-run
+    /// performs no persistent writes.
     Init {
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Apply without interactive confirmation; required in non-interactive mode"
+        )]
         yes: bool,
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Print the plan without writing configuration or the cache"
+        )]
         dry_run: bool,
-        #[arg(long, value_enum, default_value = "codex")]
+        #[arg(
+            long,
+            value_enum,
+            default_value = "codex",
+            help = "Agent integration target (default: codex; use none for no agent files)"
+        )]
         agent: AgentArg,
-        #[arg(long, value_enum)]
+        #[arg(
+            long,
+            value_enum,
+            help = "Inventory source (default: codex for agent codex, otherwise filesystem)"
+        )]
         inventory: Option<InventoryArg>,
-        #[arg(long, value_enum, default_value = "auto")]
+        #[arg(
+            long,
+            value_enum,
+            default_value = "auto",
+            help = "Codex catalogue policy: auto, native, or unchanged (default: auto)"
+        )]
         catalog: CatalogArg,
-        #[arg(long)]
+        #[arg(
+            long,
+            value_name = "PATH",
+            help = "Add an authorized filesystem discovery root; repeat as needed"
+        )]
         root: Vec<PathBuf>,
-        #[arg(long)]
+        #[arg(
+            long,
+            value_name = "PATH",
+            help = "Use PATH as Codex home (default: CODEX_HOME or ~/.codex)"
+        )]
         codex_home: Option<PathBuf>,
-        #[arg(long)]
+        #[arg(
+            long,
+            value_name = "PATH",
+            help = "Use PATH as the Codex executable for inventory and compatibility checks"
+        )]
         codex_bin: Option<PathBuf>,
-        #[arg(long)]
+        #[arg(
+            long,
+            value_name = "PATH",
+            help = "Use PATH for the owned agent context reference"
+        )]
         instructions_file: Option<PathBuf>,
     },
+    /// Diagnose configuration, cache, inventory coverage, and integration health.
+    ///
+    /// Text diagnostics go to stdout and warnings go to stderr. --strict returns
+    /// exit code 3 when the reported state is not healthy.
     Doctor {
-        #[arg(long)]
+        #[arg(long, help = "Return exit code 3 when health is not valid")]
         strict: bool,
     },
+    /// Remove only Skillwick-owned integration and optionally its cache.
     Uninstall {
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Also remove the disposable local index; installed skills remain untouched"
+        )]
         purge_cache: bool,
     },
+    /// Generate zsh completion definitions to stdout.
     Completions {
-        #[arg(value_enum)]
+        #[arg(value_enum, help = "Shell to generate (currently: zsh)")]
         shell: Shell,
     },
 }
@@ -149,6 +243,20 @@ pub fn run() -> Result<(), Failure> {
         write_text(&Args::command().render_help().to_string())?;
         return Ok(());
     }
+    if args.json
+        && !matches!(
+            args.command.as_ref(),
+            Some(Command::Search { .. })
+                | Some(Command::Inspect { .. })
+                | Some(Command::List)
+                | Some(Command::Doctor { .. })
+        )
+    {
+        return Err(Failure(
+            "--json is supported only for search, list, inspect, and doctor".into(),
+            2,
+        ));
+    }
     let cwd = args
         .cwd
         .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
@@ -198,7 +306,7 @@ pub fn run() -> Result<(), Failure> {
                 let _lock =
                     index::acquire_cache_lock(&config::cache_path()).map_err(Failure::from)?;
                 let mut db = query_database()?;
-                refresh(&mut db, &initialized, &cwd, true)?;
+                refresh(&mut db, &initialized, &cwd)?;
                 config::save(&config_path, &initialized)?;
             }
         }
@@ -221,11 +329,11 @@ pub fn run() -> Result<(), Failure> {
             &mut io::stdout(),
         ),
         Some(Command::Instructions) => write_text(integration::instructions())?,
-        Some(Command::Refresh { full }) => {
+        Some(Command::Refresh) => {
             let settings = config::load(&config_path)?;
             let _lock = index::acquire_cache_lock(&config::cache_path()).map_err(Failure::from)?;
             let mut db = query_database()?;
-            refresh(&mut db, &settings, &cwd, full)?;
+            refresh(&mut db, &settings, &cwd)?;
         }
         command => {
             let settings = config::load(&config_path)?;
@@ -251,14 +359,13 @@ fn dispatch(
                 json,
             )?;
         }
-        Some(Command::List { limit, all }) => {
-            let limit = list_limit(limit)?;
-            let rows = search::all(db, context, limit)?;
+        Some(Command::List) => {
+            let rows = search::all(db, context, None)?;
             let total = search::count(db, context)?;
             if json {
                 write_output(output::list_json(&rows, total))?;
             } else {
-                write_output(output::list_text(&rows, total, all || limit.is_none()))?;
+                write_output(output::list_text(&rows, total))?;
             }
         }
         Some(Command::Inspect { id, files }) => {
@@ -353,7 +460,7 @@ fn auto_refresh(
         &context.codex_home,
         settings.codex_bin.as_deref(),
     )? {
-        refresh(&mut db, settings, cwd, true)?;
+        refresh(&mut db, settings, cwd)?;
     }
     Ok(db)
 }
@@ -365,12 +472,7 @@ fn read_only_copy(path: &Path) -> rusqlite::Result<Connection> {
     Ok(destination)
 }
 
-fn refresh(
-    db: &mut Connection,
-    settings: &config::Config,
-    cwd: &Path,
-    _full: bool,
-) -> Result<(), Failure> {
+fn refresh(db: &mut Connection, settings: &config::Config, cwd: &Path) -> Result<(), Failure> {
     let codex = if settings.inventory == config::Inventory::Codex {
         Some(native::detect(settings)?)
     } else {
@@ -453,7 +555,7 @@ fn inspect_files(row: &search::ResultRow, json: bool) -> Result<(), Failure> {
         let result =
             serde_json::to_value(output::clean_row(row.clone())).expect("serializable result");
         let value = serde_json::json!({
-            "version": 1,
+            "version": output::JSON_VERSION,
             "results": [result],
             "package": {
                 "base": output::clean(&row.base),
@@ -566,19 +668,14 @@ fn write_text(text: &str) -> Result<(), Failure> {
 }
 
 fn search_limit(limit: Option<usize>) -> Result<usize, Failure> {
-    let limit = limit.unwrap_or(5);
-    if (1..=5).contains(&limit) {
+    let limit = limit.unwrap_or(SEARCH_DEFAULT_LIMIT);
+    if (1..=SEARCH_MAX_LIMIT).contains(&limit) {
         Ok(limit)
     } else {
-        Err(Failure("search limit must be between 1 and 5".into(), 2))
-    }
-}
-
-fn list_limit(limit: Option<usize>) -> Result<Option<usize>, Failure> {
-    match limit {
-        Some(limit) if limit > 0 => Ok(Some(limit)),
-        Some(_) => Err(Failure("list limit must be greater than zero".into(), 2)),
-        None => Ok(None),
+        Err(Failure(
+            format!("search limit must be between 1 and {SEARCH_MAX_LIMIT}"),
+            2,
+        ))
     }
 }
 
@@ -619,6 +716,24 @@ mod tests {
             codex_bin: Some(PathBuf::from("/does/not/exist")),
             ..config::Config::default()
         }
+    }
+
+    #[test]
+    fn search_limit_accepts_one_through_twenty_with_five_default() {
+        assert!(matches!(search_limit(None), Ok(5)));
+        assert!(matches!(search_limit(Some(1)), Ok(1)));
+        assert!(matches!(search_limit(Some(20)), Ok(20)));
+        assert!(matches!(
+            search_limit(Some(21)),
+            Err(ref failure) if failure.code() == 2
+        ));
+    }
+
+    #[test]
+    fn obsolete_hidden_flags_are_not_parseable() {
+        assert!(Args::try_parse_from(["skillwick", "list", "--all"]).is_err());
+        assert!(Args::try_parse_from(["skillwick", "list", "--limit", "1"]).is_err());
+        assert!(Args::try_parse_from(["skillwick", "refresh", "--full"]).is_err());
     }
 
     #[test]

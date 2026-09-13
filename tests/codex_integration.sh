@@ -260,7 +260,7 @@ partition_run "$partition_work_a" init --yes --agent none --inventory codex \
   --codex-home "$partition_codex" --codex-bin "$partition_codex_bin" >/dev/null
 partition_run "$partition_work_a" list | grep -q '^native-a@'
 partition_run "$partition_work_a/." --json doctor >"$partitions/doctor-relative"
-partition_total="$(partition_run "$partition_work_a" --json list --all | jq -r '.total')"
+partition_total="$(partition_run "$partition_work_a" --json list | jq -r '.total')"
 test "$(jq -r '.counts.model_discoverable' "$partitions/doctor-relative")" -eq "$partition_total"
 test "$(jq -r '.native_snapshot_current' "$partitions/doctor-relative")" = true
 ln -s "$partition_work_a" "$partitions/work-link"

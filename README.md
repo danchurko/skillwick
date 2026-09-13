@@ -20,6 +20,10 @@ packages with their existing installers. No daemon, registry, or telemetry.
 Search is an explicit command. A bare query is not interpreted as a search;
 this keeps normal shell composition and command errors predictable.
 
+Search returns five candidates by default and accepts `--limit` values from 1
+through 20. Text output bounds each record and marks long descriptions with
+`[truncated]`; `--json` emits complete version-2 result envelopes.
+
 **Supported:** Codex CLI 0.154.0 on macOS. See [compatibility](docs/COMPATIBILITY.md)
 for tested versions and platform limits.
 

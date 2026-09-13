@@ -33,7 +33,7 @@ test ! -e "$temporary/cache/skillwick/index-v3.sqlite-wal"
 test ! -e "$temporary/cache/skillwick/index-v3.sqlite-shm"
 run search C++ | grep -q 'C++@'
 run search 'deploy AgentCore runtime' | grep -q 'aws-agentcore@'
-! run list --all | grep -q 'leak@'
+! run list | grep -q 'leak@'
 run list | grep -q '^3 skills in the current inventory\.$'
 test "$(run list | grep -c '@')" -eq 3
 ! run list | grep -q 'manual-only@'
@@ -50,14 +50,16 @@ run doctor 2>&1 | grep -q 'native:'
 run doctor 2>&1 | grep -q 'raw:'
 run doctor 2>&1 | grep -q 'duplicates:'
 run doctor 2>&1 | grep -q 'model-discoverable:'
-run list --limit 1 | grep -q 'plain `skillwick list` prints every record'
-run --json list --limit 1 | grep -q '"total":3'
-test "$(run list --all | grep -c '@')" -eq 3
-identifier=$(run list --all | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
+run --json doctor | grep -q '"version":2'
+if run list --limit 1 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
+run --json list | grep -q '"version":2,"total":3'
+test "$(run list | grep -c '@')" -eq 3
+identifier=$(run list | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
 run read "$identifier" | grep -q "base: $home/.agents/skills/cpp"
 if run "read $identifier" >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 run inspect "$identifier" | grep -q '^description: Build native C++ command line tools\.'
 ! run inspect "$identifier" | grep -q '^package:'
+run --json inspect "$identifier" | grep -q '"version":2,"results"'
 run inspect "$identifier" --files | grep -Fq -- '- references/guide.md [markdown; file, .md]'
 run inspect "$identifier" --files | grep -Fq -- '- scripts/check.sh [non-markdown; file, .sh]'
 ! run inspect "$identifier" --files | grep -q 'support-script-ran'
@@ -67,6 +69,7 @@ run inspect "$identifier" --files | grep -Fq -- '- references/escape [non-markdo
 run inspect "$identifier" --files | grep -q '^counts: complete$'
 run inspect "$identifier" --files | grep -q '^regular files: 3$'
 run inspect "$identifier" --files | grep -q '^additional regular files: 2$'
+run --json inspect "$identifier" --files | grep -q '"version":2'
 run --json inspect "$identifier" --files | grep -q '"package"'
 run --json inspect "$identifier" --files | grep -q '"counts_scope":"complete"'
 run --json inspect "$identifier" --files | grep -q '"classification":"markdown"'
@@ -78,16 +81,27 @@ while [ "$i" -le 256 ]; do
 done
 run inspect "$identifier" --files | grep -q 'truncated; max 256 entries'
 run | grep -q 'Usage:'
+run --help | grep -q 'version-2 JSON'
+run search --help | grep -q '1-20'
+run search --help | grep -q 'default: 5'
+run inspect --help | grep -q 'does not execute files'
+run refresh --help | grep -q 'disposable local index'
+run init --help | grep -q 'required in non-interactive mode'
+run doctor --help | grep -q 'exit code 3'
+run uninstall --help | grep -q 'installed skills remain untouched'
 run instructions | grep -q '^# Skillwick$'
 run instructions | grep -q 'skillwick search "task"'
 run instructions | grep -q 'another named skill through a skill tool'
 if run probe --limit 5 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 if run search test --bogus >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
+if run refresh --full >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
+if run --json refresh >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 run search --limit 1 C++ | grep -q 'C++@'
 run search C++ --limit 1 | grep -q 'C++@'
-if run search test --limit 6 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
+run search C++ --limit 20 | grep -q 'C++@'
+if run search test --limit 21 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 test "$(run search no-such-skill)" = 'No matching skills.'
-run --json search C++ | grep -q '"version":1,"results"'
+run --json search C++ | grep -q '"version":2,"results"'
 direct=$(run search C++)
 chained=$(true && run search C++)
 test "$direct" = "$chained"
@@ -98,10 +112,16 @@ test ! -e "$short_circuit"
 mkdir -p "$project/.agents/skills/oversized"
 long_description=$(awk 'BEGIN { for (i = 0; i < 2500; i++) printf "x" }')
 printf '%s\n' '---' 'name: oversized' "description: $long_description" '---' > "$project/.agents/skills/oversized/SKILL.md"
+mkdir -p "$project/.agents/skills/oversized-two"
+printf '%s\n' '---' 'name: oversized-two' "description: $long_description" '---' > "$project/.agents/skills/oversized-two/SKILL.md"
 run refresh
 long_output=$(run search oversized)
-printf '%s' "$long_output" | grep -q '^oversized@'
-test "$(printf '%s\n' "$long_output" | wc -c | tr -d ' ')" -le 2000
+test "$(printf '%s\n' "$long_output" | grep -c '^oversized')" -eq 2
+printf '%s\n' "$long_output" | grep -q '\[truncated\]'
+printf '%s\n' "$long_output" | awk 'length($0) > 2000 { exit 1 } END { if (NR != 2) exit 1 }'
+json_output=$(run --json search oversized --limit 2)
+printf '%s\n' "$json_output" | grep -q '"version":2,"results"'
+test "$(printf '%s\n' "$json_output" | grep -o '"id"' | wc -l | tr -d ' ')" -eq 2
 rm "$project/.agents/skills/agentcore/SKILL.md"
 if run read aws-agentcore@missing >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
 

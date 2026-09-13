@@ -2,7 +2,9 @@ use crate::search::ResultRow;
 use serde::Serialize;
 use std::io::{self, Write};
 
-const MAX_TEXT_BYTES: usize = 2_000;
+const MAX_RECORD_BYTES: usize = 2_000;
+const TRUNCATION_MARKER: &str = " [truncated]";
+pub const JSON_VERSION: u8 = 2;
 
 pub fn text(rows: &[ResultRow]) -> io::Result<()> {
     let stdout = io::stdout();
@@ -10,18 +12,14 @@ pub fn text(rows: &[ResultRow]) -> io::Result<()> {
     if rows.is_empty() {
         return writeln!(output, "No matching skills.");
     }
-    let mut remaining = MAX_TEXT_BYTES;
     for row in rows {
-        let Some(line) = bounded_line(row, remaining) else {
-            break;
-        };
+        let line = bounded_line(row, MAX_RECORD_BYTES);
         output.write_all(line.as_bytes())?;
-        remaining -= line.len();
     }
     Ok(())
 }
 
-fn bounded_line(row: &ResultRow, budget: usize) -> Option<String> {
+fn bounded_line(row: &ResultRow, budget: usize) -> String {
     let id = clean(&row.id);
     let scope = if let Some(plugin) = &row.plugin_id {
         format!("plugin:{}", clean(plugin))
@@ -31,15 +29,35 @@ fn bounded_line(row: &ResultRow, budget: usize) -> Option<String> {
     let description = clean(row.description.lines().next().unwrap_or(""));
     let prefix = format!("{id} [{scope}] ");
     let newline = "\n";
+    let line = format!("{prefix}{description}{newline}");
 
-    if prefix.len() + newline.len() <= budget {
-        let description = truncate_utf8(&description, budget - prefix.len() - newline.len());
-        return Some(format!("{prefix}{description}{newline}"));
+    if line.len() <= budget {
+        return line;
     }
 
-    // Preserve the complete ID when an unusually large scope leaves no room
-    // for the normal record shape.
-    (id.len() + newline.len() <= budget).then(|| format!("{id}{newline}"))
+    // Keep every candidate visible while bounding each record independently.
+    if budget == 0 {
+        return String::new();
+    }
+    let content_budget = budget.saturating_sub(newline.len() + TRUNCATION_MARKER.len());
+    if content_budget == 0 {
+        return format!(
+            "{}\n",
+            truncate_utf8(TRUNCATION_MARKER, budget.saturating_sub(1))
+        );
+    }
+    if prefix.len() < content_budget {
+        let description_budget = content_budget - prefix.len();
+        return format!(
+            "{prefix}{}{TRUNCATION_MARKER}{newline}",
+            truncate_utf8(&description, description_budget)
+        );
+    }
+
+    format!(
+        "{}{TRUNCATION_MARKER}{newline}",
+        truncate_utf8(&prefix, content_budget)
+    )
 }
 
 fn truncate_utf8(value: &str, max_bytes: usize) -> &str {
@@ -65,26 +83,19 @@ pub fn json(rows: &[ResultRow]) -> io::Result<()> {
         stdout.lock(),
         "{}",
         serde_json::to_string(&Envelope {
-            version: 1,
+            version: JSON_VERSION,
             results: &rows
         })
         .expect("serializable output")
     )
 }
 
-pub fn list_text(rows: &[ResultRow], total: usize, all: bool) -> io::Result<()> {
+pub fn list_text(rows: &[ResultRow], total: usize) -> io::Result<()> {
     let stdout = io::stdout();
     let mut output = stdout.lock();
     writeln!(output, "{total} skills in the current inventory.")?;
     if total == 0 {
         return Ok(());
-    }
-    if !all && rows.len() < total {
-        writeln!(
-            output,
-            "Showing up to {} records; plain `skillwick list` prints every record.",
-            rows.len()
-        )?;
     }
     for row in rows {
         writeln!(output, "{}", list_line(row))?;
@@ -118,7 +129,7 @@ pub fn list_json(rows: &[ResultRow], total: usize) -> io::Result<()> {
         io::stdout().lock(),
         "{}",
         serde_json::to_string(&Envelope {
-            version: 1,
+            version: JSON_VERSION,
             total,
             results: &rows,
         })
@@ -189,10 +200,34 @@ mod tests {
 
     #[test]
     fn oversized_description_keeps_complete_id_and_valid_utf8() {
-        let line = bounded_line(&row("é".repeat(2_000)), MAX_TEXT_BYTES).unwrap();
+        let line = bounded_line(&row("é".repeat(2_000)), MAX_RECORD_BYTES);
         assert!(line.starts_with("demo@abcdef [global] "));
-        assert!(line.len() <= MAX_TEXT_BYTES);
+        assert!(line.len() <= MAX_RECORD_BYTES);
         assert!(line.ends_with('\n'));
+        assert!(line.contains("[truncated]"));
+    }
+
+    #[test]
+    fn truncates_each_record_without_omitting_later_results() {
+        let first = row("x".repeat(MAX_RECORD_BYTES));
+        let mut second = row("second result".into());
+        second.id = "second@abcdef".into();
+
+        let lines = [first, second]
+            .iter()
+            .map(|row| bounded_line(row, MAX_RECORD_BYTES))
+            .collect::<Vec<_>>();
+
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].contains("[truncated]"));
+        assert!(lines[0].len() <= MAX_RECORD_BYTES);
+        assert!(lines[1].contains("second@abcdef"));
+        assert!(lines[1].contains("second result"));
+    }
+
+    #[test]
+    fn uses_version_two_json_contract() {
+        assert_eq!(JSON_VERSION, 2);
     }
 
     #[test]

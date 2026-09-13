@@ -6,7 +6,7 @@ Skillwick is one Rust binary with one disposable SQLite database.
 installed SKILL.md files ── scan and parse ── SQLite FTS5
 Codex skills/list ───────── native policy ───────┘
                                                 │
-task text ── lexical rank ── 0–5 candidates ── read selected file
+task text ── lexical rank ── 1–20 candidates ── read selected file
 ```
 
 ## Ownership
@@ -35,3 +35,7 @@ semantics.
 
 The production path is deliberately local and lexical. It does not install
 packages, execute instruction files, or require a remote service.
+
+Search and inspection JSON uses version 2 envelopes. List adds a complete
+`total` count. Human search output bounds each record independently and marks
+description truncation, so a long candidate cannot hide later results.
