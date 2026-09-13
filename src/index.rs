@@ -356,6 +356,28 @@ pub fn has_kind(db: &Connection, kind: &str) -> rusqlite::Result<bool> {
     )
 }
 
+pub fn has_kind_for_context(
+    db: &Connection,
+    kind: &str,
+    context: Option<&crate::config::Context>,
+) -> rusqlite::Result<bool> {
+    if kind != "codex" {
+        return has_kind(db, kind);
+    }
+    let Some(context) = context else {
+        return has_kind(db, kind);
+    };
+    db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM skills WHERE source_kind=?1 AND workspace=?2 AND codex_home=?3)",
+        params![
+            kind,
+            context.workspace.to_string_lossy(),
+            context.codex_home.to_string_lossy()
+        ],
+        |row| row.get(0),
+    )
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct Counts {
     pub filesystem: usize,
