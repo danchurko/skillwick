@@ -1,0 +1,46 @@
+# Dependency assurance policy for the locked application graph.
+#
+# Keep the checks in cargo-deny rather than maintaining a second dependency
+# policy.  Tool versions and the exact invocations live in
+# scripts/dependency-assurance.sh.
+
+[advisories]
+# Keep the advisory checkout under ignored build state instead of depending on
+# a pre-existing global cargo directory.
+db-path = "target/cargo-deny/advisory-dbs"
+# Vulnerability and unsoundness findings remain errors.  Unmaintained
+# transitive crates are reported, while an unmaintained direct dependency is a
+# release blocker.
+unmaintained = "workspace"
+# Do not add ignores without a reviewed advisory ID and a reason.
+ignore = []
+
+[licenses]
+# Every expression in the current locked graph must have one of these choices.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "MIT",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+confidence-threshold = 0.8
+
+[licenses.private]
+ignore = false
+
+[bans]
+# Duplicate versions are useful maintenance findings, but are not a release
+# blocker by themselves.  A wildcard requirement is a required policy failure.
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+# Release inputs must resolve from the public crates.io registry only.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

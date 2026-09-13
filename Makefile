@@ -1,4 +1,4 @@
-.PHONY: build check fmt hooks lint test test-cli test-codex test-inference dist
+.PHONY: build check dependency-assurance fmt hooks lint test test-cli test-codex test-inference dist
 
 build:
 	cargo build --locked
@@ -26,6 +26,9 @@ test-inference: build
 	sh tests/inference_smoke.sh target/debug/skillwick
 
 check: fmt lint test test-cli
+
+dependency-assurance:
+	./scripts/dependency-assurance.sh
 
 dist:
 	dist build --artifacts=local --target=aarch64-apple-darwin --target=x86_64-apple-darwin

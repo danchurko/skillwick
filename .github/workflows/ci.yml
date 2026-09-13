@@ -18,3 +18,9 @@ jobs:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: make check
+      - name: Install dependency assurance tools
+        run: |
+          cargo install --locked --version 0.20.2 cargo-deny
+          cargo install --locked --version 0.19.0 cargo-outdated
+      - name: Check dependency assurance
+        run: make dependency-assurance
