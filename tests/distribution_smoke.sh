@@ -20,11 +20,51 @@ case "$(uname -s):$(uname -m)" in
   *) echo "unsupported test platform" >&2; exit 1 ;;
 esac
 archive="skillwick-$target.tar.xz"
-mkdir -p "$tmp/skillwick-$target"
-cp "$binary" "$tmp/skillwick-$target/skillwick"
-tar -cJf "$server/$archive" -C "$tmp" "skillwick-$target"
-(cd "$server" && shasum -a 256 "$archive" >"$archive.sha256")
-tar -tf "$server/$archive" | grep -Fxq "skillwick-$target/skillwick"
+for target in aarch64-apple-darwin x86_64-apple-darwin; do
+  archive="skillwick-$target.tar.xz"
+  mkdir -p "$tmp/skillwick-$target"
+  cp "$binary" "$tmp/skillwick-$target/skillwick"
+  cp "$root/LICENSE-APACHE" "$root/LICENSE-MIT" "$root/README.md" "$tmp/skillwick-$target/"
+  COPYFILE_DISABLE=1 tar -cJf "$server/$archive" -C "$tmp" "skillwick-$target"
+  (cd "$server" && shasum -a 256 "$archive" >"$archive.sha256")
+  tar -tf "$server/$archive" | grep -Fxq "skillwick-$target/skillwick"
+done
+
+arm_digest=$(shasum -a 256 "$server/skillwick-aarch64-apple-darwin.tar.xz" | awk '{print $1}')
+x86_digest=$(shasum -a 256 "$server/skillwick-x86_64-apple-darwin.tar.xz" | awk '{print $1}')
+formula="$tmp/skillwick.rb"
+printf '%s\n' \
+  'class Skillwick < Formula' \
+  '  homepage "https://github.com/churdaa/skillwick"' \
+  "  version \"$version\"" \
+  '  if Hardware::CPU.arm?' \
+  "    url \"https://github.com/churdaa/skillwick/releases/download/v$version/skillwick-aarch64-apple-darwin.tar.xz\"" \
+  "    sha256 \"$arm_digest\"" \
+  '  else' \
+  "    url \"https://github.com/churdaa/skillwick/releases/download/v$version/skillwick-x86_64-apple-darwin.tar.xz\"" \
+  "    sha256 \"$x86_digest\"" \
+  '  end' \
+  '  def install' \
+  '    bin.install "skillwick"' \
+  '  end' \
+  'end' >"$formula"
+
+PYTHONDONTWRITEBYTECODE=1 python3 "$root/scripts/verify-release.py" \
+  --version "$version" --archive-dir "$server" --formula "$formula" \
+  --source-binary "$binary" --skip-execution
+
+bad_server="$tmp/bad-server"
+cp -R "$server" "$bad_server"
+bad_digest="0${arm_digest#?}"
+printf '%s  %s\n' "$bad_digest" "skillwick-aarch64-apple-darwin.tar.xz" \
+  >"$bad_server/skillwick-aarch64-apple-darwin.tar.xz.sha256"
+if PYTHONDONTWRITEBYTECODE=1 python3 "$root/scripts/verify-release.py" \
+  --version "$version" --archive-dir "$bad_server" --formula "$formula" \
+  --skip-execution --skip-installer >"$tmp/bad-verifier.out" 2>&1; then
+  echo "release verifier accepted a corrupted checksum" >&2
+  exit 1
+fi
+grep -q 'checksum mismatch' "$tmp/bad-verifier.out"
 
 before=$(find "$root" -type f -print | sort | shasum -a 256)
 HOME="$home" SKILLWICK_BASE_URL="file://$server" sh "$root/scripts/install.sh" --version "$version" --prefix "$prefix"
