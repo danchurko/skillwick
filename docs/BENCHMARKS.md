@@ -207,7 +207,7 @@ input counts separate under both `usage.root` and `usage.total`. Relocated
 corpora use the manifest's portable identity mapping instead of path-derived IDs.
 Raw transcripts stay outside repository evidence when they contain private data.
 
-The helper accepts only completed recorded artifacts:
+The helper accepts complete, partial, and failed recorded artifacts:
 
 ```sh
 uv run --script scripts/evaluate_skills.py score \
@@ -218,15 +218,29 @@ uv run --script scripts/evaluate_skills.py score \
 ```
 
 `score` validates exact corpus, sample, dataset, query-budget, case, selection,
-usage, and adjudication identities across direct, delegated, and native arms. It
+usage, and adjudication identities across the recorded direct, delegated, and
+native cells. A `complete` artifact must contain every case in every arm;
+`partial` and `failed` artifacts preserve missing cells instead of fabricating
+measurements. It
 reports per-query position-sensitive retrieval metrics and workflow-level final
 selection metrics against frozen and adjudicated judgments separately. It
-aggregates root and total usage per
-workflow (plus a combined total) without invoking a model,
+aggregates root and total usage and known query latency per workflow (plus a
+combined usage total) without invoking a model,
 searching, authenticating, building prompts, sequencing agents, or resuming runs.
-Incomplete work remains a caller-owned partial evidence artifact and is not
-accepted as a complete scored report. Semantic and reranking backends remain
-unmeasured until implemented.
+Semantic and reranking backends remain unmeasured until implemented.
+
+The 13 September 2026 authenticated observational pilot records four cases for
+the direct and delegated lexical paths. It reused the live authentication scope,
+so it is explicitly partial and not clean-profile evidence; native discovery was
+not run. Both paths selected all frozen relevant skills and abstained on both
+no-skill cases. Delegation reduced Terra root input from 114,483 to 56,456 tokens,
+but increased total input to 234,398 tokens after the Luna researcher was
+included, versus 114,483 direct. Linear extrapolation to all 167 cases is about
+4.78 million direct input tokens, 2.36 million delegated root tokens, and 9.79
+million delegated total input tokens. Four cases are too few for a general
+savings claim, cached input is not additive, and no currency estimate is made.
+See the portable [evidence](../benchmarks/results/observational-pilot-2026-09-13.evidence.json)
+and [offline report](../benchmarks/results/observational-pilot-2026-09-13.report.json).
 
 ## Context estimate
 

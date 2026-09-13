@@ -353,6 +353,51 @@ class EvaluationArtifactTests(unittest.TestCase):
         _, dataset_sha256, cases = evaluate_skills.validate_dataset(dataset, loaded_manifest)
         evaluate_skills.validate_evidence(evidence, loaded_manifest, dataset_sha256, cases)
 
+    def test_partial_evidence_scores_only_recorded_workflow_cases(self) -> None:
+        manifest = self._manifest()
+        dataset = self._dataset(manifest)
+        evidence = self._evidence(manifest, dataset)
+        loaded = json.loads(evidence.read_text(encoding="utf-8"))
+        loaded["status"] = "partial"
+        loaded["failures"] = [{"stage": "native", "reason": "not authorized"}]
+        for section in ("query_results", "workflows", "adjudication"):
+            loaded[section]["direct"].pop("case-heldout")
+            loaded[section]["delegated"].pop("case-heldout")
+            loaded[section]["native"] = {}
+        loaded["query_results"]["direct"]["case-positive"][0]["wall_ms"] = None
+        evaluate_skills.write_json(evidence, loaded)
+
+        loaded_manifest = evaluate_skills.load_manifest(manifest)
+        _, dataset_sha256, cases = evaluate_skills.validate_dataset(dataset, loaded_manifest)
+        normalized = evaluate_skills.validate_evidence(evidence, loaded_manifest, dataset_sha256, cases)
+        report = evaluate_skills.score_evidence(normalized, loaded_manifest, cases)
+
+        self.assertEqual(report["status"], "partial")
+        self.assertEqual(report["case_count"], 3)
+        self.assertEqual(report["recorded_case_count"], {"direct": 2, "delegated": 2, "native": 0})
+        self.assertEqual(report["frozen"]["direct"]["selection"]["positive_cases"], 1)
+        self.assertIsNone(report["frozen"]["native"])
+        self.assertIsNone(report["usage"]["native"])
+        self.assertIsNone(report["latency"]["native"])
+        self.assertEqual(report["latency"]["direct"], {"known_queries": 5, "total_ms": 6.25})
+        self.assertEqual(report["failures"], loaded["failures"])
+
+    def test_complete_evidence_rejects_missing_cells(self) -> None:
+        manifest = self._manifest()
+        dataset = self._dataset(manifest)
+        evidence = self._evidence(manifest, dataset)
+        loaded = json.loads(evidence.read_text(encoding="utf-8"))
+        loaded["status"] = "complete"
+        loaded["query_results"]["native"].pop("case-heldout")
+        loaded["workflows"]["native"].pop("case-heldout")
+        loaded["adjudication"]["native"].pop("case-heldout")
+        evaluate_skills.write_json(evidence, loaded)
+
+        loaded_manifest = evaluate_skills.load_manifest(manifest)
+        _, dataset_sha256, cases = evaluate_skills.validate_dataset(dataset, loaded_manifest)
+        with self.assertRaisesRegex(evaluate_skills.EvaluationError, "complete evidence"):
+            evaluate_skills.validate_evidence(evidence, loaded_manifest, dataset_sha256, cases)
+
     def test_retrieval_scores_each_adaptive_query_at_its_actual_rank(self) -> None:
         cases = [{"id": "case"}]
         queries = {

@@ -1,0 +1,164 @@
+{
+  "version": 1,
+  "kind": "skillwick-evaluation-report",
+  "status": "partial",
+  "case_count": 167,
+  "recorded_case_count": {
+    "direct": 4,
+    "delegated": 4,
+    "native": 0
+  },
+  "failures": [
+    {
+      "stage": "authentication-preflight",
+      "reason": "Initial ignore-user-config attempt omitted the keyring credential-store override and returned HTTP 401; the corrected retry succeeded."
+    },
+    {
+      "stage": "native",
+      "reason": "Not run because external transmission of installed native skill catalogue instructions was not authorized."
+    }
+  ],
+  "corpus_sha256": "b450b9340fda4f2011c82c37f1cf4b2cd90001f09242b100b6f6f8b818410ae4",
+  "sample_sha256": "d3861fe0afeaa4129343bb2662058737338242539689b3efdf3480e6a7b16517",
+  "evidence_sha256": "3dd1d967f111997da4eb0ec95d0d2a5c55f5e186cbcff36d664f6136acc967b9",
+  "frozen": {
+    "direct": {
+      "retrieval": {
+        "recall_at_5": 1.0,
+        "precision_at_5": 0.26666666666666666,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0,
+        "no_skill_abstention": 1.0,
+        "positive_cases": 2,
+        "no_skill_cases": 2,
+        "queries": 4
+      },
+      "selection": {
+        "recall_at_5": 1.0,
+        "precision_at_5": 0.75,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0,
+        "no_skill_abstention": 1.0,
+        "positive_cases": 2,
+        "no_skill_cases": 2
+      }
+    },
+    "delegated": {
+      "retrieval": {
+        "recall_at_5": 1.0,
+        "precision_at_5": 0.2633333333333333,
+        "mrr_at_5": 0.9,
+        "ndcg_at_5": 0.9261859507142916,
+        "no_skill_abstention": 0.6,
+        "positive_cases": 5,
+        "no_skill_cases": 5,
+        "queries": 10
+      },
+      "selection": {
+        "recall_at_5": 1.0,
+        "precision_at_5": 0.75,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0,
+        "no_skill_abstention": 1.0,
+        "positive_cases": 2,
+        "no_skill_cases": 2
+      }
+    },
+    "native": null
+  },
+  "adjudicated": {
+    "direct": {
+      "retrieval": {
+        "recall_at_5": 1.0,
+        "precision_at_5": 0.43333333333333335,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0,
+        "no_skill_abstention": 1.0,
+        "positive_cases": 2,
+        "no_skill_cases": 2,
+        "queries": 4
+      },
+      "selection": {
+        "recall_at_5": 1.0,
+        "precision_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0,
+        "no_skill_abstention": 1.0,
+        "positive_cases": 2,
+        "no_skill_cases": 2
+      }
+    },
+    "delegated": {
+      "retrieval": {
+        "recall_at_5": 1.0,
+        "precision_at_5": 0.44666666666666666,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0,
+        "no_skill_abstention": 0.6,
+        "positive_cases": 5,
+        "no_skill_cases": 5,
+        "queries": 10
+      },
+      "selection": {
+        "recall_at_5": 1.0,
+        "precision_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0,
+        "no_skill_abstention": 1.0,
+        "positive_cases": 2,
+        "no_skill_cases": 2
+      }
+    },
+    "native": null
+  },
+  "usage": {
+    "direct": {
+      "root": {
+        "input_tokens": 114483,
+        "output_tokens": 877,
+        "cached_input_tokens": 76288
+      },
+      "total": {
+        "input_tokens": 114483,
+        "output_tokens": 877,
+        "cached_input_tokens": 76288
+      }
+    },
+    "delegated": {
+      "root": {
+        "input_tokens": 56456,
+        "output_tokens": 128,
+        "cached_input_tokens": 13056
+      },
+      "total": {
+        "input_tokens": 234398,
+        "output_tokens": 1815,
+        "cached_input_tokens": 122368
+      }
+    },
+    "native": null,
+    "combined": {
+      "root": {
+        "input_tokens": 170939,
+        "output_tokens": 1005,
+        "cached_input_tokens": 89344
+      },
+      "total": {
+        "input_tokens": 348881,
+        "output_tokens": 2692,
+        "cached_input_tokens": 198656
+      }
+    }
+  },
+  "latency": {
+    "direct": {
+      "known_queries": 0,
+      "total_ms": null
+    },
+    "delegated": {
+      "known_queries": 0,
+      "total_ms": null
+    },
+    "native": null
+  }
+}

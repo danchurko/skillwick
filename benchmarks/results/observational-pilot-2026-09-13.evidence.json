@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "kind": "skillwick-evaluation-evidence",
+  "status": "partial",
+  "corpus_sha256": "b450b9340fda4f2011c82c37f1cf4b2cd90001f09242b100b6f6f8b818410ae4",
+  "sample_sha256": "d3861fe0afeaa4129343bb2662058737338242539689b3efdf3480e6a7b16517",
+  "dataset_sha256": "60de7f13497e7e04c8628991884acccfd8c0d6650a2ee0aff91b2fb4f74c9dc4",
+  "case_ids": ["positive-002", "positive-004", "negative-001", "negative-002"],
+  "search_budget": {"max_queries_per_case": 3},
+  "provenance": {
+    "run_date": "2026-09-13",
+    "clean_profile": false,
+    "codex_version": "codex-cli 0.154.0",
+    "root_model": "gpt-5.6-terra",
+    "researcher_model": "gpt-5.6-luna",
+    "model_identity_evidence": "Models were explicitly requested in CLI invocations; the JSONL event format did not independently emit resolved model identities.",
+    "skillwick_backend": "lexical",
+    "raw_evidence_retained_locally": true,
+    "limitations": [
+      "The live CODEX_HOME authentication scope was reused; this is not clean-profile evidence.",
+      "The four cases are a provisional observational subset of the frozen 167-case dataset.",
+      "Requested model names are recorded, but resolved provider model identities were not emitted by the runner.",
+      "Per-query latency was not emitted by the runner and is recorded as null.",
+      "Native discovery was not run because transmitting installed skill catalogue instructions was not authorized.",
+      "Semantic retrieval and reranking remain unmeasured.",
+      "Cached input is a subset of input, not additional usage; no monetary savings are inferred."
+    ]
+  },
+  "failures": [
+    {"stage": "authentication-preflight", "reason": "Initial ignore-user-config attempt omitted the keyring credential-store override and returned HTTP 401; the corrected retry succeeded."},
+    {"stage": "native", "reason": "Not run because external transmission of installed native skill catalogue instructions was not authorized."}
+  ],
+  "blind_adjudication": {
+    "model_requested": "gpt-5.6-terra",
+    "workflow_and_usage_hidden": true,
+    "prompt_sha256": "01b2a100db1a140cec708633f4b8f761dbf04f5d335a0fa95c4929803fd0f31a",
+    "output_sha256": "93db38c2905a05514eade38e2c7f6b2e17081160d39d479afd01476073c9b576",
+    "usage": {"input_tokens": 14293, "output_tokens": 158, "cached_input_tokens": 0},
+    "judgments": {
+      "positive-002": {"relevant": ["agent-platform-skill-registry@3faa4f"], "rationale": "Directly supports registering and searching capabilities in the specified Skill Registry."},
+      "positive-004": {"relevant": ["aws-cdk@aae8b0", "aws-cloudformation@c1bd22"], "rationale": "CDK covers TypeScript deployment and non-replacement refactoring; CloudFormation supports issue diagnosis."},
+      "negative-001": {"relevant": [], "rationale": "No candidates were selected."},
+      "negative-002": {"relevant": [], "rationale": "No candidates were selected."}
+    }
+  },
+  "query_results": {
+    "direct": {
+      "positive-002": [{"perspective": "outcome", "query": "register agent capability Gemini Enterprise Agent Platform Skill Registry", "results": [{"id": "agent-platform-skill-registry@3faa4f"}, {"id": "agent-platform-troubleshooting@3bfd5a"}, {"id": "agent-platform-migrate-from-ai-studio@ef8db7"}, {"id": "gemini-agents-api@521f65"}, {"id": "gemini-interactions-api@1c2d71"}], "wall_ms": null}],
+      "positive-004": [{"perspective": "outcome", "query": "AWS infrastructure stack TypeScript CDK deploy CloudFormation diagnose resource replacement", "results": [{"id": "aws-cdk@aae8b0"}, {"id": "aws-cloudformation@c1bd22"}, {"id": "aws-blocks@3713ee"}], "wall_ms": null}],
+      "negative-001": [{"perspective": "outcome", "query": "arithmetic calculation multiplication", "results": [], "wall_ms": null}],
+      "negative-002": [{"perspective": "outcome", "query": "convert kilometres metres", "results": [], "wall_ms": null}]
+    },
+    "delegated": {
+      "positive-002": [
+        {"perspective": "outcome", "query": "register agent capability Gemini Enterprise Agent Platform Skill Registry", "results": [{"id": "agent-platform-skill-registry@3faa4f"}, {"id": "agent-platform-troubleshooting@3bfd5a"}, {"id": "agent-platform-migrate-from-ai-studio@ef8db7"}, {"id": "gemini-agents-api@521f65"}, {"id": "gemini-interactions-api@1c2d71"}], "wall_ms": null},
+        {"perspective": "mechanism", "query": "Gemini Enterprise Agent Platform register capability create search available capabilities skill registry", "results": [{"id": "agent-platform-skill-registry@3faa4f"}, {"id": "gemini-agents-api@521f65"}, {"id": "gemini-api@f473b2"}, {"id": "agent-platform-troubleshooting@3bfd5a"}, {"id": "agent-platform-migrate-from-ai-studio@ef8db7"}], "wall_ms": null}
+      ],
+      "positive-004": [
+        {"perspective": "outcome", "query": "AWS infrastructure stack TypeScript CDK CloudFormation diagnose preserve existing resources", "results": [{"id": "aws-cdk@aae8b0"}, {"id": "aws-cloudformation@c1bd22"}, {"id": "aws-blocks@3713ee"}], "wall_ms": null},
+        {"perspective": "mechanism", "query": "CDK CloudFormation failed deployment resource replacement retain import change set diagnose events", "results": [{"id": "aws-cloudformation@c1bd22"}, {"id": "aws-cdk@aae8b0"}, {"id": "gke-ai-troubleshooting-handle-disruption-gpu-tpu@aa6c13"}, {"id": "gke-multitenancy@92db8a"}], "wall_ms": null},
+        {"perspective": "constraints", "query": "TypeScript AWS CDK deploy synth diff CloudFormation resource replacement", "results": [{"id": "aws-cdk@aae8b0"}, {"id": "aws-cloudformation@c1bd22"}, {"id": "aws-deployment@78c638"}], "wall_ms": null}
+      ],
+      "negative-001": [
+        {"perspective": "outcome", "query": "calculate multiplication arithmetic", "results": [], "wall_ms": null},
+        {"perspective": "mechanism", "query": "math", "results": [{"id": "ecc:defi-amm-security@ea28b7"}], "wall_ms": null}
+      ],
+      "negative-002": [
+        {"perspective": "outcome", "query": "convert kilometres to metres", "results": [], "wall_ms": null},
+        {"perspective": "mechanism", "query": "unit conversion", "results": [{"id": "google-ads-api-account-diagnostics@d4deff"}, {"id": "ecc:rust-testing@ac33f6"}, {"id": "ecc:tdd-workflow@0dbec2"}, {"id": "ecc:ralphinho-rfc-pipeline@f2bd7b"}, {"id": "ecc:ui-to-vue@07ce82"}], "wall_ms": null},
+        {"perspective": "constraints", "query": "kilometre metre", "results": [], "wall_ms": null}
+      ]
+    },
+    "native": {}
+  },
+  "workflows": {
+    "direct": {
+      "positive-002": {"selected_ids": ["agent-platform-skill-registry@3faa4f"], "selected_instruction_loading": false, "usage": {"root": {"input_tokens": 28856, "output_tokens": 268, "cached_input_tokens": 13056}, "total": {"input_tokens": 28856, "output_tokens": 268, "cached_input_tokens": 13056}}},
+      "positive-004": {"selected_ids": ["aws-cdk@aae8b0", "aws-cloudformation@c1bd22"], "selected_instruction_loading": false, "usage": {"root": {"input_tokens": 28742, "output_tokens": 217, "cached_input_tokens": 24064}, "total": {"input_tokens": 28742, "output_tokens": 217, "cached_input_tokens": 24064}}},
+      "negative-001": {"selected_ids": [], "selected_instruction_loading": false, "usage": {"root": {"input_tokens": 28427, "output_tokens": 178, "cached_input_tokens": 26112}, "total": {"input_tokens": 28427, "output_tokens": 178, "cached_input_tokens": 26112}}},
+      "negative-002": {"selected_ids": [], "selected_instruction_loading": false, "usage": {"root": {"input_tokens": 28458, "output_tokens": 214, "cached_input_tokens": 13056}, "total": {"input_tokens": 28458, "output_tokens": 214, "cached_input_tokens": 13056}}}
+    },
+    "delegated": {
+      "positive-002": {"selected_ids": ["agent-platform-skill-registry@3faa4f"], "selected_instruction_loading": false, "usage": {"root": {"input_tokens": 14123, "output_tokens": 27, "cached_input_tokens": 0}, "total": {"input_tokens": 52435, "output_tokens": 477, "cached_input_tokens": 24064}}},
+      "positive-004": {"selected_ids": ["aws-cdk@aae8b0", "aws-cloudformation@c1bd22"], "selected_instruction_loading": false, "usage": {"root": {"input_tokens": 14159, "output_tokens": 33, "cached_input_tokens": 0}, "total": {"input_tokens": 66168, "output_tokens": 609, "cached_input_tokens": 25088}}},
+      "negative-001": {"selected_ids": [], "selected_instruction_loading": false, "usage": {"root": {"input_tokens": 14088, "output_tokens": 37, "cached_input_tokens": 13056}, "total": {"input_tokens": 51305, "output_tokens": 330, "cached_input_tokens": 37120}}},
+      "negative-002": {"selected_ids": [], "selected_instruction_loading": false, "usage": {"root": {"input_tokens": 14086, "output_tokens": 31, "cached_input_tokens": 0}, "total": {"input_tokens": 64490, "output_tokens": 399, "cached_input_tokens": 36096}}}
+    },
+    "native": {}
+  },
+  "adjudication": {
+    "direct": {
+      "positive-002": {"reviewed": true, "relevant": ["agent-platform-skill-registry@3faa4f"]},
+      "positive-004": {"reviewed": true, "relevant": ["aws-cdk@aae8b0", "aws-cloudformation@c1bd22"]},
+      "negative-001": {"reviewed": true, "relevant": []},
+      "negative-002": {"reviewed": true, "relevant": []}
+    },
+    "delegated": {
+      "positive-002": {"reviewed": true, "relevant": ["agent-platform-skill-registry@3faa4f"]},
+      "positive-004": {"reviewed": true, "relevant": ["aws-cdk@aae8b0", "aws-cloudformation@c1bd22"]},
+      "negative-001": {"reviewed": true, "relevant": []},
+      "negative-002": {"reviewed": true, "relevant": []}
+    },
+    "native": {}
+  }
+}

@@ -310,6 +310,15 @@ def validate_evidence(
     evidence = dict(require_mapping(read_json(path), "evidence"))
     if evidence.get("version") != EVIDENCE_VERSION or evidence.get("kind") != "skillwick-evaluation-evidence":
         raise EvaluationError("unsupported evidence artifact")
+    status = evidence.get("status", "complete")
+    if status not in {"complete", "partial", "failed"}:
+        raise EvaluationError("evidence status must be complete, partial, or failed")
+    evidence["status"] = status
+    failures = require_list(evidence.get("failures", []), "evidence.failures")
+    for index, value in enumerate(failures):
+        failure = require_mapping(value, f"evidence.failures[{index}]")
+        require_string(failure.get("stage"), f"evidence.failures[{index}].stage")
+        require_string(failure.get("reason"), f"evidence.failures[{index}].reason")
     for field, expected in (
         ("corpus_sha256", manifest["corpus"]["sha256"]),
         ("sample_sha256", manifest["sample"]["sha256"]),
@@ -328,9 +337,11 @@ def validate_evidence(
         raise EvaluationError("query evidence must contain direct, delegated, and native workflows")
     for workflow in WORKFLOWS:
         workflow_queries = require_mapping(query_results[workflow], f"query_results.{workflow}")
-        if set(workflow_queries) != set(case_by_id):
-            raise EvaluationError(f"{workflow} query evidence is missing or contains unknown cases")
-        for case_id in case_by_id:
+        if not set(workflow_queries) <= set(case_by_id):
+            raise EvaluationError(f"{workflow} query evidence contains unknown cases")
+        if status == "complete" and set(workflow_queries) != set(case_by_id):
+            raise EvaluationError(f"{workflow} query evidence is missing from complete evidence")
+        for case_id in workflow_queries:
             rows = require_list(workflow_queries[case_id], f"query_results.{workflow}.{case_id}")
             if not 1 <= len(rows) <= max_queries:
                 raise EvaluationError(f"{workflow}/{case_id}: query evidence must contain one to three adaptive queries")
@@ -347,13 +358,15 @@ def validate_evidence(
                 if len(result_ids) > 5 or len(result_ids) != len(set(result_ids)) or not set(result_ids) <= corpus_ids:
                     raise EvaluationError(f"{workflow}/{case_id}: query results contain duplicate or unknown IDs")
                 wall_ms = row.get("wall_ms")
-                if not isinstance(wall_ms, (int, float)) or isinstance(wall_ms, bool) or wall_ms < 0:
-                    raise EvaluationError(f"{workflow}/{case_id}: query wall_ms must be non-negative")
+                if wall_ms is not None and (
+                    not isinstance(wall_ms, (int, float)) or isinstance(wall_ms, bool) or wall_ms < 0
+                ):
+                    raise EvaluationError(f"{workflow}/{case_id}: query wall_ms must be non-negative or null")
     workflows = require_mapping(evidence.get("workflows"), "evidence.workflows")
     for workflow in WORKFLOWS:
         records = require_mapping(workflows.get(workflow), f"workflows.{workflow}")
-        if set(records) != set(case_by_id):
-            raise EvaluationError(f"{workflow} workflow evidence is missing or contains unknown cases")
+        if set(records) != set(query_results[workflow]):
+            raise EvaluationError(f"{workflow} workflow evidence does not match its query cases")
         for case_id, value in records.items():
             record = require_mapping(value, f"workflows.{workflow}.{case_id}")
             selected = [require_string(item, "selected ID") for item in require_list(record.get("selected_ids"), "selected_ids")]
@@ -379,8 +392,8 @@ def validate_evidence(
     adjudication = require_mapping(evidence.get("adjudication"), "evidence.adjudication")
     for workflow in WORKFLOWS:
         records = require_mapping(adjudication.get(workflow), f"adjudication.{workflow}")
-        if set(records) != set(case_by_id):
-            raise EvaluationError(f"{workflow} adjudication is missing or contains unknown cases")
+        if set(records) != set(query_results[workflow]):
+            raise EvaluationError(f"{workflow} adjudication does not match its query cases")
         for case_id, value in records.items():
             judgment = require_mapping(value, f"adjudication.{workflow}.{case_id}")
             if judgment.get("reviewed") is not True:
@@ -468,27 +481,42 @@ def score_evidence(
     combined_root_calls = []
     combined_total_calls = []
     usage_by_workflow: dict[str, Any] = {}
+    latency_by_workflow: dict[str, Any] = {}
+    recorded_case_count: dict[str, int] = {}
     for workflow in WORKFLOWS:
+        workflow_case_ids = set(workflows[workflow])
+        workflow_cases = [case for case in cases if str(case["id"]) in workflow_case_ids]
+        recorded_case_count[workflow] = len(workflow_cases)
         selected = {case_id: list(record["selected_ids"]) for case_id, record in workflows[workflow].items()}
         frozen[workflow] = {
             "retrieval": _retrieval_metrics(
-                cases, evidence["query_results"][workflow], frozen_relevant
+                workflow_cases, evidence["query_results"][workflow], frozen_relevant
             ),
-            "selection": _selection_metrics(cases, selected, frozen_relevant),
-        }
+            "selection": _selection_metrics(workflow_cases, selected, frozen_relevant),
+        } if workflow_cases else None
         reviewed = {case_id: list(value["relevant"]) for case_id, value in evidence["adjudication"][workflow].items()}
         adjudicated[workflow] = {
             "retrieval": _retrieval_metrics(
-                cases, evidence["query_results"][workflow], reviewed
+                workflow_cases, evidence["query_results"][workflow], reviewed
             ),
-            "selection": _selection_metrics(cases, selected, reviewed),
-        }
+            "selection": _selection_metrics(workflow_cases, selected, reviewed),
+        } if workflow_cases else None
         root_calls = [{"usage": record["usage"]["root"]} for record in workflows[workflow].values()]
         total_calls = [{"usage": record["usage"]["total"]} for record in workflows[workflow].values()]
         usage_by_workflow[workflow] = {
             "root": aggregate_usage(root_calls),
             "total": aggregate_usage(total_calls),
-        }
+        } if workflow_cases else None
+        latencies = [
+            query["wall_ms"]
+            for rows in evidence["query_results"][workflow].values()
+            for query in rows
+            if query.get("wall_ms") is not None
+        ]
+        latency_by_workflow[workflow] = {
+            "known_queries": len(latencies),
+            "total_ms": sum(latencies) if latencies else None,
+        } if workflow_cases else None
         combined_root_calls.extend(root_calls)
         combined_total_calls.extend(total_calls)
     usage_by_workflow["combined"] = {
@@ -498,14 +526,17 @@ def score_evidence(
     return {
         "version": REPORT_VERSION,
         "kind": "skillwick-evaluation-report",
-        "status": "complete",
+        "status": evidence["status"],
         "case_count": len(cases),
+        "recorded_case_count": recorded_case_count,
+        "failures": evidence.get("failures", []),
         "corpus_sha256": manifest["corpus"]["sha256"],
         "sample_sha256": manifest["sample"]["sha256"],
         "evidence_sha256": evidence.get("_sha256"),
         "frozen": frozen,
         "adjudicated": adjudicated,
         "usage": usage_by_workflow,
+        "latency": latency_by_workflow,
     }
 
 
