@@ -8,12 +8,17 @@ trap 'rm -rf "$temporary"' EXIT HUP INT TERM
 home="$temporary/home with spaces"
 project="$temporary/project/child"
 sibling="$temporary/sibling"
-mkdir -p "$home/.agents/skills/cpp/references" "$home/.agents/skills/cpp/scripts" "$project/.agents/skills/agentcore" "$sibling/.agents/skills/leak" "$temporary/config" "$temporary/cache" "$temporary/state"
+mkdir -p "$home/.agents/skills/cpp/references" "$home/.agents/skills/cpp/scripts" "$home/.agents/skills/manual-only" "$home/.agents/skills/user-hidden" "$home/.agents/skills/policy-deny/agents" "$home/.agents/skills/malformed-policy" "$project/.agents/skills/agentcore" "$sibling/.agents/skills/leak" "$temporary/config" "$temporary/cache" "$temporary/state"
 
 printf '%s\n' '---' 'name: C++' 'description: Build native C++ command line tools.' 'keywords: [cpp, C#, .NET, Node.js]' '---' 'Read references/guide.md.' > "$home/.agents/skills/cpp/SKILL.md"
 printf '%s\n' 'relative reference' > "$home/.agents/skills/cpp/references/guide.md"
 printf '%s\n' '#!/bin/sh' "touch '$temporary/support-script-ran'" > "$home/.agents/skills/cpp/scripts/check.sh"
 printf '%s\n' '---' 'name: aws-agentcore' 'description: Deploy and debug AgentCore runtimes.' '---' > "$project/.agents/skills/agentcore/SKILL.md"
+printf '%s\n' '---' 'name: manual-only' 'description: Manual only workflow.' 'disable-model-invocation: true' '---' > "$home/.agents/skills/manual-only/SKILL.md"
+printf '%s\n' '---' 'name: user-hidden' 'description: Model discoverable workflow.' 'user-invocable: false' '---' > "$home/.agents/skills/user-hidden/SKILL.md"
+printf '%s\n' '---' 'name: policy-deny' 'description: Policy denied workflow.' '---' > "$home/.agents/skills/policy-deny/SKILL.md"
+printf '%s\n' 'policy:' '  allow_implicit_invocation: false' > "$home/.agents/skills/policy-deny/agents/openai.yaml"
+printf '%s\n' '---' 'name: malformed-policy' 'description: Malformed policy workflow.' 'disable-model-invocation: maybe' '---' > "$home/.agents/skills/malformed-policy/SKILL.md"
 printf '%s\n' '---' 'name: leak' 'description: Never cross project boundaries.' '---' > "$sibling/.agents/skills/leak/SKILL.md"
 ln -s "$sibling/.agents/skills/leak" "$home/.agents/skills/cpp/references/escape"
 
@@ -23,17 +28,31 @@ run() {
 
 run init --yes --agent none --inventory filesystem
 run init --yes --agent none --inventory filesystem
-test -f "$temporary/cache/skillwick/index-v2.sqlite"
-test ! -e "$temporary/cache/skillwick/index-v2.sqlite-wal"
-test ! -e "$temporary/cache/skillwick/index-v2.sqlite-shm"
+test -f "$temporary/cache/skillwick/index-v3.sqlite"
+test ! -e "$temporary/cache/skillwick/index-v3.sqlite-wal"
+test ! -e "$temporary/cache/skillwick/index-v3.sqlite-shm"
 run search C++ | grep -q 'C++@'
 run search 'deploy AgentCore runtime' | grep -q 'aws-agentcore@'
 ! run list --all | grep -q 'leak@'
-run list | grep -q '^2 skills in the current inventory\.$'
-test "$(run list | grep -c '@')" -eq 2
+run list | grep -q '^3 skills in the current inventory\.$'
+test "$(run list | grep -c '@')" -eq 3
+! run list | grep -q 'manual-only@'
+! run list | grep -q 'policy-deny@'
+run list | grep -q 'user-hidden@'
+! run search 'manual only workflow' | grep -q 'manual-only@'
+! run search 'policy denied workflow' | grep -q 'policy-deny@'
+hidden_id="manual-only@$(printf 'filesystem:%s' "$home/.agents/skills/manual-only/SKILL.md" | shasum -a 256 | awk '{print substr($1,1,6)}')"
+if run read "$hidden_id" >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
+if run inspect "$hidden_id" >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
+run refresh 2>&1 | grep -q 'invocation policy'
+run doctor 2>&1 | grep -q 'filesystem:'
+run doctor 2>&1 | grep -q 'native:'
+run doctor 2>&1 | grep -q 'raw:'
+run doctor 2>&1 | grep -q 'duplicates:'
+run doctor 2>&1 | grep -q 'model-discoverable:'
 run list --limit 1 | grep -q 'plain `skillwick list` prints every record'
-run --json list --limit 1 | grep -q '"total":2'
-test "$(run list --all | grep -c '@')" -eq 2
+run --json list --limit 1 | grep -q '"total":3'
+test "$(run list --all | grep -c '@')" -eq 3
 identifier=$(run list --all | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
 run read "$identifier" | grep -q "base: $home/.agents/skills/cpp"
 if run "read $identifier" >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi

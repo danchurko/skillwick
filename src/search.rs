@@ -228,4 +228,36 @@ mod tests {
         assert!(query(&db, "quoted \" text", 5).is_ok());
         assert_eq!(count(&db).unwrap(), 2);
     }
+
+    #[test]
+    fn public_inventory_hides_disabled_records() {
+        let mut db = index::open(std::path::Path::new(":memory:")).unwrap();
+        let mut skill = Skill {
+            path: "/hidden/SKILL.md".into(),
+            canonical: "/hidden/SKILL.md".into(),
+            base: "/hidden".into(),
+            scope: "global".into(),
+            source: "/hidden".into(),
+            source_kind: "filesystem".into(),
+            enabled: false,
+            plugin_id: None,
+            metadata: Metadata {
+                name: "hidden".into(),
+                description: "manual only".into(),
+                keywords: "manual".into(),
+                degraded: false,
+                hash: "hash".into(),
+            },
+        };
+        index::refresh_kind(&mut db, "filesystem", std::slice::from_ref(&skill), true).unwrap();
+        let id = all(&db, None).unwrap()[0].id.clone();
+        assert!(find(&db, &id).unwrap().is_none());
+        assert!(all(&db, None).unwrap().is_empty());
+        assert!(query(&db, "manual", 5).unwrap().is_empty());
+        assert_eq!(count(&db).unwrap(), 0);
+
+        skill.enabled = true;
+        index::refresh_kind(&mut db, "filesystem", &[skill], true).unwrap();
+        assert_eq!(count(&db).unwrap(), 1);
+    }
 }
