@@ -3,8 +3,8 @@
 This is a dated implementation record, beginning with v0.1.0 and followed by
 later evidence below. Version numbers, test counts, toolchains, and release
 incidents describe their respective runs, not current project status. Use the
-[usage guide](USAGE.md), [compatibility](COMPATIBILITY.md), and
-[evaluation guide](BENCHMARKS.md) for the current supported surface.
+[usage guide](USAGE.md) and [compatibility](COMPATIBILITY.md) for the current
+supported surface.
 
 The original v0.1.0 verification used synthetic skill packages and temporary
 homes. No setup test changed live Codex configuration.
@@ -15,8 +15,8 @@ homes. No setup test changed live Codex configuration.
    parsing, one SQLite/FTS5 index, deterministic search, and live `read`.
 2. Add lifecycle safety: refresh semantics, short-lived Codex inventory,
    compatibility checks, reversible setup, diagnostics, and uninstall.
-3. Prepare native macOS release artifacts, packaging, installer fixtures, lexical
-   evaluation, and an evidence-backed release-candidate report.
+3. Prepare native macOS release artifacts, packaging, installer fixtures, and
+   an evidence-backed release-candidate report.
 
 ## Fixed decisions
 
@@ -40,8 +40,8 @@ homes. No setup test changed live Codex configuration.
 - One bundled SQLite database with transactional metadata/FTS5 updates, bounded
   lock waits, safe incomplete-scan behavior, technical-token aliases, weighted
   BM25, exact-name and term-coverage ranking, and deterministic ties.
-- Search, `read`, `inspect`, `list`, `refresh`, `benchmark`, `init`, `doctor`,
-  `uninstall`, JSON output, zsh completions, and a cached-only suggestion hook.
+- Search, `read`, `inspect`, `list`, `refresh`, `init`, `doctor`, `uninstall`,
+  JSON output, and zsh completions.
 - Short-lived Codex `skills/list` inventory with bounded newline-delimited JSON,
   interleaved-notification handling, request IDs, stderr capture, timeout, EOF,
   and child termination. Native enabled state suppresses filesystem aliases.
@@ -69,41 +69,20 @@ cargo clippy --all-targets --locked --offline -- -D warnings
 cargo test --all-targets --locked --offline
 ```
 
-Result: 13 unit tests and the 40-case lexical evaluation passed; one release
-performance test is intentionally ignored by the normal suite. CLI acceptance,
-Codex integration, and distribution smoke scripts passed separately.
-
-The labelled evaluation contained 35 tasks with one or more relevant skills and
-five no-skill-needed tasks. Result: Recall@5 1.000, zero irrelevant suggestions
-on the no-skill set, and 2,779 aggregate result bytes. This small synthetic set
-is transparent test evidence, not a general quality claim.
-
-Release performance test, optimized build, in-memory bundled SQLite, 200 warm
-queries per size:
-
-```text
-records=1000  refresh_ms=16.75  warm_query_p95_ms=1.72
-records=10000 refresh_ms=128.37 warm_query_p95_ms=16.99
-```
-
-One hundred optimized arm64 `--version` starts took 0.19 seconds wall time,
-about 1.9 ms per process on this host. This is an aggregate startup measure,
-not a cold-start percentile.
+Result: the retained Rust, CLI acceptance, Codex integration, and distribution
+checks passed separately.
 
 `tests/cli_acceptance.sh` proved temporary-home setup, repeatability, global and
 project scope, no sibling leakage, paths with spaces, C++/C#/.NET/Node.js query
-handling, JSON, relative-base `read`, reserved-command escape, output bound,
-exit codes, deletion, dry-run, and clean broken-pipe behavior.
+handling, JSON, relative-base `read`, output bounds, exit codes, deletion,
+dry-run, and clean broken-pipe behavior.
 
 `tests/codex_integration.sh` used the real 0.154.0 app server with a temporary
 `HOME`, `CODEX_HOME`, and XDG tree. It proved the requested working-directory
-scope, one native-precedence result, strict doctor health, inventory before
-catalogue suppression, no managed writes after an inventory failure, the owned
-context/reference config changes, prompt-input catalogue suppression, context
-visibility, uninstall, and preservation of later unrelated edits. Prompt-input
-size was 11,421 bytes with the catalogue hidden and 14,299 bytes with native
-catalogue injection enabled. The hidden request had
-one SKILLWICK.md reference, one user prompt, and no skills-catalogue marker.
+scope, native inventory, strict doctor health, inventory before catalogue
+suppression, no managed writes after an inventory failure, the owned
+context/reference config changes, explicit reads, uninstall, and preservation
+of later unrelated edits.
 
 Pinned cargo-dist 0.28.0 generated the GitHub workflow. `dist plan`
 selected only `aarch64-apple-darwin` and `x86_64-apple-darwin`. `dist build`
@@ -134,13 +113,8 @@ archive, verified its checksum, installed into a temporary prefix, and returned
 ## Compatibility and limits
 
 - Codex 0.154.0 accepted `skills.include_instructions = false`; its real
-  `skills/list` RPC returned current system/user inventory in under the adapter's
-  eight-second bound. Other versions default to filesystem discovery only.
-- `tests/inference_smoke.sh` ran a real `gpt-5.6-luna` turn. The model searched
-  a temporary fixture library, copied the returned ID, read its live
-  `SKILL.md`, found the expected marker, and returned
-  `SKILLWICK_INFERENCE_OK`. Skillwick was not installed or integrated into the
-  live Codex configuration.
+  `skills/list` RPC returned current system/user inventory. Other versions
+  default to filesystem discovery only.
 - Signing, notarization, and execution on an actual Intel Mac or older macOS
   release remain unverified.
 - The first tag-triggered cargo-dist run could not start because its generated
@@ -151,33 +125,9 @@ archive, verified its checksum, installed into a temporary prefix, and returned
 - Non-full refresh currently hashes every discovered metadata document. This is
   simpler and correct; stat-based hash skipping can be added if real libraries
   show refresh cost is material.
-- The optional suggestion-hook command is cached-only and failure-open. Codex
-  still requires native review and trust before the installed handler runs.
 
 New verification entries retain their run dates and distinguish historical
 evidence from current behaviour.
-
-## Post-v0.1 benchmark and integration evidence
-
-On 12 September 2026, the production-path benchmark evaluated 65 labelled tasks
-against a captured Codex inventory containing 418 enabled records. Native
-`skills/list` supplied 327 ECC skills, 15 other plugin skills, and 76 records
-without a plugin ID. Temporary Skillwick config, cache, and state kept the run
-isolated without hiding installed plugins. The optimized lexical runner measured
-Recall@5 0.869, MRR@5 0.812, nDCG@5 0.826, no-match accuracy 0.600, and warm
-in-process query latency of 0.163 ms p50 and 0.380 ms p95. Dataset SHA-256 begins
-`078bff04aa63`; corpus SHA-256 begins `6af61dadafa3`. Ten misses remain visible
-in JSON for future ranking comparisons. See [benchmark evidence](BENCHMARKS.md).
-
-The managed AGENTS block now routes every instruction to use, find, select, or
-load a skill through Skillwick before reading the chosen live document. The
-optional suggestion hook is one cached-only Codex `UserPromptSubmit` handler.
-Temporary-home integration evidence preserved an existing `caveman` handler,
-and Codex `hooks/list` returned both native definitions. The hook emitted valid
-additional context, then uninstall removed only Skillwick's handler. Codex's
-trust review remains unchanged. This matches the official
-[Codex hooks contract](https://learn.chatgpt.com/docs/hooks): matching hook
-sources coexist and non-managed hooks require review.
 
 ## v0.1.4 distribution verification
 

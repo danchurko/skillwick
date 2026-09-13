@@ -10,22 +10,47 @@ pub fn text(rows: &[ResultRow]) -> io::Result<()> {
     if rows.is_empty() {
         return writeln!(output, "No matching skills.");
     }
-    let mut used = 0;
+    let mut remaining = MAX_TEXT_BYTES;
     for row in rows {
-        let description = clean(row.description.lines().next().unwrap_or(""));
-        let scope = if let Some(plugin) = &row.plugin_id {
-            format!("plugin:{}", clean(plugin))
-        } else {
-            clean(&row.scope)
-        };
-        let line = format!("{} [{}] {}\n", clean(&row.id), scope, description);
-        if used + line.len() > MAX_TEXT_BYTES {
+        let Some(line) = bounded_line(row, remaining) else {
             break;
-        }
+        };
         output.write_all(line.as_bytes())?;
-        used += line.len();
+        remaining -= line.len();
     }
     Ok(())
+}
+
+fn bounded_line(row: &ResultRow, budget: usize) -> Option<String> {
+    let id = clean(&row.id);
+    let scope = if let Some(plugin) = &row.plugin_id {
+        format!("plugin:{}", clean(plugin))
+    } else {
+        clean(&row.scope)
+    };
+    let description = clean(row.description.lines().next().unwrap_or(""));
+    let prefix = format!("{id} [{scope}] ");
+    let newline = "\n";
+
+    if prefix.len() + newline.len() <= budget {
+        let description = truncate_utf8(&description, budget - prefix.len() - newline.len());
+        return Some(format!("{prefix}{description}{newline}"));
+    }
+
+    // Preserve the complete ID when an unusually large scope leaves no room
+    // for the normal record shape.
+    (id.len() + newline.len() <= budget).then(|| format!("{id}{newline}"))
+}
+
+fn truncate_utf8(value: &str, max_bytes: usize) -> &str {
+    if value.len() <= max_bytes {
+        return value;
+    }
+    let mut end = max_bytes;
+    while !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    &value[..end]
 }
 
 pub fn json(rows: &[ResultRow]) -> io::Result<()> {
@@ -139,9 +164,35 @@ pub fn clean(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn row(description: String) -> ResultRow {
+        ResultRow {
+            id: "demo@abcdef".into(),
+            name: "demo".into(),
+            description,
+            scope: "global".into(),
+            path: "/skills/demo/SKILL.md".into(),
+            canonical: "/skills/demo/SKILL.md".into(),
+            base: "/skills/demo".into(),
+            source: "/skills".into(),
+            source_kind: "filesystem".into(),
+            enabled: true,
+            plugin_id: None,
+            degraded: false,
+            hash: "hash".into(),
+        }
+    }
+
     #[test]
     fn strips_terminal_controls() {
         assert_eq!(clean("safe\u{1b}[31m red\n"), "safe red");
+    }
+
+    #[test]
+    fn oversized_description_keeps_complete_id_and_valid_utf8() {
+        let line = bounded_line(&row("é".repeat(2_000)), MAX_TEXT_BYTES).unwrap();
+        assert!(line.starts_with("demo@abcdef [global] "));
+        assert!(line.len() <= MAX_TEXT_BYTES);
+        assert!(line.ends_with('\n'));
     }
 
     #[test]

@@ -26,8 +26,8 @@ run init --yes --agent none --inventory filesystem
 test -f "$temporary/cache/skillwick/index-v2.sqlite"
 test ! -e "$temporary/cache/skillwick/index-v2.sqlite-wal"
 test ! -e "$temporary/cache/skillwick/index-v2.sqlite-shm"
-run C++ | grep -q 'C++@'
-run 'deploy AgentCore runtime' | grep -q 'aws-agentcore@'
+run search C++ | grep -q 'C++@'
+run search 'deploy AgentCore runtime' | grep -q 'aws-agentcore@'
 ! run list --all | grep -q 'leak@'
 run list | grep -q '^2 skills in the current inventory\.$'
 test "$(run list | grep -c '@')" -eq 2
@@ -36,7 +36,7 @@ run --json list --limit 1 | grep -q '"total":2'
 test "$(run list --all | grep -c '@')" -eq 2
 identifier=$(run list --all | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
 run read "$identifier" | grep -q "base: $home/.agents/skills/cpp"
-run "read $identifier" | grep -q "base: $home/.agents/skills/cpp"
+if run "read $identifier" >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 run inspect "$identifier" | grep -q '^description: Build native C++ command line tools\.'
 ! run inspect "$identifier" | grep -q '^package:'
 run inspect "$identifier" --files | grep -Fq -- '- references/guide.md [markdown; file, .md]'
@@ -58,10 +58,30 @@ while [ "$i" -le 256 ]; do
   i=$((i + 1))
 done
 run inspect "$identifier" --files | grep -q 'truncated; max 256 entries'
-run -- init hooks | grep -q 'No matching skills.'
 run | grep -q 'Usage:'
+run instructions | grep -q '^# Skillwick$'
+run instructions | grep -q 'skillwick search "task"'
+if run probe --limit 5 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
+if run search test --bogus >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
+run search --limit 1 C++ | grep -q 'C++@'
+run search C++ --limit 1 | grep -q 'C++@'
 if run search test --limit 6 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
-test "$(run 'deploy AgentCore runtime' | wc -c | tr -d ' ')" -le 2000
+test "$(run search no-such-skill)" = 'No matching skills.'
+run --json search C++ | grep -q '"version":1,"results"'
+direct=$(run search C++)
+chained=$(true && run search C++)
+test "$direct" = "$chained"
+short_circuit="$temporary/short-circuit"
+(false && run search C++ >"$short_circuit") || true
+test ! -e "$short_circuit"
+
+mkdir -p "$project/.agents/skills/oversized"
+long_description=$(awk 'BEGIN { for (i = 0; i < 2500; i++) printf "x" }')
+printf '%s\n' '---' 'name: oversized' "description: $long_description" '---' > "$project/.agents/skills/oversized/SKILL.md"
+run refresh
+long_output=$(run search oversized)
+printf '%s' "$long_output" | grep -q '^oversized@'
+test "$(printf '%s\n' "$long_output" | wc -c | tr -d ' ')" -le 2000
 rm "$project/.agents/skills/agentcore/SKILL.md"
 if run read aws-agentcore@missing >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
 

@@ -14,7 +14,6 @@ pub struct Config {
     pub codex_home: Option<PathBuf>,
     pub codex_bin: Option<PathBuf>,
     pub instructions_file: Option<PathBuf>,
-    pub hooks: Hooks,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -33,14 +32,6 @@ pub enum Agent {
     Codex,
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum Hooks {
-    #[default]
-    Off,
-    Suggest,
-}
-
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -50,7 +41,6 @@ impl Default for Config {
             codex_home: None,
             codex_bin: None,
             instructions_file: None,
-            hooks: Hooks::Off,
         }
     }
 }

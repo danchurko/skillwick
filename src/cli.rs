@@ -1,14 +1,13 @@
 use crate::{
-    config, doctor, evaluation, index, integration, metadata, native, output, package, search,
+    config, doctor, index, integration, inventory, metadata, native, output, package, search,
     sources,
 };
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use rusqlite::{backup::Backup, Connection};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashSet,
     env, fs,
-    io::{self, Read, Write},
+    io::{self, Write},
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -28,8 +27,6 @@ struct Args {
     config: Option<PathBuf>,
     #[command(subcommand)]
     command: Option<Command>,
-    #[arg(trailing_var_arg = true)]
-    query: Vec<String>,
 }
 
 #[derive(Subcommand)]
@@ -62,14 +59,8 @@ enum Command {
         #[arg(long, hide = true)]
         full: bool,
     },
-    Benchmark {
-        #[arg(long)]
-        dataset: PathBuf,
-        #[arg(long, short, default_value_t = 5)]
-        limit: usize,
-        #[arg(long)]
-        native_only: bool,
-    },
+    /// Print the canonical agent usage instructions.
+    Instructions,
     Init {
         #[arg(long)]
         yes: bool,
@@ -81,8 +72,6 @@ enum Command {
         inventory: Option<InventoryArg>,
         #[arg(long, value_enum, default_value = "auto")]
         catalog: CatalogArg,
-        #[arg(long, value_enum, default_value = "off")]
-        hooks: HooksArg,
         #[arg(long)]
         root: Vec<PathBuf>,
         #[arg(long)]
@@ -104,8 +93,6 @@ enum Command {
         #[arg(value_enum)]
         shell: Shell,
     },
-    #[command(hide = true)]
-    Hook,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -123,11 +110,6 @@ enum CatalogArg {
     Auto,
     Native,
     Unchanged,
-}
-#[derive(Clone, Copy, ValueEnum)]
-enum HooksArg {
-    Off,
-    Suggest,
 }
 #[derive(Clone, Copy, ValueEnum)]
 enum Shell {
@@ -163,6 +145,10 @@ impl From<String> for Failure {
 
 pub fn run() -> Result<(), Failure> {
     let args = Args::parse();
+    if args.command.is_none() {
+        write_text(&Args::command().render_help().to_string())?;
+        return Ok(());
+    }
     let cwd = args
         .cwd
         .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
@@ -174,7 +160,6 @@ pub fn run() -> Result<(), Failure> {
             agent,
             inventory,
             catalog,
-            hooks,
             root,
             codex_home,
             codex_bin,
@@ -202,10 +187,6 @@ pub fn run() -> Result<(), Failure> {
                         CatalogArg::Auto => integration::Catalog::Auto,
                         CatalogArg::Native => integration::Catalog::Native,
                         CatalogArg::Unchanged => integration::Catalog::Unchanged,
-                    },
-                    hooks: match hooks {
-                        HooksArg::Off => config::Hooks::Off,
-                        HooksArg::Suggest => config::Hooks::Suggest,
                     },
                     roots: root,
                     codex_home,
@@ -236,19 +217,7 @@ pub fn run() -> Result<(), Failure> {
             "skillwick",
             &mut io::stdout(),
         ),
-        Some(Command::Hook) => hook(),
-        Some(command @ Command::Benchmark { native_only, .. }) => {
-            let settings = config::load(&config_path)?;
-            let mut db = query_database()?;
-            if native_only && settings.inventory != config::Inventory::Codex {
-                return Err(Failure("--native-only requires Codex inventory".into(), 2));
-            }
-            if native_only {
-                index::refresh_kind(&mut db, "filesystem", &[], true)?;
-            }
-            prepare_index(&mut db, &settings, &cwd, !native_only)?;
-            dispatch(Some(command), args.query, args.json, &mut db)?;
-        }
+        Some(Command::Instructions) => write_text(integration::instructions())?,
         Some(Command::Refresh { full }) => {
             let settings = config::load(&config_path)?;
             let mut db = query_database()?;
@@ -258,32 +227,15 @@ pub fn run() -> Result<(), Failure> {
             let settings = config::load(&config_path)?;
             let mut db = query_database()?;
             prepare_index(&mut db, &settings, &cwd, true)?;
-            dispatch(command, args.query, args.json, &mut db)?;
+            dispatch(command, args.json, &mut db)?;
         }
     }
     Ok(())
 }
 
-fn dispatch(
-    command: Option<Command>,
-    trailing: Vec<String>,
-    json: bool,
-    db: &mut Connection,
-) -> Result<(), Failure> {
+fn dispatch(command: Option<Command>, json: bool, db: &mut Connection) -> Result<(), Failure> {
     match command {
-        None => {
-            let query = trailing.join(" ");
-            if query.is_empty() {
-                write_text(&Args::command().render_help().to_string())?;
-            } else if let Some(id) = query
-                .strip_prefix("read ")
-                .filter(|id| id.contains('@') && !id.contains(char::is_whitespace))
-            {
-                read(db, id)?;
-            } else {
-                emit(&search::query(db, &query, 5)?, json)?;
-            }
-        }
+        None => unreachable!("missing command handled before index setup"),
         Some(Command::Search { query, limit }) => {
             emit(
                 &search::query(db, &query.join(" "), search_limit(limit)?)?,
@@ -311,11 +263,6 @@ fn dispatch(
             }
         }
         Some(Command::Read { id }) => read(db, &id)?,
-        Some(Command::Benchmark {
-            dataset,
-            limit,
-            native_only: _,
-        }) => benchmark(db, &dataset, search_limit(Some(limit))?, json)?,
         _ => unreachable!(),
     }
     Ok(())
@@ -342,6 +289,12 @@ fn prepare_index(
             ));
         }
         let codex_home = config::codex_home(settings);
+        if !index::has_snapshot_marker(db)? {
+            return Err(Failure(
+                "native inventory snapshot is missing; run `skillwick refresh`".into(),
+                3,
+            ));
+        }
         if !index::has_codex_home_snapshot(db, &codex_home)? {
             return Err(Failure(
                 "native inventory belongs to another Codex home; run `skillwick refresh`".into(),
@@ -349,60 +302,13 @@ fn prepare_index(
             ));
         }
         if !index::has_workspace_snapshot(db, cwd, &codex_home)? {
-            index::remove_workspace_native(db)?;
+            return Err(Failure(
+                "native inventory does not cover this workspace; run `skillwick refresh`".into(),
+                3,
+            ));
         }
     }
     Ok(())
-}
-
-fn benchmark(db: &Connection, path: &Path, limit: usize, json: bool) -> Result<(), Failure> {
-    let bytes =
-        fs::read(path).map_err(|error| Failure(format!("{}: {error}", path.display()), 1))?;
-    let dataset: evaluation::Dataset = serde_json::from_slice(&bytes)
-        .map_err(|error| Failure(format!("{}: {error}", path.display()), 2))?;
-    let rows = search::all(db, None)?;
-    let corpus_names: HashSet<_> = rows.iter().map(|row| row.name.clone()).collect();
-    let mut corpus_identity: Vec<_> = rows
-        .iter()
-        .map(|row| format!("{}:{}", row.name, row.hash))
-        .collect();
-    corpus_identity.sort();
-    let report = evaluation::evaluate(
-        &dataset,
-        &format!("{:x}", Sha256::digest(&bytes)),
-        &format!("{:x}", Sha256::digest(corpus_identity.join("\n"))),
-        &corpus_names,
-        rows.len(),
-        limit,
-        |query, limit| {
-            search::query(db, query, limit)
-                .map(|rows| rows.into_iter().map(|row| row.name).collect())
-                .map_err(|error| error.to_string())
-        },
-    )?;
-    if json {
-        write_text(&format!("{}\n", serde_json::to_string(&report).unwrap()))
-    } else {
-        write_text(&format!(
-            "dataset: {} ({})\ncorpus: {} skills ({})\nretriever: {}\nqueries: {} ({} judged, {} no-match)\nRecall@{limit}: {:.3}\nHitRate@{limit}: {:.3}\nMRR@{limit}: {:.3}\nnDCG@{limit}: {:.3}\nno-match accuracy: {:.3}\nquery latency: p50 {:.3} ms, p95 {:.3} ms\nmisses: {}\n",
-            report.dataset,
-            &report.dataset_sha256[..12],
-            report.corpus_skills,
-            &report.corpus_sha256[..12],
-            report.retriever,
-            report.queries,
-            report.judged_queries,
-            report.no_match_queries,
-            report.recall_at_k,
-            report.hit_rate_at_k,
-            report.mrr_at_k,
-            report.ndcg_at_k,
-            report.no_match_accuracy,
-            report.query_p50_ms,
-            report.query_p95_ms,
-            report.misses.len(),
-        ))
-    }
 }
 
 fn query_database() -> Result<Connection, Failure> {
@@ -431,43 +337,21 @@ fn refresh(
     cwd: &Path,
     _full: bool,
 ) -> Result<(), Failure> {
-    // ponytail: every refresh hashes metadata; add stat-based skipping only after profiling large libraries.
-    let scan = sources::scan(cwd, &settings.roots);
-    index::refresh_kind(db, "filesystem", &scan.skills, scan.complete)?;
-    for diagnostic in scan.diagnostics {
-        eprintln!("warning: {diagnostic}");
-    }
-    if settings.inventory == config::Inventory::Codex {
-        let codex = native::detect(settings)?;
-        refresh_native(db, settings, cwd, &codex)?;
-    }
-    index::publish(db, &config::cache_path())?;
-    Ok(())
-}
-
-fn refresh_native(
-    db: &mut Connection,
-    settings: &config::Config,
-    cwd: &Path,
-    codex: &native::Codex,
-) -> Result<(), Failure> {
-    match native::inventory(codex, &config::codex_home(settings), cwd) {
-        Ok(skills) => {
-            index::refresh_kind(db, "codex", &skills, true)?;
-            index::record_snapshot(
-                db,
-                cwd,
-                &codex.version,
-                &codex.path,
-                &config::codex_home(settings),
-            )?;
-            Ok(())
-        }
-        Err(error) => Err(Failure(
-            format!("native inventory failed; previous snapshot retained: {error}"),
-            3,
-        )),
-    }
+    let codex = if settings.inventory == config::Inventory::Codex {
+        Some(native::detect(settings)?)
+    } else {
+        None
+    };
+    inventory::refresh(db, settings, cwd, codex.as_ref()).map_err(|error| match error {
+        inventory::Error::Database(error) => Failure(
+            format!(
+                "database error: {error}; run `skillwick refresh` to rebuild the disposable cache"
+            ),
+            1,
+        ),
+        inventory::Error::Native(error) => Failure(error.to_string(), 3),
+        inventory::Error::NoSpecialist => Failure(error.to_string(), 3),
+    })
 }
 
 fn find(db: &Connection, id: &str) -> Result<search::ResultRow, Failure> {
@@ -622,48 +506,6 @@ fn read(db: &Connection, id: &str) -> Result<(), Failure> {
     ))
 }
 
-fn hook() {
-    let mut input = Vec::new();
-    if io::stdin().take(64 * 1024).read_to_end(&mut input).is_err() {
-        return;
-    }
-    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&input) else {
-        return;
-    };
-    let Some(prompt) = value.get("prompt").and_then(|value| value.as_str()) else {
-        return;
-    };
-    let Ok(db) = rusqlite::Connection::open_with_flags(
-        config::cache_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    ) else {
-        return;
-    };
-    if let Ok(rows) = search::query(&db, prompt, 3) {
-        if !rows.is_empty() {
-            let mut candidates = String::new();
-            for row in rows {
-                let description = output::clean(row.description.lines().next().unwrap_or(""));
-                let line = format!("{}: {}\n", output::clean(&row.id), description);
-                if candidates.len() + line.len() > 1_500 {
-                    break;
-                }
-                candidates.push_str(&line);
-            }
-            let context = format!(
-                "Skillwick found these candidates. Read each relevant ID with `skillwick read ID` before following it; selecting none is valid.\n{candidates}"
-            );
-            let value = serde_json::json!({
-                "hookSpecificOutput": {
-                    "hookEventName": "UserPromptSubmit",
-                    "additionalContext": context
-                }
-            });
-            let _ = write_text(&format!("{value}\n"));
-        }
-    }
-}
-
 fn emit(rows: &[search::ResultRow], json: bool) -> Result<(), Failure> {
     if json {
         write_output(output::json(rows))
@@ -754,7 +596,7 @@ mod tests {
     }
 
     #[test]
-    fn cached_queries_drop_another_workspaces_native_skills() {
+    fn cached_queries_require_native_workspace_coverage() {
         let workspace_a = tempfile::tempdir().unwrap();
         let workspace_b = tempfile::tempdir().unwrap();
         let mut skill = codex_skill();
@@ -770,12 +612,14 @@ mod tests {
         )
         .unwrap();
 
-        assert!(prepare_index(&mut db, &codex_settings(), workspace_b.path(), false).is_ok());
-        assert_eq!(search::count(&db).unwrap(), 0);
+        let error = prepare_index(&mut db, &codex_settings(), workspace_b.path(), false)
+            .expect_err("uncovered workspace unexpectedly passed");
+        assert_eq!(error.code(), 3);
+        assert!(error.to_string().contains("does not cover this workspace"));
     }
 
     #[test]
-    fn latest_workspace_marker_owns_the_published_native_corpus() {
+    fn latest_workspace_marker_rejects_older_workspace_queries() {
         let workspace_a = tempfile::tempdir().unwrap();
         let workspace_b = tempfile::tempdir().unwrap();
         let settings = codex_settings();
@@ -801,8 +645,10 @@ mod tests {
         )
         .unwrap();
 
-        assert!(prepare_index(&mut db, &settings, workspace_a.path(), false).is_ok());
-        assert_eq!(search::count(&db).unwrap(), 0);
+        let error = prepare_index(&mut db, &settings, workspace_a.path(), false)
+            .expect_err("stale workspace marker unexpectedly passed");
+        assert_eq!(error.code(), 3);
+        assert!(error.to_string().contains("does not cover this workspace"));
     }
 
     #[test]

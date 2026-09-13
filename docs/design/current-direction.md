@@ -1,166 +1,124 @@
-# Shared understanding and findings
+# Shared understanding
 
-Status: shared understanding confirmed. GitHub issue
-[#1](https://github.com/churdaa/skillwick/issues/1) is the authoritative
-[implementation specification](discovery-spec.md).
-Updated 13 September 2026 from the user discussion in Codex task
-`01a09a40-abcc-7bd0-9648-0da8b833bfe8`.
+Status: shared understanding confirmed by the user on 13 September 2026.
+This direction supersedes the previous direction.
+Implementation has not started.
+The [implementation specification](https://github.com/churdaa/skillwick/issues/8)
+is published with the `ready-for-agent` label and is authoritative for delivery.
+It supersedes issue #1; this document records the confirmed decisions and findings.
 
-This is the single owner of the current design direction. It contains no
-superseded proposals or interview transcript. Measured results retain their
-original provenance in the benchmark evidence files.
+## Requirements stated by the user
 
-## Product boundary
+- Skillwick should be a simple tool that fits into a user's working environment.
+- Agents should invoke it deliberately for relevant tasks. Automatic prompt
+  suggestions must not stand in for a working CLI.
+- Remove benchmarking and evaluation machinery, artifacts, procedures, and
+  comparative claims from the maintained repository. Retain only a documented
+  gap: comparative retrieval quality, context savings, and task-success benefits
+  have not been established for the supported product and workflow.
+- Fix defects at their responsible boundary and retain correctness checks.
+- Keep portable product behavior independent of mac-state installation choices
+  and personal agent orchestration policy.
 
-Skillwick enables reliable skill selection with less root-agent discovery
-context. It owns search, inventory, inspection, and selected instruction reads.
-The calling agent and usage prompts own model selection, prompt management,
-adaptive searching, sub-agent invocation, judging, and run coordination.
+## Decisions confirmed in the interview
 
-Keep installed instructions short. When the calling workflow uses delegation,
-one researcher may search from up to three distinct perspectives and return at
-most five deduplicated IDs with descriptions and reasons. The root reads selected
-instructions. Package inspection exposes bounded relative paths, counts, and
-Markdown/non-Markdown file types without reading or executing supporting files.
+- Support Codex on macOS first, independently of mac-state.
+- Retain explicit reversible setup for ordinary users and externally managed
+  configuration for managed environments. Each file or setting has one owner.
+- Remove the automatic prompt-suggestion hook from the product and mac-state
+  integration, preserving unrelated hooks and user-owned configuration.
+- Require explicit `skillwick search "task"`. Remove shorthand interpretation
+  rather than adding special handling for unknown command words.
+- Keep delegation outside shipped Skillwick instructions. The calling workflow
+  chooses which agent searches; searching alone does not require a subagent.
+- Retain native catalogue suppression in previewed, reversible setup. Managed
+  environments own the equivalent Codex setting themselves.
+- Keep searches local with explicit inventory refresh. Setup and mac-state run
+  refresh after installation changes. Changes to native enablement require
+  refresh too; the snapshot is not a claim of live native state.
+- Report missing or incompatible inventory clearly. Do not silently represent
+  missing workspace coverage as a complete no-match result.
 
-Evaluation is a documented method with small offline helpers for inventory
-snapshots, structural validation, token accounting, and scoring recorded results.
-Do not build an evaluation framework, scheduler, or model-adapter layer.
+## Findings verified in the current source
 
-## Evaluation method
+- mac-state installs its base `AGENTS.md`, then Skillwick appends an owned
+  reference to that same file. Managed setup should assign that reference to
+  mac-state rather than requiring two configuration writers.
+- mac-state owns release selection, binary verification, installed capability
+  roots, and apply ordering. Skillwick has no need to know those local paths.
+- `src/doctor.rs` requires nonempty filesystem discovery even when Codex native
+  inventory is selected. This source-level coupling can reject native-only
+  installations; a native-only fixture should verify the corrected contract.
+- Installed product instructions prescribe a discovery subagent, up to three
+  search perspectives, and a root-agent instruction read. This is workflow policy
+  in `assets/skillwick/SKILLWICK.md`, not a requirement of the search implementation.
+- `src/cli.rs` runs prompt suggestions through a separate hidden hook command.
+  It searches submitted prompt text and emits Codex additional context.
+- mac-state `agents/apply.sh` explicitly enables suggestions to run discovery
+  before a failed command joined with `&&` can prevent it. This changes invocation
+  policy; it does not fix shell output. Independent discovery belongs in an
+  independent agent tool call.
+- In an isolated filesystem fixture, direct search, a successful shell chain,
+  and the same successful chain through RTK produced identical candidate text
+  without hooks. A failing left command correctly prevented the search.
+- Shorthand `probe --limit 5` returned no matches where explicit
+  `search probe --limit 5` returned the fixture's exact match. The shorthand
+  parser captures the option as query text.
+- A first candidate whose rendered line exceeds 2,000 bytes produced empty text
+  output with exit code zero. JSON still contained the candidate. The early break
+  in `src/output.rs` owns this defect; its connection to the historical shell
+  report has not been established.
 
-- Internal runs use `gpt-5.6-terra` for the root and `gpt-5.6-luna` for the
-  researcher. Use a separate Terra session for blind adjudication. Actual
-  deployments may use different models; do not transfer measured percentages
-  between model combinations.
-- Run measured agents in a temporary clean Codex environment. Personal hooks,
-  instructions, custom agents, plugins, memories, MCP configuration, and inherited
-  task state must not silently affect results. Do not modify the installed setup.
-  Export the full local skill inventory separately as the corpus input; isolation
-  must not silently substitute an empty or incomplete corpus.
-- Derive the default evaluation case count as `ceil(0.30 * discoverable_skills)`.
-  Make the proportion adjustable and retain the full searchable corpus. Cases
-  should span varied capabilities; there is no one-case-per-sampled-skill rule.
-  This total includes no-skill cases. Repeated runs and workflow comparisons reuse
-  the cases rather than increasing the population count.
-- Author realistic held-out requests independently of target skill descriptions;
-  use separate relevance review. Freeze labels before retrieval. No-skill cases
-  must be independently judged, never tuned until search returns nothing.
-- Compare lexical, lexical plus semantic, and lexical plus semantic with reranking,
-  each with direct and delegated discovery. Use the same adaptive search budget
-  and cases. Keep future backends unmeasured until implemented. Fixed-query replay
-  can remain a diagnostic; it is not evidence of adaptive research.
-- Add native Codex discovery as a reference using the same installed inventory
-  and root model. Pin and disclose its catalogue configuration within the clean
-  profile. Report rendered coverage; do not invent a synthetic native catalogue
-  to equalize candidate counts. Uncapped native discovery is an optional diagnostic.
-- Measure discovery through final selection. Account separately for loading
-  selected instructions. Downstream task success requires a separate evaluation.
-- Report recall, precision, no-skill abstention, root discovery context, total
-  input/output/cache usage, latency, failures, and corpus/model provenance. Keep
-  token volume distinct from monetary estimates; prices and billing semantics
-  must be verified before quoting monetary estimates.
-- Recommend a workflow only with lower root discovery context and no observed
-  decline in held-out quality against its relevant baseline. Small-sample passes
-  remain provisional. Compare delegation with direct discovery on the same
-  backend, and both with native discovery.
-- Keep frozen-label scores separate from blind adjudication of useful alternatives
-  or unnecessary additions. Hide workflow/model identity and cost from the judge,
-  retain rationales, flag unresolved cases, and label results agent-reviewed.
-- Use one run for routine checks and three independent repetitions for claims
-  of stable comparative quality or cost. Start with a pilot. Expanded runs need
-  a workload estimate and supplied token budget; the calling agent owns budget
-  enforcement and checkpointing. Incomplete runs stay partial.
+These are bounded local reproductions, not a complete release certification.
+The structural index is stale; findings use direct source reads. The linked
+Codex task was readable. Initial GitHub access failed; issue state was subsequently
+verified during specification publication.
 
-## Public documentation and releases
+## Agreed responsibility boundary
 
-Lead the README with the user benefit, a working example, measured evidence,
-and installation. Use professional project language. Keep command detail in
-the usage guide and the reproducible evaluation method in its guide and copyable
-agent prompt. Label results by their actual measurement scope and model pair.
+- Skillwick owns its search and read contract, derived inventory, compact usage
+  instructions, explicit refresh, diagnostics, and portable reversible setup.
+- Codex owns native discovery, enablement, plugin state, and permissions.
+  Existing package installers continue to own installed skills.
+- The calling agent owns relevance decisions, query formulation, selection, and
+  whether to delegate. The instructions explain when discovery is useful and
+  how to call it; they do not require a search on every turn.
+- mac-state owns release selection, managed files and Codex settings, installed
+  capabilities, local paths, and lifecycle ordering. It consumes the same public
+  Skillwick contracts as any other managed environment. Managed integration
+  consumes the product's canonical usage content rather than maintaining a
+  separate local version of its instructions.
 
-Keep Homebrew and the repository-owned script installer. Future release uploads
-contain both architecture archives and their per-file checksums; retain build
-metadata in CI. Verify the Homebrew formula against published archive digests.
+## Agreed implementation order and proof
 
-## Existing work and required alignment
+1. Establish the public CLI and output contract. Remove shorthand and obsolete
+   compatibility paths; fix oversized-result output at the formatter. Verify
+   unknown commands/options, option placement, successful/no-match/error output,
+   JSON, bounded text, and normal shell composition at the executable boundary.
+2. Remove the suggestion hook and ship neutral usage instructions. Retire only
+   the owned installed hook during the coordinated transition; preserve unrelated
+   hook configuration. Do not retain a second supported discovery flow.
+3. Consolidate setup and refresh around the owning inventory implementation.
+   Separate ordinary setup from externally managed configuration ownership.
+   Verify native-only and filesystem inventory, workspace scope, failed refresh
+   retention, repeat setup, modified user files, and uninstall in temporary homes.
+4. Align mac-state with the public contract and chosen refresh policy. Check
+   desired-state diffs, verify install/configuration/capability ordering, and run
+   one real clean-environment setup/search/read check with the built artifact.
+   Stubbed installer tests alone do not establish usable integration.
+5. Remove out-of-scope tooling and its commands, dependencies, fixtures, CI jobs,
+   docs, and claims. Retain ordinary correctness regressions and the documented
+   evidence gap. Reconcile the implementation issue and public documentation
+   with this direction; do not keep parallel authoritative specifications.
 
-| Surface | Required alignment |
-| --- | --- |
-| `assets/skillwick/SKILLWICK.md`, `src/package.rs`, `src/cli.rs`, `docs/USAGE.md` | Review existing bounded instructions and inspection against the product boundary |
-| `scripts/evaluate_skills.py`, `tests/test_evaluate_skills.py` | Reuse measurement logic; remove agent orchestration from the planned evaluation surface |
-| `scripts/measure-context.py` | Retain narrow token measurement and explicit exclusions |
-| `docs/BENCHMARKS.md`, `docs/prompts/evaluate-skills.md`, `README.md` | Align the method, clean profile, Terra/Luna pairing, and case-count policy |
-| `benchmarks/local-skills-v2.json`, `benchmarks/results/` | Preserve actual historical evidence; create new cases/results for the current method |
-| `Makefile`, `.github/workflows/ci.yml` | Align checks with retained small measurement helpers |
-| `dist-workspace.toml`, `.github/workflows/release.yml`, `Formula/skillwick.rb` | Retain and verify the existing release simplification |
+For each defect, first reproduce the observable failure, trace its responsible
+layer and callers, then add the smallest regression that fails before the fix.
+Use unit tests for isolated invariants and executable/integration tests for
+contracts that cross module or process boundaries. Formatting and lint checks
+catch source problems; `doctor` diagnoses a current environment. Neither proves
+that actual commands return the correct output. Run relevant checks during the
+change and the complete retained CI suite before release. Verify the packaged
+artifact and a supported Codex integration when those boundaries change.
 
-## Remaining work
-
-1. The user completes device login in the isolated profile. Repeat preflight checks
-   after authentication, then run the bounded Terra/Luna pilot and inspect actual
-   runtime behavior. No new model evaluation has been run yet.
-2. Complete and verify the ready-for-agent child issues linked from the
-   authoritative implementation specification. Do not recreate completed work.
-
-No further product questions are open. The case population includes no-skill cases.
-
-## Verified findings
-
-The [saved no-model preflight](../../benchmarks/results/profile-preflight-2026-09-13.json)
-records these checks against Codex 0.154.0:
-
-- A fresh native inventory read found 555 skills and exactly matched the captured
-  source manifest. The read used temporary Skillwick caches; installed Skillwick
-  state and user configuration were not changed.
-- Staging actual native skill directories and cached plugin packages preserved
-  all 555 names, plugin identities, metadata and instruction hashes. Every staged
-  source path is inside the temporary profile. Paths and derived IDs change on
-  relocation, so comparisons require an explicit identity mapping rather than
-  pretending the original path-dependent digest is portable.
-- The staged configuration disables hooks, apps and memories. The hook inventory
-  is empty, tested personal instruction markers are absent, and there is no
-  global `AGENTS.md` or custom-agent directory in the clean Codex home.
-- Copying the real plugin packages initially exposed an enabled Chrome DevTools
-  MCP server. `features.apps=false` did not disable it. An explicit disabled MCP
-  declaration with a valid transport fixed this: zero MCP servers are now enabled.
-  A fresh inventory comparison after that change still matched all 555 records.
-- The staged plugin configuration must be loaded. `--ignore-user-config` would
-  discard its plugin activation and MCP disablement. Use the isolated Codex home
-  with only audited evaluation settings; do not copy the user's configuration.
-- The live profile is authenticated, but a fresh Codex home has no matching keyring
-  credential. The fully isolated home cannot access the default keychain in the
-  probe. Supported file-backed storage reports not logged in. The next step is
-  a normal device login confined to the evaluation profile; no login was initiated
-  and no credentials were copied.
-
-See the [clean-profile preparation method](../evaluation-profile.md) for commands
-and checks. A named profile layers settings over the base profile; it does not
-provide this isolation. `--ignore-rules` excludes execpolicy rules rather than
-`AGENTS.md`, and `--ephemeral` controls persistence rather than configuration.
-
-These are offline preparation results, not an authenticated runtime or quality
-benchmark. Recheck after login: account-dependent behavior and actual model-turn
-execution have not yet been observed. Package hook/MCP files remain physically
-present as resources, while the audited settings disable their activation.
-Required host policy is retained and must be disclosed.
-
-## Evidence and implementation boundaries
-
-The Rust CLI has the intended discovery boundary. `scripts/evaluate_skills.py`
-now retains only corpus export, structural validation, recorded-evidence
-scoring, portable identity mapping, and pure usage aggregation. Model choice,
-authentication, prompts, delegation, sequencing, and partial-run handling live
-in the documented calling workflow. The existing Rust benchmark still provides
-a deterministic lexical diagnostic.
-
-The historical 177-case snapshot and Astra/Luna pilot do not implement the new
-population or clean-profile method. Preserve their recorded facts and limitations.
-The current dataset has 167 total cases, including ten no-skill cases. New runs
-use that frozen dataset and their actual Terra/Luna identities. No monetary
-savings or general quality advantage has been established.
-
-Release work already matches the intended archive/checksum and installer surface.
-Final release verification should include the uploaded artifact layout as well
-as filenames. Nothing has been committed, published, or applied to the user's
-installed configuration in this preparation work.
+Resolved terms live in `CONTEXT.md`. Implementation tasks belong in the issue
+tracker after agreement. No ADR is needed for this reversible cleanup.

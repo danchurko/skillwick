@@ -1,26 +1,27 @@
 # Skillwick
 
-Skillwick finds relevant installed skills. Search the task, select useful
-candidates, then read their instructions.
+Skillwick helps find relevant installed skills. When a task would benefit from
+specialist guidance, search explicitly, judge the candidates, and read the
+instructions for any skill you select. No match or selecting none is valid.
 
 ## Use
 
 ```sh
-skillwick "deploy an AgentCore MCP server with TypeScript"
+skillwick search "deploy an AgentCore MCP server with TypeScript"
 skillwick read aws-agentcore@7d92ac
 ```
 
-The first command returns up to five candidates. Read each useful result before
-following it. No result, or selecting no skill, is valid.
+Use `skillwick search "task"` when specialist guidance may help. Review the
+candidate names and descriptions, choose only relevant results (or select
+none), then read selected skill instructions before following them.
 
-When your normal workflow uses sub-agents, delegate one discovery pass with up
-to three distinct task perspectives: outcome, mechanism, and constraints.
-Return at most five deduplicated IDs, descriptions, and brief relevance reasons.
-The root agent reads selected skills. Otherwise, search directly.
+Use `skillwick inspect ID` to review selected skill metadata and
+`skillwick inspect ID --files` to list package references without reading them.
+Read selected instructions with `skillwick read ID`.
 
 ## Commands
 
-- `skillwick "task and important technologies"` searches; this is the preferred form.
+- `skillwick search "task and important technologies"` searches.
 - `skillwick search "task" --limit 3` searches with an explicit limit.
 - `skillwick read ID` prints selected skill instructions.
 - `skillwick inspect ID` prints selected skill metadata.

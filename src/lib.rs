@@ -1,9 +1,9 @@
 pub mod cli;
 pub mod config;
 pub mod doctor;
-pub mod evaluation;
 pub mod index;
 pub mod integration;
+pub mod inventory;
 pub mod metadata;
 pub mod native;
 pub mod output;

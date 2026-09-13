@@ -33,7 +33,5 @@ The Codex adapter stays narrow. Supporting another agent requires a separate
 inventory and integration contract; it must not weaken Codex or filesystem
 semantics.
 
-Evaluation tooling lives in `scripts/`, outside the production search path.
-It freezes a corpus and relevance judgments, then compares direct and delegated
-selection over identical retrieval inputs. Optional semantic retrieval and
-reranking remain research candidates; the shipped search backend is lexical.
+The production path is deliberately local and lexical. It does not install
+packages, execute instruction files, or require a remote service.

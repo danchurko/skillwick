@@ -1,6 +1,6 @@
 use crate::{
-    config::{self, Agent, Config, Hooks, Inventory},
-    index, native, sources,
+    config::{self, Agent, Config, Inventory},
+    inventory, native,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -24,6 +24,10 @@ pub enum Catalog {
     Unchanged,
 }
 
+pub fn instructions() -> &'static str {
+    CONTEXT
+}
+
 pub struct InitRequest {
     pub cwd: PathBuf,
     pub yes: bool,
@@ -31,7 +35,6 @@ pub struct InitRequest {
     pub agent: Agent,
     pub inventory: Inventory,
     pub catalog: Catalog,
-    pub hooks: Hooks,
     pub roots: Vec<PathBuf>,
     pub codex_home: Option<PathBuf>,
     pub codex_bin: Option<PathBuf>,
@@ -78,7 +81,6 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     }
     settings.agent = request.agent;
     settings.inventory = request.inventory;
-    settings.hooks = request.hooks;
     if request.codex_home.is_some() {
         settings.codex_home = request.codex_home;
     }
@@ -87,9 +89,6 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     }
     if request.instructions_file.is_some() {
         settings.instructions_file = request.instructions_file;
-    }
-    if settings.agent == Agent::None && settings.hooks == Hooks::Suggest {
-        return Err("--hooks suggest requires --agent codex".into());
     }
     if settings.agent == Agent::None {
         print_plan(config_path, &settings, false);
@@ -111,12 +110,6 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     let reference = reference_line(&context)?;
     let codex = native::detect(&settings)?;
     let compatible = native::supports_native_catalog(&codex.version);
-    if settings.hooks == Hooks::Suggest && !compatible {
-        return Err(format!(
-            "Codex {} does not have a verified suggestion-hook contract",
-            codex.version
-        ));
-    }
     let write_catalog = match request.catalog {
         Catalog::Native if !compatible => {
             return Err(format!(
@@ -143,10 +136,9 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     config::refuse_symlink(&instructions)?;
     config::refuse_symlink(&codex_config)?;
     config::refuse_symlink(&context)?;
-    if settings.hooks == Hooks::Suggest
-        || previous_journal
-            .as_ref()
-            .is_some_and(|journal| journal.hook_command.is_some())
+    if let Some(hook_file) = previous_journal
+        .as_ref()
+        .and_then(|journal| journal_hook_file(journal, &hook_file))
     {
         config::refuse_symlink(&hook_file)?;
     }
@@ -249,25 +241,15 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     } else {
         observed_catalog
     };
-    let hook_file_created = previous_journal
-        .as_ref()
-        .is_some_and(|journal| journal.hook_file_created)
-        || !hook_file.exists();
-    let mut hook_updated = fs::read_to_string(&hook_file).unwrap_or_default();
-    if let Some(command) = previous_journal
-        .as_ref()
-        .and_then(|journal| journal.hook_command.as_deref())
-    {
-        if settings.hooks == Hooks::Off
-            || command != hook_command(&std::env::current_exe().map_err(|e| e.to_string())?)?
-        {
-            hook_updated = remove_hook(&hook_updated, command)?;
-        }
-    }
-    let hook_command = if settings.hooks == Hooks::Suggest {
-        let command = hook_command(&std::env::current_exe().map_err(|e| e.to_string())?)?;
-        hook_updated = add_hook(&hook_updated, &command)?;
-        Some(command)
+    let hook_retirement = previous_journal.as_ref().and_then(|journal| {
+        journal.hook_command.as_ref().and_then(|command| {
+            journal_hook_file(journal, &hook_file)
+                .map(|path| (path, command.clone(), journal.hook_file_created))
+        })
+    });
+    let hook_updated = if let Some((path, command, file_created)) = &hook_retirement {
+        let current = fs::read_to_string(path).unwrap_or_default();
+        Some((path.clone(), remove_hook(&current, command)?, *file_created))
     } else {
         None
     };
@@ -289,12 +271,21 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
         router_hash: previous_journal
             .as_ref()
             .and_then(|journal| journal.router_hash.clone()),
-        hook_file: hook_command.as_ref().map(|_| hook_file.clone()),
-        hook_command,
-        hook_file_created,
+        hook_file: None,
+        hook_command: None,
+        hook_file_created: false,
     };
     prime_index(&settings, &codex, &request.cwd)
         .map_err(|error| format!("{error}; native catalogue was not changed"))?;
+    if let Some((hook_file, hook_updated, hook_file_created)) = hook_updated {
+        if hook_file_created && hook_document_empty(&hook_updated) {
+            if hook_file.exists() {
+                fs::remove_file(&hook_file).map_err(|e| e.to_string())?;
+            }
+        } else {
+            config::atomic_write(&hook_file, hook_updated.as_bytes(), 0o600)?;
+        }
+    }
     let journal_path = config::state_dir().join("integration.json");
     config::atomic_write(
         &journal_path,
@@ -304,19 +295,6 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     config::save(config_path, &settings)?;
     config::atomic_write(&context, CONTEXT.as_bytes(), 0o600)?;
     config::atomic_write(&instructions, instruction_updated.as_bytes(), 0o600)?;
-    if settings.hooks == Hooks::Suggest
-        || previous_journal
-            .as_ref()
-            .is_some_and(|journal| journal.hook_command.is_some())
-    {
-        if settings.hooks == Hooks::Off && hook_file_created && hook_document_empty(&hook_updated) {
-            if hook_file.exists() {
-                fs::remove_file(&hook_file).map_err(|e| e.to_string())?;
-            }
-        } else {
-            config::atomic_write(&hook_file, hook_updated.as_bytes(), 0o600)?;
-        }
-    }
     if let Some(updated) = codex_updated {
         config::atomic_write(&codex_config, updated.as_bytes(), 0o600)?;
     }
@@ -327,35 +305,7 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
 }
 
 fn prime_index(settings: &Config, codex: &native::Codex, cwd: &Path) -> Result<(), String> {
-    let scan = sources::scan(cwd, &settings.roots);
-    let mut db = index::open(Path::new(":memory:")).map_err(|error| error.to_string())?;
-    index::refresh_kind(&mut db, "filesystem", &scan.skills, scan.complete)
-        .map_err(|error| error.to_string())?;
-    let mut has_specialist = scan
-        .skills
-        .iter()
-        .any(|skill| skill.metadata.name != "skillwick");
-    if settings.inventory == Inventory::Codex {
-        let native_skills = native::inventory(codex, &config::codex_home(settings), cwd)?;
-        has_specialist |= native_skills
-            .iter()
-            .any(|skill| skill.metadata.name != "skillwick");
-        index::refresh_kind(&mut db, "codex", &native_skills, true)
-            .map_err(|error| error.to_string())?;
-        index::record_snapshot(
-            &db,
-            cwd,
-            &codex.version,
-            &codex.path,
-            &config::codex_home(settings),
-        )
-        .map_err(|error| error.to_string())?;
-    }
-    if !has_specialist {
-        return Err("no specialist skill source could be indexed".into());
-    }
-    index::publish(&db, &config::cache_path()).map_err(|error| error.to_string())?;
-    Ok(())
+    inventory::prime(settings, codex, cwd).map_err(|error| error.to_string())
 }
 
 pub fn uninstall(purge_cache: bool) -> Result<(), String> {
@@ -542,11 +492,13 @@ fn remove_reference(current: &str, reference: &str, owned: bool) -> Result<Strin
         .collect())
 }
 
-fn hook_command(executable: &Path) -> Result<String, String> {
-    let executable = executable
-        .to_str()
-        .ok_or("Skillwick executable path is not UTF-8")?;
-    Ok(format!("'{}' hook", executable.replace('\'', "'\\''")))
+fn journal_hook_file(journal: &Journal, default: &Path) -> Option<PathBuf> {
+    journal.hook_command.as_ref().map(|_| {
+        journal
+            .hook_file
+            .clone()
+            .unwrap_or_else(|| default.to_path_buf())
+    })
 }
 
 fn hook_group(command: &str) -> Value {
@@ -570,41 +522,35 @@ fn hook_document(current: &str) -> Result<Value, String> {
     Ok(value)
 }
 
-fn add_hook(current: &str, command: &str) -> Result<String, String> {
-    let mut document = hook_document(current)?;
-    let root = document.as_object_mut().unwrap();
-    let hooks = root.entry("hooks").or_insert_with(|| json!({}));
-    let hooks = hooks
-        .as_object_mut()
-        .ok_or("Codex hooks field must be an object")?;
-    let event = hooks.entry("UserPromptSubmit").or_insert_with(|| json!([]));
-    let event = event
-        .as_array_mut()
-        .ok_or("Codex UserPromptSubmit hooks must be an array")?;
-    let group = hook_group(command);
-    if !event.contains(&group) {
-        event.push(group);
-    }
-    Ok(format!(
-        "{}\n",
-        serde_json::to_string_pretty(&document).unwrap()
-    ))
-}
-
 fn remove_hook(current: &str, command: &str) -> Result<String, String> {
     let mut document = hook_document(current)?;
-    let Some(hooks) = document.get_mut("hooks").and_then(Value::as_object_mut) else {
-        return Err("Skillwick hook changed after setup".into());
+    let Some(hooks_value) = document.get_mut("hooks") else {
+        return Ok(current.to_string());
     };
-    let Some(event) = hooks
-        .get_mut("UserPromptSubmit")
-        .and_then(Value::as_array_mut)
-    else {
-        return Err("Skillwick hook changed after setup".into());
+    let Some(hooks) = hooks_value.as_object_mut() else {
+        return Err("Codex hooks field must be an object".into());
+    };
+    let Some(event_value) = hooks.get_mut("UserPromptSubmit") else {
+        return Ok(current.to_string());
+    };
+    let Some(event) = event_value.as_array_mut() else {
+        return Err("Codex UserPromptSubmit hooks must be an array".into());
     };
     let group = hook_group(command);
     let Some(position) = event.iter().position(|candidate| candidate == &group) else {
-        return Err("Skillwick hook changed after setup".into());
+        if event.iter().any(|group| {
+            group
+                .get("hooks")
+                .and_then(Value::as_array)
+                .is_some_and(|handlers| {
+                    handlers.iter().any(|handler| {
+                        handler.get("command").and_then(Value::as_str) == Some(command)
+                    })
+                })
+        }) {
+            return Err("Skillwick hook changed after setup".into());
+        }
+        return Ok(current.to_string());
     };
     event.remove(position);
     if event.is_empty() {
@@ -682,12 +628,11 @@ fn restore_catalog(current: &str, previous: Option<bool>) -> Result<Option<Strin
 }
 fn print_plan(config_path: &Path, settings: &Config, catalog: bool) {
     eprintln!(
-        "config: {}\ninventory: {:?}\nagent: {:?}\ncatalogue suppression: {}\nsuggestion hook: {:?}",
+        "config: {}\ninventory: {:?}\nagent: {:?}\ncatalogue suppression: {}",
         config_path.display(),
         settings.inventory,
         settings.agent,
         catalog,
-        settings.hooks,
     );
 }
 fn confirm(yes: bool) -> Result<(), String> {
@@ -754,13 +699,25 @@ mod tests {
         assert!(!restored.contains("include_instructions"));
     }
     #[test]
-    fn hook_patch_preserves_other_hooks_and_removes_only_its_group() {
+    fn hook_retirement_preserves_other_hooks_and_removes_only_its_group() {
         let source = r#"{"description":"owned elsewhere","hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"caveman"}]}],"Stop":[]}}"#;
-        let patched = add_hook(source, "'/opt/skillwick' hook").unwrap();
-        assert!(patched.contains("caveman"));
-        assert!(patched.contains(HOOK_STATUS));
-        let restored = remove_hook(&patched, "'/opt/skillwick' hook").unwrap();
+        let command = "'/opt/skillwick' hook";
+        let mut document: Value = serde_json::from_str(source).unwrap();
+        document["hooks"]["UserPromptSubmit"]
+            .as_array_mut()
+            .unwrap()
+            .push(hook_group(command));
+        let installed = serde_json::to_string(&document).unwrap();
+        let restored = remove_hook(&installed, command).unwrap();
         assert!(restored.contains("caveman"));
         assert!(!restored.contains(HOOK_STATUS));
+        assert_eq!(remove_hook(&restored, command).unwrap(), restored);
+
+        let modified = format!(
+            r#"{{"hooks":{{"UserPromptSubmit":[{{"hooks":[{{"type":"command","command":"other"}},{{"type":"command","command":"{command}"}}]}}]}}}}"#
+        );
+        assert!(remove_hook(&modified, command)
+            .unwrap_err()
+            .contains("changed after setup"));
     }
 }

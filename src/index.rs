@@ -219,17 +219,10 @@ pub fn has_codex_home_snapshot(db: &Connection, codex_home: &Path) -> rusqlite::
     )
 }
 
-pub fn remove_workspace_native(db: &mut Connection) -> rusqlite::Result<()> {
-    let transaction = db.transaction()?;
-    transaction.execute(
-        "DELETE FROM skills_fts WHERE id IN (SELECT id FROM skills WHERE source_kind='codex' AND scope NOT IN ('global','system','user'))",
-        [],
-    )?;
-    transaction.execute(
-        "DELETE FROM skills WHERE source_kind='codex' AND scope NOT IN ('global','system','user')",
-        [],
-    )?;
-    transaction.commit()
+pub fn has_snapshot_marker(db: &Connection) -> rusqlite::Result<bool> {
+    db.query_row("SELECT EXISTS(SELECT 1 FROM native_snapshots)", [], |row| {
+        row.get(0)
+    })
 }
 
 pub fn has_kind(db: &Connection, kind: &str) -> rusqlite::Result<bool> {
