@@ -115,14 +115,14 @@ was tested only on macOS 26.6.2. Installer and archive checksum smoke tests
 passed. Ruby formula syntax and shell syntax checks passed.
 
 GitHub Actions CI run
-[`34687019561`](https://github.com/danchurko/skillwick/actions/runs/34687019561)
+[`34687019561`](https://github.com/churdaa/skillwick/actions/runs/34687019561)
 passed `make check` on commit `52c581d8b9d73e43cb02e39270d5dd61b2b273d7`.
 The final main-branch run
-[`34687599560`](https://github.com/danchurko/skillwick/actions/runs/34687599560)
+[`34687599560`](https://github.com/churdaa/skillwick/actions/runs/34687599560)
 also passed after the release workflow runner update.
 
 The public
-[`v0.1.0` release](https://github.com/danchurko/skillwick/releases/tag/v0.1.0)
+[`v0.1.0` release](https://github.com/churdaa/skillwick/releases/tag/v0.1.0)
 contains arm64 and x86_64 archives plus separate SHA-256 files. GitHub reports
 archive digests `86a24cd4d6653f752a44f00c5b4ff98081786404f372af539e3f1f3eec591506`
 and `dcc272ae3d486dc6e5d6ec0d18903095ab5f09879f6271e2fd2e25c747e9196b`,

@@ -232,7 +232,7 @@ Prepare a public GitHub release workflow with versioned archives, SHA-256 checks
 Homebrew interface from this repository:
 
 ```sh
-brew tap danchurko/skillwick https://github.com/danchurko/skillwick.git
+brew tap churdaa/skillwick https://github.com/churdaa/skillwick.git
 brew install skillwick
 skillwick init
 ```

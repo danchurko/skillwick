@@ -1,7 +1,7 @@
 # Shared understanding and findings
 
 Status: shared understanding confirmed. GitHub issue
-[#1](https://github.com/danchurko/skillwick/issues/1) is the authoritative
+[#1](https://github.com/churdaa/skillwick/issues/1) is the authoritative
 [implementation specification](discovery-spec.md).
 Updated 13 September 2026 from the user discussion in Codex task
 `01a09a40-abcc-7bd0-9648-0da8b833bfe8`.
