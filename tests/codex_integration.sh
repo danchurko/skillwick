@@ -93,7 +93,7 @@ managed_run read "$managed_id" | grep -q '^name: managed-source$'
 managed_run doctor --strict >/dev/null
 grep -Fxq "@$managed_codex/SKILLWICK.md" "$managed_codex/AGENTS.md"
 grep -Fxq 'skills.include_instructions = false' "$managed_codex/config.toml"
-managed_cache="$managed/cache/skillwick/index-v2.sqlite"
+managed_cache="$managed/cache/skillwick/index-v3.sqlite"
 cp "$managed_cache" "$managed/cache.before-failure"
 printf '%s\n' '#!/bin/sh' 'if [ "$1" = "--version" ]; then echo "codex-cli 0.154.0"; else exit 1; fi' \
   >"$managed/codex-fail"

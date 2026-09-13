@@ -1,7 +1,10 @@
 use crate::{search, sources::Skill};
 use rusqlite::{params, Connection, DatabaseName, OpenFlags, OptionalExtension};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path, time::Duration};
+
+const SCHEMA_VERSION: i64 = 3;
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
     if path != Path::new(":memory:") {
@@ -26,15 +29,46 @@ pub fn open(path: &Path) -> rusqlite::Result<Connection> {
             .map_err(|error| rusqlite::Error::ToSqlConversionFailure(error.into()))?;
     }
     db.busy_timeout(Duration::from_millis(750))?;
-    db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY, identity TEXT NOT NULL UNIQUE, name TEXT NOT NULL, description TEXT NOT NULL, keywords TEXT NOT NULL, degraded INTEGER NOT NULL, path TEXT NOT NULL, canonical TEXT NOT NULL, base TEXT NOT NULL, scope TEXT NOT NULL, source TEXT NOT NULL, source_kind TEXT NOT NULL, enabled INTEGER NOT NULL, plugin_id TEXT, hash TEXT NOT NULL); CREATE INDEX IF NOT EXISTS skills_kind_canonical ON skills(source_kind, canonical); CREATE VIRTUAL TABLE IF NOT EXISTS skills_fts USING fts5(id UNINDEXED, name, description, keywords); CREATE TABLE IF NOT EXISTS native_snapshots (cwd TEXT PRIMARY KEY, version TEXT NOT NULL, executable TEXT NOT NULL, codex_home TEXT NOT NULL, refreshed_at INTEGER NOT NULL);")?;
+    if schema_exists(&db)? {
+        validate_schema(&db)?;
+    } else {
+        create_schema(&db)?;
+    }
     Ok(db)
 }
 
 pub fn open_read_only(path: &Path) -> rusqlite::Result<Connection> {
-    Connection::open_with_flags(
+    let db = Connection::open_with_flags(
         immutable_uri(path),
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_URI,
+    )?;
+    validate_schema(&db)?;
+    Ok(db)
+}
+
+fn schema_exists(db: &Connection) -> rusqlite::Result<bool> {
+    db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='skills')",
+        [],
+        |row| row.get(0),
     )
+}
+
+fn create_schema(db: &Connection) -> rusqlite::Result<()> {
+    db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE skills (id TEXT PRIMARY KEY, identity TEXT NOT NULL UNIQUE, name TEXT NOT NULL, description TEXT NOT NULL, keywords TEXT NOT NULL, degraded INTEGER NOT NULL, path TEXT NOT NULL, canonical TEXT NOT NULL, base TEXT NOT NULL, scope TEXT NOT NULL, source TEXT NOT NULL, source_kind TEXT NOT NULL, enabled INTEGER NOT NULL, model_discoverable INTEGER NOT NULL, policy_diagnostic TEXT, plugin_id TEXT, hash TEXT NOT NULL); CREATE INDEX skills_kind_canonical ON skills(source_kind, canonical); CREATE VIRTUAL TABLE skills_fts USING fts5(id UNINDEXED, name, description, keywords); CREATE TABLE native_snapshots (cwd TEXT PRIMARY KEY, version TEXT NOT NULL, executable TEXT NOT NULL, codex_home TEXT NOT NULL, refreshed_at INTEGER NOT NULL); PRAGMA user_version=3;")
+}
+
+fn validate_schema(db: &Connection) -> rusqlite::Result<()> {
+    let version: i64 = db.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version != SCHEMA_VERSION {
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+    db.prepare("SELECT id,identity,name,description,keywords,degraded,path,canonical,base,scope,source,source_kind,enabled,model_discoverable,policy_diagnostic,plugin_id,hash FROM skills LIMIT 0")?;
+    db.prepare("SELECT id,name,description,keywords FROM skills_fts LIMIT 0")?;
+    db.prepare(
+        "SELECT cwd,version,executable,codex_home,refreshed_at FROM native_snapshots LIMIT 0",
+    )?;
+    Ok(())
 }
 
 fn immutable_uri(path: &Path) -> String {
@@ -98,7 +132,7 @@ pub fn refresh_kind(
             }
             transaction.execute("DELETE FROM skills_fts WHERE id=?1", [&id])?;
         }
-        transaction.execute("INSERT INTO skills (id,identity,name,description,keywords,degraded,path,canonical,base,scope,source,source_kind,enabled,plugin_id,hash) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15) ON CONFLICT(identity) DO UPDATE SET id=excluded.id,name=excluded.name,description=excluded.description,keywords=excluded.keywords,degraded=excluded.degraded,path=excluded.path,canonical=excluded.canonical,base=excluded.base,scope=excluded.scope,source=excluded.source,source_kind=excluded.source_kind,enabled=excluded.enabled,plugin_id=excluded.plugin_id,hash=excluded.hash", params![id,identity,skill.metadata.name,skill.metadata.description,keywords,skill.metadata.degraded as i32,skill.path.to_string_lossy(),skill.canonical.to_string_lossy(),skill.base.to_string_lossy(),skill.scope,skill.source,skill.source_kind,skill.enabled as i32,skill.plugin_id,skill.metadata.hash])?;
+        transaction.execute("INSERT INTO skills (id,identity,name,description,keywords,degraded,path,canonical,base,scope,source,source_kind,enabled,model_discoverable,policy_diagnostic,plugin_id,hash) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17) ON CONFLICT(identity) DO UPDATE SET id=excluded.id,name=excluded.name,description=excluded.description,keywords=excluded.keywords,degraded=excluded.degraded,path=excluded.path,canonical=excluded.canonical,base=excluded.base,scope=excluded.scope,source=excluded.source,source_kind=excluded.source_kind,enabled=excluded.enabled,model_discoverable=excluded.model_discoverable,policy_diagnostic=excluded.policy_diagnostic,plugin_id=excluded.plugin_id,hash=excluded.hash", params![id,identity,skill.metadata.name,skill.metadata.description,keywords,skill.metadata.degraded as i32,skill.path.to_string_lossy(),skill.canonical.to_string_lossy(),skill.base.to_string_lossy(),skill.scope,skill.source,skill.source_kind,skill.enabled as i32,skill.metadata.invocation_policy.model_discoverable() as i32,skill.metadata.policy_diagnostic,skill.plugin_id,skill.metadata.hash])?;
         transaction.execute(
             "INSERT INTO skills_fts (id,name,description,keywords) VALUES (?1,?2,?3,?4)",
             params![
@@ -233,6 +267,54 @@ pub fn has_kind(db: &Connection, kind: &str) -> rusqlite::Result<bool> {
     )
 }
 
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct Counts {
+    pub filesystem: usize,
+    pub native: usize,
+    pub raw: usize,
+    pub duplicates: usize,
+    pub model_discoverable: usize,
+}
+
+pub fn counts(db: &Connection) -> rusqlite::Result<Counts> {
+    let filesystem = count_kind(db, "filesystem")?;
+    let native = count_kind(db, "codex")?;
+    let raw: usize = db.query_row("SELECT count(*) FROM skills", [], |row| row.get(0))?;
+    let unique: usize =
+        db.query_row("SELECT count(DISTINCT canonical) FROM skills", [], |row| {
+            row.get(0)
+        })?;
+    Ok(Counts {
+        filesystem,
+        native,
+        raw,
+        duplicates: raw.saturating_sub(unique),
+        model_discoverable: search::count(db)?,
+    })
+}
+
+fn count_kind(db: &Connection, kind: &str) -> rusqlite::Result<usize> {
+    db.query_row(
+        "SELECT count(*) FROM skills WHERE source_kind=?1",
+        [kind],
+        |row| row.get(0),
+    )
+}
+
+pub fn policy_diagnostics(db: &Connection) -> rusqlite::Result<Vec<String>> {
+    let mut statement = db.prepare(
+        "SELECT path,policy_diagnostic FROM skills WHERE policy_diagnostic IS NOT NULL ORDER BY path",
+    )?;
+    let rows = statement
+        .query_map([], |row| {
+            let path: String = row.get(0)?;
+            let diagnostic: String = row.get(1)?;
+            Ok(format!("{path}: {diagnostic}"))
+        })?
+        .collect();
+    rows
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,6 +336,8 @@ mod tests {
                 keywords: String::new(),
                 degraded: false,
                 hash: description.into(),
+                invocation_policy: crate::metadata::InvocationPolicy::Discoverable,
+                policy_diagnostic: None,
             },
         }
     }
@@ -303,5 +387,34 @@ mod tests {
         native.source_kind = "codex".into();
         refresh_kind(&mut db, "codex", &[native], true).unwrap();
         assert!(has_kind(&db, "codex").unwrap());
+    }
+
+    #[test]
+    fn reports_raw_duplicate_and_model_discoverable_counts() {
+        let mut db = open(Path::new(":memory:")).unwrap();
+        let filesystem = skill("/skills/demo/SKILL.md", "filesystem");
+        let mut native = filesystem.clone();
+        native.source_kind = "codex".into();
+        native.source = "codex:native".into();
+        refresh_kind(&mut db, "filesystem", &[filesystem], true).unwrap();
+        refresh_kind(&mut db, "codex", &[native], true).unwrap();
+
+        let counts = counts(&db).unwrap();
+        assert_eq!(counts.filesystem, 1);
+        assert_eq!(counts.native, 1);
+        assert_eq!(counts.raw, 2);
+        assert_eq!(counts.duplicates, 1);
+        assert_eq!(counts.model_discoverable, 1);
+    }
+
+    #[test]
+    fn rejects_an_old_schema_instead_of_migrating_it() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("index.sqlite");
+        let old = Connection::open(&path).unwrap();
+        old.execute_batch("CREATE TABLE skills (id TEXT PRIMARY KEY);")
+            .unwrap();
+        drop(old);
+        assert!(open(&path).is_err());
     }
 }

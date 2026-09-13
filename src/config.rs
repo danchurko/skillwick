@@ -51,7 +51,7 @@ pub fn cache_path() -> PathBuf {
     env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home().join(".cache"))
-        .join("skillwick/index-v2.sqlite")
+        .join("skillwick/index-v3.sqlite")
 }
 pub fn state_dir() -> PathBuf {
     env::var_os("XDG_STATE_HOME")

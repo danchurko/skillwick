@@ -566,6 +566,8 @@ mod tests {
                 keywords: String::new(),
                 degraded: false,
                 hash: "hash".into(),
+                invocation_policy: crate::metadata::InvocationPolicy::Discoverable,
+                policy_diagnostic: None,
             },
         }
     }

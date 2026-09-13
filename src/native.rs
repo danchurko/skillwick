@@ -201,6 +201,9 @@ fn parse_inventory(response: Response) -> Result<Vec<Skill>, String> {
                 .or(native.short_description)
                 .filter(|value| !value.trim().is_empty())
                 .unwrap_or(native.description);
+            if let Some(diagnostic) = &parsed.policy_diagnostic {
+                eprintln!("warning: {}: {diagnostic}", native.path.display());
+            }
             output.push(Skill {
                 base: native.path.parent().unwrap_or(Path::new(".")).to_path_buf(),
                 path: native.path,

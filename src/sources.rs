@@ -158,17 +158,22 @@ pub fn scan(cwd: &Path, extra: &[PathBuf]) -> ScanReport {
                     continue;
                 }
                 match metadata::parse(&canonical) {
-                    Ok(metadata) => skills.push(Skill {
-                        base: path.parent().unwrap_or(&root).to_path_buf(),
-                        path,
-                        canonical,
-                        scope: scope.clone(),
-                        source: root.display().to_string(),
-                        source_kind: "filesystem".into(),
-                        enabled: true,
-                        plugin_id: None,
-                        metadata,
-                    }),
+                    Ok(metadata) => {
+                        if let Some(diagnostic) = &metadata.policy_diagnostic {
+                            diagnostics.push(format!("{}: {diagnostic}", path.display()));
+                        }
+                        skills.push(Skill {
+                            base: path.parent().unwrap_or(&root).to_path_buf(),
+                            path,
+                            canonical,
+                            scope: scope.clone(),
+                            source: root.display().to_string(),
+                            source_kind: "filesystem".into(),
+                            enabled: true,
+                            plugin_id: None,
+                            metadata,
+                        });
+                    }
                     Err(error) => {
                         diagnostics.push(format!("{}: {error}", path.display()));
                         complete = false;
@@ -295,5 +300,29 @@ mod tests {
             .diagnostics
             .iter()
             .any(|item| item == &format!("configured root does not exist: {}", missing.display())));
+    }
+
+    #[test]
+    fn retains_policy_denials_as_raw_records_with_diagnostics() {
+        let temp = tempfile::tempdir().unwrap();
+        let skill = temp.path().join(".agents/skills/manual");
+        fs::create_dir_all(&skill).unwrap();
+        fs::write(
+            skill.join("SKILL.md"),
+            "---\nname: manual\ndescription: manual workflow\ndisable-model-invocation: maybe\n---\n",
+        )
+        .unwrap();
+
+        let report = scan(temp.path(), &[]);
+        let manual = report
+            .skills
+            .iter()
+            .find(|skill| skill.metadata.name == "manual")
+            .expect("manual skill missing");
+        assert!(!manual.metadata.invocation_policy.model_discoverable());
+        assert!(report
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.contains("invocation policy")));
     }
 }

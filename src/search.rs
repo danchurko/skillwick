@@ -68,7 +68,7 @@ pub fn query(db: &Connection, query: &str, limit: usize) -> rusqlite::Result<Vec
     if query_tokens.is_empty() {
         return Ok(Vec::new());
     }
-    let mut statement = db.prepare("SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash,bm25(skills_fts,8.0,3.0,1.0),lower(s.name)||' '||lower(s.description)||' '||lower(s.keywords) FROM skills_fts JOIN skills s ON s.id=skills_fts.id WHERE skills_fts MATCH ?1 AND s.enabled=1 AND NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical))")?;
+    let mut statement = db.prepare("SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash,bm25(skills_fts,8.0,3.0,1.0),lower(s.name)||' '||lower(s.description)||' '||lower(s.keywords) FROM skills_fts JOIN skills s ON s.id=skills_fts.id WHERE skills_fts MATCH ?1 AND s.enabled=1 AND s.model_discoverable=1 AND NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical))")?;
     let mapped = statement.query_map([expression(&query_tokens)], |row| {
         let result = row_from(row)?;
         let score = row.get(13)?;
@@ -122,9 +122,9 @@ pub fn query(db: &Connection, query: &str, limit: usize) -> rusqlite::Result<Vec
 
 pub fn all(db: &Connection, limit: Option<usize>) -> rusqlite::Result<Vec<ResultRow>> {
     let sql = if limit.is_some() {
-        "SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash FROM skills s WHERE NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical)) ORDER BY lower(s.name),s.id LIMIT ?1"
+        "SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash FROM skills s WHERE s.enabled=1 AND s.model_discoverable=1 AND NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical)) ORDER BY lower(s.name),s.id LIMIT ?1"
     } else {
-        "SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash FROM skills s WHERE NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical)) ORDER BY lower(s.name),s.id"
+        "SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash FROM skills s WHERE s.enabled=1 AND s.model_discoverable=1 AND NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical)) ORDER BY lower(s.name),s.id"
     };
     let mut statement = db.prepare(sql)?;
     if let Some(limit) = limit {
@@ -136,14 +136,14 @@ pub fn all(db: &Connection, limit: Option<usize>) -> rusqlite::Result<Vec<Result
 
 pub fn count(db: &Connection) -> rusqlite::Result<usize> {
     db.query_row(
-        "SELECT count(*) FROM skills s WHERE NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical))",
+        "SELECT count(*) FROM skills s WHERE s.enabled=1 AND s.model_discoverable=1 AND NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical))",
         [],
         |row| row.get(0),
     )
 }
 
 pub fn find(db: &Connection, id: &str) -> rusqlite::Result<Option<ResultRow>> {
-    let mut statement = db.prepare("SELECT id,name,description,scope,path,canonical,base,source,source_kind,enabled,plugin_id,degraded,hash FROM skills WHERE id=?1")?;
+    let mut statement = db.prepare("SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash FROM skills s WHERE s.id=?1 AND s.enabled=1 AND s.model_discoverable=1 AND NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.canonical=s.canonical))")?;
     let mut rows = statement.query([id])?;
     rows.next()?.map(row_from).transpose()
 }
@@ -206,6 +206,8 @@ mod tests {
                 keywords: String::new(),
                 degraded: false,
                 hash: "hash".into(),
+                invocation_policy: crate::metadata::InvocationPolicy::Discoverable,
+                policy_diagnostic: None,
             },
         };
         index::refresh_kind(
@@ -247,10 +249,14 @@ mod tests {
                 keywords: "manual".into(),
                 degraded: false,
                 hash: "hash".into(),
+                invocation_policy: crate::metadata::InvocationPolicy::Discoverable,
+                policy_diagnostic: None,
             },
         };
         index::refresh_kind(&mut db, "filesystem", std::slice::from_ref(&skill), true).unwrap();
-        let id = all(&db, None).unwrap()[0].id.clone();
+        let id: String = db
+            .query_row("SELECT id FROM skills", [], |row| row.get(0))
+            .unwrap();
         assert!(find(&db, &id).unwrap().is_none());
         assert!(all(&db, None).unwrap().is_empty());
         assert!(query(&db, "manual", 5).unwrap().is_empty());
