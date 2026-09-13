@@ -96,7 +96,6 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
             return Ok(settings);
         }
         confirm(request.yes)?;
-        config::save(config_path, &settings)?;
         return Ok(settings);
     }
     let codex_home = config::codex_home(&settings);

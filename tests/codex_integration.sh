@@ -216,4 +216,111 @@ test ! -e "$failed/config/skillwick/config.toml"
 test ! -e "$failed/codex/AGENTS.md"
 test ! -e "$failed/codex/config.toml"
 test ! -e "$failed/codex/SKILLWICK.md"
+
+# Native snapshots are partitioned by normalized workspace and Codex home.
+partitions="$temporary/partitions"
+partition_home="$partitions/home"
+partition_codex="$partitions/codex"
+partition_work_a="$partitions/work-a"
+partition_work_b="$partitions/work-b"
+partition_work_c="$partitions/work-c"
+partition_work_d="$partitions/work-d"
+mkdir -p "$partition_home" "$partition_codex" "$partition_work_a" "$partition_work_b" \
+  "$partition_work_c" "$partition_work_d" "$partitions/config" "$partitions/cache" \
+  "$partitions/state"
+for native_name in native-a native-b native-c native-d; do
+  mkdir -p "$partition_codex/skills/$native_name"
+  printf '%s\n' '---' "name: $native_name" "description: $native_name partition skill." '---' \
+    >"$partition_codex/skills/$native_name/SKILL.md"
+done
+partition_codex_bin="$partitions/codex-bin"
+printf '%s\n' \
+  '#!/bin/sh' \
+  'if [ "$1" = "--version" ]; then echo "codex-cli 0.154.0"; exit 0; fi' \
+  'if [ "$1" != "app-server" ]; then exit 1; fi' \
+  'IFS= read -r initialize' \
+  'IFS= read -r initialized' \
+  'IFS= read -r request' \
+  'workspace=$(printf "%s\n" "$request" | jq -r ".params.cwds[0]")' \
+  'case "$workspace" in *work-a) native_name=native-a ;; *work-b) native_name=native-b ;; *work-c) native_name=native-c ;; *work-d) native_name=native-d ;; *) exit 1 ;; esac' \
+  'printf "%s\n" "$workspace" >> "$CODEX_HOME/inventory.log"' \
+  'sleep 0.1' \
+  'skill_path="$CODEX_HOME/skills/$native_name/SKILL.md"' \
+  'jq -cn --arg cwd "$workspace" --arg name "$native_name" --arg path "$skill_path" "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"data\":[{\"cwd\":\$cwd,\"skills\":[{\"name\":\$name,\"description\":\$name,\"interface\":null,\"path\":\$path,\"scope\":\"user\",\"enabled\":true,\"pluginId\":null,\"shortDescription\":null}],\"errors\":[]}]}}"' \
+  >"$partition_codex_bin"
+chmod +x "$partition_codex_bin"
+partition_run() {
+  partition_workspace=$1
+  shift
+  env HOME="$partition_home" CODEX_HOME="$partition_codex" \
+    XDG_CONFIG_HOME="$partitions/config" XDG_CACHE_HOME="$partitions/cache" \
+    XDG_STATE_HOME="$partitions/state" "$binary" --cwd "$partition_workspace" "$@"
+}
+partition_run "$partition_work_a" init --yes --agent none --inventory codex \
+  --codex-home "$partition_codex" --codex-bin "$partition_codex_bin" >/dev/null
+partition_run "$partition_work_a" list | grep -q '^native-a@'
+partition_run "$partition_work_a/." --json doctor >"$partitions/doctor-relative"
+partition_total="$(partition_run "$partition_work_a" --json list --all | jq -r '.total')"
+test "$(jq -r '.counts.model_discoverable' "$partitions/doctor-relative")" -eq "$partition_total"
+test "$(jq -r '.native_snapshot_current' "$partitions/doctor-relative")" = true
+ln -s "$partition_work_a" "$partitions/work-link"
+partition_run "$partitions/work-link" --json doctor >"$partitions/doctor-symlink"
+test "$(jq -r '.native_snapshot_current' "$partitions/doctor-symlink")" = true
+calls_before="$(wc -l <"$partition_codex/inventory.log" | tr -d ' ')"
+partition_run "$partition_work_b" list >"$partitions/list-b" 2>"$partitions/list-b.err"
+grep -q '^native-b@' "$partitions/list-b"
+! grep -q '^native-a@' "$partitions/list-b"
+grep -Fxq 'notice: native inventory cache misses this context; refreshing' "$partitions/list-b.err"
+calls_after_b="$(wc -l <"$partition_codex/inventory.log" | tr -d ' ')"
+test "$calls_after_b" -eq $((calls_before + 1))
+partition_run "$partition_work_a" list >"$partitions/list-a" 2>"$partitions/list-a.err"
+grep -q '^native-a@' "$partitions/list-a"
+! grep -q '^native-b@' "$partitions/list-a"
+calls_after_a="$(wc -l <"$partition_codex/inventory.log" | tr -d ' ')"
+test "$calls_after_a" -eq "$calls_after_b"
+
+# A second Codex home gets its own partition without hiding the first home.
+partition_alt_codex="$partitions/codex-alt"
+partition_alt_config="$partitions/config-alt"
+mkdir -p "$partition_alt_codex/skills/native-a" "$partition_alt_config"
+cp "$partition_codex/skills/native-a/SKILL.md" "$partition_alt_codex/skills/native-a/SKILL.md"
+partition_run_alt() {
+  partition_workspace=$1
+  shift
+  env HOME="$partition_home" CODEX_HOME="$partition_alt_codex" \
+    XDG_CONFIG_HOME="$partition_alt_config" XDG_CACHE_HOME="$partitions/cache" \
+    XDG_STATE_HOME="$partitions/state" "$binary" --cwd "$partition_workspace" "$@"
+}
+partition_run_alt "$partition_work_a" init --yes --agent none --inventory codex \
+  --codex-home "$partition_alt_codex" --codex-bin "$partition_codex_bin" >/dev/null
+partition_run_alt "$partition_work_a" list | grep -q '^native-a@'
+partition_run "$partition_work_b" list | grep -q '^native-b@'
+
+# A failed refresh leaves the last published cache byte-for-byte intact.
+partition_fail_bin="$partitions/codex-fail"
+printf '%s\n' '#!/bin/sh' \
+  'if [ "$1" = "--version" ]; then echo "codex-cli 0.154.0"; exit 0; fi' \
+  'exit 1' >"$partition_fail_bin"
+chmod +x "$partition_fail_bin"
+cp "$partitions/cache/skillwick/index-v3.sqlite" "$partitions/cache.before-failure"
+mkdir -p "$partitions/work-fail"
+if partition_run "$partitions/work-fail" init --yes --agent none --inventory codex \
+  --codex-bin "$partition_fail_bin" >/dev/null 2>&1; then
+  exit 1
+else
+  test "$?" -eq 3
+fi
+cmp -s "$partitions/cache.before-failure" "$partitions/cache/skillwick/index-v3.sqlite"
+partition_run "$partition_work_a" list | grep -q '^native-a@'
+partition_run "$partition_work_b" list | grep -q '^native-b@'
+
+# Concurrent refreshes serialize publication and retain both new partitions.
+partition_run "$partition_work_c" refresh >"$partitions/refresh-c" 2>&1 & refresh_c=$!
+partition_run "$partition_work_d" refresh >"$partitions/refresh-d" 2>&1 & refresh_d=$!
+wait "$refresh_c"
+wait "$refresh_d"
+partition_run "$partition_work_c" list | grep -q '^native-c@'
+! partition_run "$partition_work_c" list | grep -q '^native-d@'
+partition_run "$partition_work_d" list | grep -q '^native-d@'
+! partition_run "$partition_work_d" list | grep -q '^native-c@'
 echo "Codex integration passed"

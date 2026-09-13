@@ -85,9 +85,10 @@ pub fn supports_native_catalog(version: &str) -> bool {
 }
 
 pub fn inventory(codex: &Codex, codex_home: &Path, cwd: &Path) -> Result<Vec<Skill>, String> {
+    let context = config::normalize_context(cwd, codex_home)?;
     let mut child = Command::new(&codex.path)
         .args(["app-server", "--stdio"])
-        .env("CODEX_HOME", codex_home)
+        .env("CODEX_HOME", &context.codex_home)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -102,6 +103,7 @@ pub fn inventory(codex: &Codex, codex_home: &Path, cwd: &Path) -> Result<Vec<Ski
         .take()
         .ok_or("Codex inventory stderr unavailable")?;
     let (sender, receiver) = mpsc::channel();
+    let parse_context = context.clone();
     thread::spawn(move || {
         let mut reader = BufReader::new(stdout);
         let mut line = String::new();
@@ -118,7 +120,7 @@ pub fn inventory(codex: &Codex, codex_home: &Path, cwd: &Path) -> Result<Vec<Ski
                 }
                 Ok(_) => match serde_json::from_str::<Response>(&line) {
                     Ok(response) if response.id == Some(2) => {
-                        let _ = sender.send(parse_inventory(response));
+                        let _ = sender.send(parse_inventory(response, &parse_context));
                         break;
                     }
                     Ok(_) => {}
@@ -142,7 +144,7 @@ pub fn inventory(codex: &Codex, codex_home: &Path, cwd: &Path) -> Result<Vec<Ski
     let requests = [
         json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"clientInfo":{"name":"skillwick","title":"Skillwick","version":env!("CARGO_PKG_VERSION")},"capabilities":{}}}),
         json!({"jsonrpc":"2.0","method":"initialized","params":{}}),
-        json!({"jsonrpc":"2.0","id":2,"method":"skills/list","params":{"cwds":[cwd],"forceReload":true}}),
+        json!({"jsonrpc":"2.0","id":2,"method":"skills/list","params":{"cwds":[context.workspace],"forceReload":true}}),
     ];
     let write_result = (|| -> Result<(), String> {
         let stdin = child
@@ -172,7 +174,7 @@ pub fn inventory(codex: &Codex, codex_home: &Path, cwd: &Path) -> Result<Vec<Ski
     })?
 }
 
-fn parse_inventory(response: Response) -> Result<Vec<Skill>, String> {
+fn parse_inventory(response: Response, context: &config::Context) -> Result<Vec<Skill>, String> {
     if let Some(error) = response.error {
         return Err(format!("Codex inventory failed: {}", error.message));
     }
@@ -208,6 +210,8 @@ fn parse_inventory(response: Response) -> Result<Vec<Skill>, String> {
                 base: native.path.parent().unwrap_or(Path::new(".")).to_path_buf(),
                 path: native.path,
                 canonical,
+                workspace: Some(context.workspace.clone()),
+                codex_home: Some(context.codex_home.clone()),
                 scope: native.scope,
                 source: format!("codex:{}", native.plugin_id.as_deref().unwrap_or("native")),
                 source_kind: "codex".into(),

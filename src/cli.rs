@@ -195,8 +195,11 @@ pub fn run() -> Result<(), Failure> {
                 },
             )?;
             if !dry_run && initialized.agent == config::Agent::None {
+                let _lock =
+                    index::acquire_cache_lock(&config::cache_path()).map_err(Failure::from)?;
                 let mut db = query_database()?;
                 refresh(&mut db, &initialized, &cwd, true)?;
+                config::save(&config_path, &initialized)?;
             }
         }
         Some(Command::Uninstall { purge_cache }) => integration::uninstall(purge_cache)?,
@@ -220,32 +223,38 @@ pub fn run() -> Result<(), Failure> {
         Some(Command::Instructions) => write_text(integration::instructions())?,
         Some(Command::Refresh { full }) => {
             let settings = config::load(&config_path)?;
+            let _lock = index::acquire_cache_lock(&config::cache_path()).map_err(Failure::from)?;
             let mut db = query_database()?;
             refresh(&mut db, &settings, &cwd, full)?;
         }
         command => {
             let settings = config::load(&config_path)?;
             let mut db = query_database()?;
-            prepare_index(&mut db, &settings, &cwd, true)?;
-            dispatch(command, args.json, &mut db)?;
+            let context = prepare_index(&mut db, &settings, &cwd, true)?;
+            dispatch(command, args.json, &mut db, context.as_ref())?;
         }
     }
     Ok(())
 }
 
-fn dispatch(command: Option<Command>, json: bool, db: &mut Connection) -> Result<(), Failure> {
+fn dispatch(
+    command: Option<Command>,
+    json: bool,
+    db: &mut Connection,
+    context: Option<&config::Context>,
+) -> Result<(), Failure> {
     match command {
         None => unreachable!("missing command handled before index setup"),
         Some(Command::Search { query, limit }) => {
             emit(
-                &search::query(db, &query.join(" "), search_limit(limit)?)?,
+                &search::query(db, context, &query.join(" "), search_limit(limit)?)?,
                 json,
             )?;
         }
         Some(Command::List { limit, all }) => {
             let limit = list_limit(limit)?;
-            let rows = search::all(db, limit)?;
-            let total = search::count(db)?;
+            let rows = search::all(db, context, limit)?;
+            let total = search::count(db, context)?;
             if json {
                 write_output(output::list_json(&rows, total))?;
             } else {
@@ -253,7 +262,7 @@ fn dispatch(command: Option<Command>, json: bool, db: &mut Connection) -> Result
             }
         }
         Some(Command::Inspect { id, files }) => {
-            let row = find(db, &id)?;
+            let row = find(db, context, &id)?;
             if files {
                 inspect_files(&row, json)?;
             } else if json {
@@ -262,7 +271,7 @@ fn dispatch(command: Option<Command>, json: bool, db: &mut Connection) -> Result
                 write_text(&inspect_text(&row))?;
             }
         }
-        Some(Command::Read { id }) => read(db, &id)?,
+        Some(Command::Read { id }) => read(db, context, &id)?,
         _ => unreachable!(),
     }
     Ok(())
@@ -273,40 +282,47 @@ fn prepare_index(
     settings: &config::Config,
     cwd: &Path,
     filesystem: bool,
-) -> Result<(), Failure> {
+) -> Result<Option<config::Context>, Failure> {
+    let context = if settings.inventory == config::Inventory::Codex {
+        Some(config::normalize_context(cwd, &config::codex_home(settings)).map_err(Failure::from)?)
+    } else {
+        None
+    };
     if filesystem {
-        let scan = sources::scan(cwd, &settings.roots);
-        index::refresh_kind(db, "filesystem", &scan.skills, scan.complete)?;
-        for diagnostic in scan.diagnostics {
-            eprintln!("warning: {diagnostic}");
+        refresh_filesystem(
+            db,
+            settings,
+            context
+                .as_ref()
+                .map_or(cwd, |context| context.workspace.as_path()),
+        )?;
+    }
+    if let Some(context) = &context {
+        if !index::snapshot_compatible(
+            db,
+            &context.workspace,
+            &context.codex_home,
+            settings.codex_bin.as_deref(),
+        )? {
+            eprintln!("notice: native inventory cache misses this context; refreshing");
+            *db = auto_refresh(settings, cwd, context)?;
+            if filesystem {
+                refresh_filesystem(db, settings, &context.workspace)?;
+            }
         }
     }
-    if settings.inventory == config::Inventory::Codex {
-        if !index::has_kind(db, "codex")? {
-            return Err(Failure(
-                "native inventory cache is empty; run `skillwick refresh`".into(),
-                3,
-            ));
-        }
-        let codex_home = config::codex_home(settings);
-        if !index::has_snapshot_marker(db)? {
-            return Err(Failure(
-                "native inventory snapshot is missing; run `skillwick refresh`".into(),
-                3,
-            ));
-        }
-        if !index::has_codex_home_snapshot(db, &codex_home)? {
-            return Err(Failure(
-                "native inventory belongs to another Codex home; run `skillwick refresh`".into(),
-                3,
-            ));
-        }
-        if !index::has_workspace_snapshot(db, cwd, &codex_home)? {
-            return Err(Failure(
-                "native inventory does not cover this workspace; run `skillwick refresh`".into(),
-                3,
-            ));
-        }
+    Ok(context)
+}
+
+fn refresh_filesystem(
+    db: &mut Connection,
+    settings: &config::Config,
+    cwd: &Path,
+) -> Result<(), Failure> {
+    let scan = sources::scan(cwd, &settings.roots);
+    index::refresh_kind(db, "filesystem", &scan.skills, scan.complete)?;
+    for diagnostic in scan.diagnostics {
+        eprintln!("warning: {diagnostic}");
     }
     Ok(())
 }
@@ -322,6 +338,24 @@ fn query_database() -> Result<Connection, Failure> {
             index::open(Path::new(":memory:")).map_err(Into::into)
         }
     }
+}
+
+fn auto_refresh(
+    settings: &config::Config,
+    cwd: &Path,
+    context: &config::Context,
+) -> Result<Connection, Failure> {
+    let _lock = index::acquire_cache_lock(&config::cache_path()).map_err(Failure::from)?;
+    let mut db = query_database()?;
+    if !index::snapshot_compatible(
+        &db,
+        &context.workspace,
+        &context.codex_home,
+        settings.codex_bin.as_deref(),
+    )? {
+        refresh(&mut db, settings, cwd, true)?;
+    }
+    Ok(db)
 }
 
 fn read_only_copy(path: &Path) -> rusqlite::Result<Connection> {
@@ -354,8 +388,12 @@ fn refresh(
     })
 }
 
-fn find(db: &Connection, id: &str) -> Result<search::ResultRow, Failure> {
-    search::find(db, id)?.ok_or_else(|| Failure("skill not found".into(), 3))
+fn find(
+    db: &Connection,
+    context: Option<&config::Context>,
+    id: &str,
+) -> Result<search::ResultRow, Failure> {
+    search::find(db, context, id)?.ok_or_else(|| Failure("skill not found".into(), 3))
 }
 
 struct ValidatedSource {
@@ -493,8 +531,8 @@ fn inspect_files(row: &search::ResultRow, json: bool) -> Result<(), Failure> {
     }
 }
 
-fn read(db: &Connection, id: &str) -> Result<(), Failure> {
-    let row = find(db, id)?;
+fn read(db: &Connection, context: Option<&config::Context>, id: &str) -> Result<(), Failure> {
+    let row = find(db, context, id)?;
     let source = validate_source(&row)?;
     let body = String::from_utf8(source.bytes)
         .map_err(|_| Failure("instruction file is not UTF-8".into(), 3))?;
@@ -555,6 +593,8 @@ mod tests {
             path: PathBuf::from("/skills/native/SKILL.md"),
             canonical: PathBuf::from("/skills/native/SKILL.md"),
             base: PathBuf::from("/skills/native"),
+            workspace: None,
+            codex_home: None,
             scope: "global".into(),
             source: "codex:native".into(),
             source_kind: "codex".into(),
@@ -572,9 +612,10 @@ mod tests {
         }
     }
 
-    fn codex_settings() -> config::Config {
+    fn codex_settings_at(home: &Path) -> config::Config {
         config::Config {
             inventory: config::Inventory::Codex,
+            codex_home: Some(home.to_path_buf()),
             codex_bin: Some(PathBuf::from("/does/not/exist")),
             ..config::Config::default()
         }
@@ -583,124 +624,146 @@ mod tests {
     #[test]
     fn cached_queries_do_not_detect_codex() {
         let temp = tempfile::tempdir().unwrap();
+        let codex_home = tempfile::tempdir().unwrap();
+        let settings = config::Config {
+            codex_home: Some(codex_home.path().to_path_buf()),
+            inventory: config::Inventory::Codex,
+            ..config::Config::default()
+        };
+        let context = config::normalize_context(temp.path(), codex_home.path()).unwrap();
         let mut db = index::open(Path::new(":memory:")).unwrap();
         index::refresh_kind(&mut db, "codex", &[codex_skill()], true).unwrap();
         index::record_snapshot(
             &db,
-            temp.path(),
-            "test",
+            &context.workspace,
+            "0.154.0",
             Path::new("/does/not/exist"),
-            &config::codex_home(&codex_settings()),
+            &context.codex_home,
         )
         .unwrap();
 
-        assert!(prepare_index(&mut db, &codex_settings(), temp.path(), false).is_ok());
+        assert!(prepare_index(&mut db, &settings, temp.path(), false).is_ok());
     }
 
     #[test]
     fn cached_queries_require_native_workspace_coverage() {
         let workspace_a = tempfile::tempdir().unwrap();
         let workspace_b = tempfile::tempdir().unwrap();
+        let codex_home = tempfile::tempdir().unwrap();
+        let settings = codex_settings_at(codex_home.path());
+        let context_a = config::normalize_context(workspace_a.path(), codex_home.path()).unwrap();
         let mut skill = codex_skill();
         skill.scope = "project".into();
         let mut db = index::open(Path::new(":memory:")).unwrap();
         index::refresh_kind(&mut db, "codex", &[skill], true).unwrap();
         index::record_snapshot(
             &db,
-            workspace_a.path(),
-            "test",
+            &context_a.workspace,
+            "0.154.0",
             Path::new("/does/not/exist"),
-            &config::codex_home(&codex_settings()),
+            &context_a.codex_home,
         )
         .unwrap();
 
-        let error = prepare_index(&mut db, &codex_settings(), workspace_b.path(), false)
+        let error = prepare_index(&mut db, &settings, workspace_b.path(), false)
             .expect_err("uncovered workspace unexpectedly passed");
-        assert_eq!(error.code(), 3);
-        assert!(error.to_string().contains("does not cover this workspace"));
+        assert_eq!(error.code(), 1);
     }
 
     #[test]
     fn latest_workspace_marker_rejects_older_workspace_queries() {
         let workspace_a = tempfile::tempdir().unwrap();
         let workspace_b = tempfile::tempdir().unwrap();
-        let settings = codex_settings();
-        let codex_home = config::codex_home(&settings);
+        let codex_home = tempfile::tempdir().unwrap();
+        let settings = config::Config {
+            codex_home: Some(codex_home.path().to_path_buf()),
+            inventory: config::Inventory::Codex,
+            ..config::Config::default()
+        };
+        let context_a = config::normalize_context(workspace_a.path(), codex_home.path()).unwrap();
+        let context_b = config::normalize_context(workspace_b.path(), codex_home.path()).unwrap();
         let mut skill = codex_skill();
         skill.scope = "project".into();
         let mut db = index::open(Path::new(":memory:")).unwrap();
         index::refresh_kind(&mut db, "codex", &[skill], true).unwrap();
         index::record_snapshot(
             &db,
-            workspace_a.path(),
-            "test",
+            &context_a.workspace,
+            "0.154.0",
             Path::new("/does/not/exist"),
-            &codex_home,
+            &context_a.codex_home,
         )
         .unwrap();
         index::record_snapshot(
             &db,
-            workspace_b.path(),
-            "test",
+            &context_b.workspace,
+            "0.154.0",
             Path::new("/does/not/exist"),
-            &codex_home,
+            &context_b.codex_home,
         )
         .unwrap();
 
-        let error = prepare_index(&mut db, &settings, workspace_a.path(), false)
-            .expect_err("stale workspace marker unexpectedly passed");
-        assert_eq!(error.code(), 3);
-        assert!(error.to_string().contains("does not cover this workspace"));
+        assert!(prepare_index(&mut db, &settings, workspace_a.path(), false).is_ok());
     }
 
     #[test]
     fn another_codex_home_requires_refresh() {
         let workspace = tempfile::tempdir().unwrap();
+        let codex_home_a = tempfile::tempdir().unwrap();
+        let codex_home_b = tempfile::tempdir().unwrap();
         let mut db = index::open(Path::new(":memory:")).unwrap();
         index::refresh_kind(&mut db, "codex", &[codex_skill()], true).unwrap();
         index::record_snapshot(
             &db,
             workspace.path(),
-            "test",
+            "0.154.0",
             Path::new("/does/not/exist"),
-            Path::new("/codex-home-a"),
+            codex_home_a.path(),
         )
         .unwrap();
-        let settings = config::Config {
-            inventory: config::Inventory::Codex,
-            codex_home: Some(PathBuf::from("/codex-home-b")),
-            ..config::Config::default()
-        };
+        let settings = codex_settings_at(codex_home_b.path());
 
         let error = prepare_index(&mut db, &settings, workspace.path(), false).unwrap_err();
-        assert_eq!(error.code(), 3);
-        assert!(error.to_string().contains("another Codex home"));
+        assert_eq!(error.code(), 1);
     }
 
     #[test]
     fn empty_native_cache_requires_explicit_refresh() {
         let temp = tempfile::tempdir().unwrap();
+        let codex_home = tempfile::tempdir().unwrap();
+        let settings = codex_settings_at(codex_home.path());
         let mut db = index::open(Path::new(":memory:")).unwrap();
 
-        let error = match prepare_index(&mut db, &codex_settings(), temp.path(), false) {
-            Ok(()) => panic!("empty native cache unexpectedly passed"),
+        let error = match prepare_index(&mut db, &settings, temp.path(), false) {
+            Ok(_) => panic!("empty native cache unexpectedly passed"),
             Err(error) => error,
         };
-        assert_eq!(error.code(), 3);
-        assert!(error.to_string().contains("run `skillwick refresh`"));
+        assert_eq!(error.code(), 1);
     }
 
     #[test]
     fn read_only_copy_preserves_native_inventory() {
         let temp = tempfile::tempdir().unwrap();
+        let codex_home = tempfile::tempdir().unwrap();
         let path = temp.path().join("cache%?#.sqlite3");
         let mut durable = index::open(Path::new(":memory:")).unwrap();
-        index::refresh_kind(&mut durable, "codex", &[codex_skill()], true).unwrap();
+        index::refresh_kind_for_context(
+            &mut durable,
+            "codex",
+            Some((temp.path(), codex_home.path())),
+            &[codex_skill()],
+            true,
+        )
+        .unwrap();
         index::publish(&durable, &path).unwrap();
 
         let copied = read_only_copy(&path).unwrap();
         assert!(index::has_kind(&copied, "codex").unwrap());
-        assert_eq!(search::count(&copied).unwrap(), 1);
+        let context = config::Context {
+            workspace: temp.path().to_path_buf(),
+            codex_home: codex_home.path().to_path_buf(),
+        };
+        assert_eq!(search::count(&copied, Some(&context)).unwrap(), 1);
     }
 
     #[test]
@@ -715,10 +778,21 @@ mod tests {
         skill.base = temp.path().to_path_buf();
         skill.metadata.hash = format!("{:x}", Sha256::digest(body));
         let mut db = index::open(Path::new(":memory:")).unwrap();
-        index::refresh_kind(&mut db, "codex", &[skill], true).unwrap();
-        let id = search::all(&db, None).unwrap().remove(0).id;
+        index::refresh_kind_for_context(
+            &mut db,
+            "codex",
+            Some((temp.path(), temp.path())),
+            &[skill],
+            true,
+        )
+        .unwrap();
+        let context = config::Context {
+            workspace: temp.path().to_path_buf(),
+            codex_home: temp.path().to_path_buf(),
+        };
+        let id = search::all(&db, Some(&context), None).unwrap().remove(0).id;
 
-        assert!(read(&db, &id).is_ok());
+        assert!(read(&db, Some(&context), &id).is_ok());
     }
 
     #[test]

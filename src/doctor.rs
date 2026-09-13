@@ -22,7 +22,18 @@ pub struct Report {
 
 pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
     let settings = config::load(config_path)?;
-    let scan = sources::scan(cwd, &settings.roots);
+    let context = if settings.inventory == config::Inventory::Codex {
+        Some(config::normalize_context(
+            cwd,
+            &config::codex_home(&settings),
+        )?)
+    } else {
+        None
+    };
+    let workspace = context
+        .as_ref()
+        .map_or(cwd, |context| context.workspace.as_path());
+    let scan = sources::scan(workspace, &settings.roots);
     let mut diagnostics = scan.diagnostics;
     let cache = config::cache_path();
     let cache_db = crate::index::open_read_only(&cache).ok();
@@ -31,7 +42,8 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
         diagnostics.push("readable cache unavailable; run skillwick refresh".into());
     }
     if let Some(db) = &cache_db {
-        for diagnostic in crate::index::policy_diagnostics(db).unwrap_or_default() {
+        for diagnostic in crate::index::policy_diagnostics(db, context.as_ref()).unwrap_or_default()
+        {
             if !diagnostics.contains(&diagnostic) {
                 diagnostics.push(diagnostic);
             }
@@ -39,7 +51,7 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
     }
     let mut counts = cache_db
         .as_ref()
-        .and_then(|db| crate::index::counts(db).ok())
+        .and_then(|db| crate::index::counts(db, context.as_ref()).ok())
         .unwrap_or_default();
     if !cache_readable {
         counts.filesystem = scan.skills.len();
@@ -54,16 +66,16 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
     let supported = codex
         .as_ref()
         .is_some_and(|codex| native::supports_native_catalog(&codex.version));
-    let snapshot = match (&codex, cache_readable) {
-        (Some(codex), true) => cache_db
+    let snapshot = match (&codex, cache_readable, &context) {
+        (Some(codex), true, Some(context)) => cache_db
             .as_ref()
             .and_then(|db| {
                 crate::index::has_snapshot(
                     db,
-                    cwd,
+                    &context.workspace,
                     &codex.version,
                     &codex.path,
-                    &config::codex_home(&settings),
+                    &context.codex_home,
                 )
                 .ok()
             })

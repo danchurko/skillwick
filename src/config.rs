@@ -5,6 +5,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Context {
+    pub workspace: PathBuf,
+    pub codex_home: PathBuf,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Config {
@@ -70,6 +76,21 @@ pub fn codex_home(config: &Config) -> PathBuf {
         .clone()
         .or_else(|| env::var_os("CODEX_HOME").map(PathBuf::from))
         .unwrap_or_else(|| home().join(".codex"))
+}
+
+pub fn normalize_context(cwd: &Path, codex_home: &Path) -> Result<Context, String> {
+    let workspace = fs::canonicalize(cwd)
+        .map_err(|error| format!("cannot normalize workspace {}: {error}", cwd.display()))?;
+    let codex_home = fs::canonicalize(codex_home).map_err(|error| {
+        format!(
+            "cannot normalize Codex home {}: {error}",
+            codex_home.display()
+        )
+    })?;
+    Ok(Context {
+        workspace,
+        codex_home,
+    })
 }
 fn config_home() -> PathBuf {
     env::var_os("XDG_CONFIG_HOME")
