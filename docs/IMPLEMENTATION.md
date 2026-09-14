@@ -67,6 +67,21 @@ are run separately so source tests are not mistaken for release or integration
 evidence. Published release verification additionally checks archive layout,
 checksums, executable versions, installer behavior, and package metadata.
 
+### 0.2.2 exact-name reads - 2026-09-14
+
+Before the release tag was created, `make release-preflight` passed from an
+unrestricted local terminal on commit `485ad99`. The gate included formatting,
+Clippy, 53 Rust tests, CLI, documentation, trust-boundary and distribution
+checks, Codex integration, a live coding-agent inference check, dependency
+assurance, and fresh source-installed filesystem and Codex-native workflows.
+
+Release workflow 34889055556 built, published, and verified both macOS archives.
+Independent published-release verification confirmed archive layout, checksums,
+both executable versions, and isolated installer behavior. The archive SHA-256
+values are `3a2ff7ecbf8423802a6703a5be301d6cc345c72b8bb415b7952a00849e864ad8`
+for arm64 and `3bbf51f67ee9acac7e9b1e9d7edfaaca5c029516af1594854049a6c0d410ae6f`
+for x86_64.
+
 ### 0.2.1 corrective release - 2026-09-14
 
 Before the release tag was created, `make release-preflight` passed from an
