@@ -1,7 +1,7 @@
 # Changelog
 
 User-visible changes are recorded here. Release artifacts and verification
-evidence live in [implementation history](IMPLEMENTATION.md).
+evidence live in [implementation history](docs/IMPLEMENTATION.md).
 
 ## 0.2.2 - 2026-09-14
 

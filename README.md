@@ -77,7 +77,8 @@ not been established for the supported product and workflow.
 
 ## Contribute
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md). The [documentation map](docs/README.md)
-links user guides, architecture, compatibility, and implementation history.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). See the [changelog](CHANGELOG.md)
+for released changes; the [documentation map](docs/README.md) links user guides,
+architecture, compatibility, and implementation history.
 
 Licensed under either Apache License 2.0 or MIT, at your option.

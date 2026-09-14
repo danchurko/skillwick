@@ -29,6 +29,7 @@ errors: list[str] = []
 
 required = [
     "AGENTS.md",
+    "CHANGELOG.md",
     "README.md",
     "CONTEXT.md",
     "CONTRIBUTING.md",
@@ -37,7 +38,6 @@ required = [
     "benchmarks/README.md",
     "docs/AGENTS.md",
     "docs/ARCHITECTURE.md",
-    "docs/CHANGELOG.md",
     "docs/COMPATIBILITY.md",
     "docs/DECISIONS.md",
     "docs/GETTING_STARTED.md",
@@ -134,14 +134,19 @@ for target in (
     "DECISIONS.md",
     "RESEARCH.md",
     "IMPLEMENTATION.md",
-    "CHANGELOG.md",
+    "../CHANGELOG.md",
     "../benchmarks/README.md",
 ):
     if f"]({target})" not in docs_map:
         errors.append(f"docs/README.md: missing navigation link to {target}")
 
 
-retired = ("docs/design/current-direction.md", "docs/design/discovery-spec.md", "docs/SPEC.md")
+retired = (
+    "docs/CHANGELOG.md",
+    "docs/design/current-direction.md",
+    "docs/design/discovery-spec.md",
+    "docs/SPEC.md",
+)
 for relative in retired:
     if (root / relative).exists():
         errors.append(f"retired documentation still exists: {relative}")
@@ -152,6 +157,30 @@ for path in sorted(markdown_paths):
     for stale in ("current-direction.md", "discovery-spec.md", "docs/SPEC.md", "skillwick hook"):
         if stale in text:
             errors.append(f"{path.relative_to(root)}: stale contract reference: {stale}")
+
+
+manifest = (root / "Cargo.toml").read_text(encoding="utf-8")
+package = re.search(r"(?ms)^\[package\]\s*$\n(.*?)(?=^\[|\Z)", manifest)
+version = re.search(r'^version\s*=\s*"([^"]+)"', package.group(1), re.M) if package else None
+changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+releases = list(
+    re.finditer(
+        r"(?m)^##\s+([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"
+        r"(?:\s+-\s+[0-9]{4}-[0-9]{2}-[0-9]{2})?\s*$",
+        changelog,
+    )
+)
+if version is None:
+    errors.append("Cargo.toml: missing package version")
+elif not releases or releases[0].group(1) != version.group(1):
+    errors.append(f"CHANGELOG.md: newest release does not match package version {version.group(1)}")
+else:
+    matching = [release for release in releases if release.group(1) == version.group(1)]
+    if len(matching) != 1:
+        errors.append(f"CHANGELOG.md: expected one release heading for {version.group(1)}")
+    section_end = releases[1].start() if len(releases) > 1 else len(changelog)
+    if not re.search(r"(?m)^-\s+\S", changelog[releases[0].end() : section_end]):
+        errors.append(f"CHANGELOG.md: release {version.group(1)} has no notes")
 
 
 reference = (root / "docs/REFERENCE.md").read_text(encoding="utf-8")

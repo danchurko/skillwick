@@ -30,7 +30,7 @@ work until it is implemented and released.
 - [Research](RESEARCH.md) — dated source review and future semantic gates.
 - [Implementation history](IMPLEMENTATION.md) — dated release and verification
   evidence.
-- [Changelog](CHANGELOG.md) — user-visible changes by release.
+- [Changelog](../CHANGELOG.md) — user-visible changes by release.
 - [Retrieval evidence](../benchmarks/README.md) — frozen offline measurements
   for the optional semantic experiments.
 
