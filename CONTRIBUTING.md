@@ -62,6 +62,26 @@ remaining limits. Use Conventional Commits for commit and pull-request titles.
 
 ## Release maintenance
 
+Every release must first be installed from the final source tree and exercised
+locally. From an unrestricted terminal with the intended release commit checked
+out, run:
+
+```sh
+make release-preflight
+```
+
+This is the mandatory pre-tag gate. It runs the complete source checks, real
+Codex integration and inference checks, dependency assurance, then performs a
+fresh `cargo install --path` into a temporary prefix. The installed executable
+must pass filesystem search/read/doctor and native refresh/search/doctor in two
+workspace contexts using the developer's real Codex home. Temporary XDG homes
+keep Skillwick configuration and cache changes out of the developer's account.
+
+Do not create or push the release tag, and therefore do not start release CI,
+until this command passes for the exact versioned source commit. A coding-agent
+sandbox that cannot initialize the real Codex state is not release evidence;
+run the gate from the local terminal instead.
+
 Publish the arm64 and x86_64 archives with their per-file SHA-256 checksums.
 Keep build manifests in CI and use `scripts/install.sh` as the script installer.
 Update the Homebrew formula from verified published archive digests.

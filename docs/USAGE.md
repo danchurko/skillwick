@@ -58,6 +58,10 @@ snapshot without starting Codex. Run `skillwick refresh` after installed skills,
 plugins, native enablement, or configured roots change. A missing or incomplete
 snapshot is reported as a diagnostic rather than treated as an empty library;
 `read` still rechecks the selected live file and its content hash.
+If automatic native refresh fails, search, list, read, and inspect fail closed
+because filesystem metadata cannot prove Codex enablement. The diagnostic
+includes the provider detail and tells the agent to run `skillwick refresh`
+from an unrestricted terminal before retrying.
 
 ## Codex setup
 

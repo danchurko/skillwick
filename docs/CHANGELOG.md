@@ -3,6 +3,14 @@
 User-visible changes are recorded here. Release artifacts and verification
 evidence live in [implementation history](IMPLEMENTATION.md).
 
+## 0.2.1 - 2026-09-14
+
+- Explain uncovered-workspace native refresh failures with the real Codex
+  provider detail and an unrestricted-terminal recovery command while keeping
+  unknown enablement fail-closed and the previous cache intact.
+- Require a local source installation to pass filesystem and real native Codex
+  workflows in two workspace contexts before a release tag starts CI.
+
 ## 0.2.0 - 2026-09-14
 
 - Partition native snapshots by normalized workspace and Codex home, refresh

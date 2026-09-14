@@ -35,6 +35,10 @@ skillwick refresh
 A complete refresh publishes a new snapshot atomically. A failed native refresh
 retains the previous valid context partition and reports the provider error.
 Ordinary queries use compatible cached native coverage without starting Codex.
+When a new workspace cannot refresh native coverage, discovery fails closed
+because a filesystem scan cannot prove which skills Codex disabled. The error
+includes the provider detail. Run `skillwick refresh` from an unrestricted
+terminal, then retry; the previous snapshot remains intact.
 
 ## Diagnose state
 

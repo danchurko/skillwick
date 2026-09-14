@@ -156,20 +156,24 @@ pub fn inventory(codex: &Codex, codex_home: &Path, cwd: &Path) -> Result<Vec<Ski
     })();
     if let Err(error) = write_result {
         terminate(&mut child);
-        return Err(error);
+        let stderr = stderr_reader.join().unwrap_or_default();
+        return Err(with_stderr(error, &stderr));
     }
     let response = receiver
         .recv_timeout(TIMEOUT)
-        .map_err(|_| "Codex inventory timed out".to_string());
+        .map_err(|_| "Codex inventory timed out".to_string())
+        .and_then(|response| response);
     terminate(&mut child);
     let stderr = stderr_reader.join().unwrap_or_default();
-    response.map_err(|error| {
-        if stderr.trim().is_empty() {
-            error
-        } else {
-            format!("{error}; stderr: {}", stderr.trim())
-        }
-    })?
+    response.map_err(|error| with_stderr(error, &stderr))
+}
+
+fn with_stderr(error: String, stderr: &str) -> String {
+    if stderr.trim().is_empty() {
+        error
+    } else {
+        format!("{error}; stderr: {}", stderr.trim())
+    }
 }
 
 fn read_bounded_line<R: BufRead>(reader: &mut R, limit: usize) -> io::Result<Option<Vec<u8>>> {
@@ -297,6 +301,9 @@ mod tests {
     use super::*;
     use std::io::Cursor;
 
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+
     #[test]
     fn compatibility_is_explicit() {
         assert!(supports_native_catalog("0.154.0"));
@@ -314,6 +321,37 @@ mod tests {
         let mut reader = BufReader::new(Cursor::new(vec![b'x'; MAX_MESSAGE + 1]));
         let error = read_bounded_line(&mut reader, MAX_MESSAGE).unwrap_err();
         assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn inventory_includes_provider_stderr_when_it_reaches_eof() {
+        let temp = tempfile::tempdir().unwrap();
+        let executable = temp.path().join("codex");
+        fs::write(
+            &executable,
+            "#!/bin/sh\necho 'state runtime is not writable' >&2\nexit 1\n",
+        )
+        .unwrap();
+        fs::set_permissions(&executable, fs::Permissions::from_mode(0o755)).unwrap();
+        let codex_home = temp.path().join("codex-home");
+        let workspace = temp.path().join("workspace");
+        fs::create_dir_all(&codex_home).unwrap();
+        fs::create_dir_all(&workspace).unwrap();
+
+        for _ in 0..20 {
+            let error = inventory(
+                &Codex {
+                    path: executable.clone(),
+                    version: "0.154.0".into(),
+                },
+                &codex_home,
+                &workspace,
+            )
+            .unwrap_err();
+
+            assert!(error.contains("state runtime is not writable"), "{error}");
+        }
     }
 
     #[cfg(unix)]

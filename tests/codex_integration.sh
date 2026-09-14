@@ -303,13 +303,41 @@ printf '%s\n' '#!/bin/sh' \
   'exit 1' >"$partition_fail_bin"
 chmod +x "$partition_fail_bin"
 cp "$partitions/cache/skillwick/index-v3.sqlite" "$partitions/cache.before-failure"
-mkdir -p "$partitions/work-fail"
+mkdir -p "$partitions/work-fail/.agents/skills/disabled-overlap"
+printf '%s\n' '---' 'name: disabled-overlap' \
+  'description: Must stay hidden while Codex enablement is unknown.' '---' \
+  >"$partitions/work-fail/.agents/skills/disabled-overlap/SKILL.md"
+partition_fail_config="$partitions/fail-config.toml"
+printf '%s\n' \
+  'roots = []' \
+  'inventory = "codex"' \
+  'agent = "none"' \
+  "codex_home = \"$partition_codex\"" \
+  "codex_bin = \"$partition_fail_bin\"" \
+  >"$partition_fail_config"
 if partition_run "$partitions/work-fail" init --yes --agent none --inventory codex \
   --codex-bin "$partition_fail_bin" >/dev/null 2>&1; then
   exit 1
 else
   test "$?" -eq 3
 fi
+cmp -s "$partitions/cache.before-failure" "$partitions/cache/skillwick/index-v3.sqlite"
+if partition_run "$partitions/work-fail" --config "$partition_fail_config" list \
+  >"$partitions/fallback-list" 2>"$partitions/fallback-list.err"; then
+  echo "list used inventory with unknown Codex enablement" >&2
+  exit 1
+else
+  test "$?" -eq 3
+fi
+test ! -s "$partitions/fallback-list"
+grep -q 'discovery cannot safely continue until Codex enablement is refreshed' \
+  "$partitions/fallback-list.err"
+grep -q 'Run `skillwick refresh` from an unrestricted terminal' "$partitions/fallback-list.err"
+partition_run "$partitions/work-fail" --config "$partition_fail_config" --json doctor \
+  >"$partitions/fallback-doctor"
+test "$(jq -r '.healthy' "$partitions/fallback-doctor")" = false
+jq -e '.diagnostics[] | select(contains("run `skillwick refresh` from an unrestricted terminal"))' \
+  "$partitions/fallback-doctor" >/dev/null
 cmp -s "$partitions/cache.before-failure" "$partitions/cache/skillwick/index-v3.sqlite"
 partition_run "$partition_work_a" list | grep -q '^native-a@'
 partition_run "$partition_work_b" list | grep -q '^native-b@'

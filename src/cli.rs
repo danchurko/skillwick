@@ -412,9 +412,23 @@ fn prepare_index(
             settings.codex_bin.as_deref(),
         )? {
             eprintln!("notice: native inventory cache misses this context; refreshing");
-            *db = auto_refresh(settings, cwd, context)?;
-            if filesystem {
-                refresh_filesystem(db, settings, &context.workspace)?;
+            match auto_refresh(settings, cwd, context) {
+                Ok(refreshed) => {
+                    *db = refreshed;
+                    if filesystem {
+                        refresh_filesystem(db, settings, &context.workspace)?;
+                    }
+                }
+                Err(error) => {
+                    let detail = error.to_string().lines().collect::<Vec<_>>().join(" | ");
+                    return Err(Failure(
+                        format!(
+                            "native inventory is unavailable for this workspace; discovery cannot safely continue until Codex enablement is refreshed. Run `skillwick refresh` from an unrestricted terminal, then retry. Detail: {}",
+                            output::clean(&detail)
+                        ),
+                        3,
+                    ));
+                }
             }
         }
     }
@@ -478,15 +492,16 @@ fn refresh(db: &mut Connection, settings: &config::Config, cwd: &Path) -> Result
     } else {
         None
     };
-    inventory::refresh(db, settings, cwd, codex.as_ref()).map_err(|error| match error {
-        inventory::Error::Database(error) => Failure(
+    inventory::refresh(db, settings, cwd, codex.as_ref()).map_err(|error| match &error {
+        inventory::Error::Database(database) => Failure(
             format!(
-                "database error: {error}; run `skillwick refresh` to rebuild the disposable cache"
+                "database error: {database}; run `skillwick refresh` to rebuild the disposable cache"
             ),
             1,
         ),
-        inventory::Error::Native(error) => Failure(error.to_string(), 3),
-        inventory::Error::NoSpecialist => Failure(error.to_string(), 3),
+        inventory::Error::Native(_) | inventory::Error::NoSpecialist => {
+            Failure(error.to_string(), 3)
+        }
     })
 }
 
@@ -764,7 +779,7 @@ mod tests {
     }
 
     #[test]
-    fn cached_queries_require_native_workspace_coverage() {
+    fn cached_queries_explain_failed_native_workspace_refresh() {
         let workspace_a = tempfile::tempdir().unwrap();
         let workspace_b = tempfile::tempdir().unwrap();
         let codex_home = tempfile::tempdir().unwrap();
@@ -783,9 +798,12 @@ mod tests {
         )
         .unwrap();
 
-        let error = prepare_index(&mut db, &settings, workspace_b.path(), false)
-            .expect_err("uncovered workspace unexpectedly passed");
-        assert_eq!(error.code(), 1);
+        let error = prepare_index(&mut db, &settings, workspace_b.path(), true).unwrap_err();
+        assert_eq!(error.code(), 3);
+        assert!(error
+            .to_string()
+            .contains("discovery cannot safely continue"));
+        assert!(error.to_string().contains("unrestricted terminal"));
     }
 
     #[test]
@@ -825,7 +843,7 @@ mod tests {
     }
 
     #[test]
-    fn another_codex_home_requires_refresh() {
+    fn another_codex_home_requires_refresh_without_filesystem_fallback() {
         let workspace = tempfile::tempdir().unwrap();
         let codex_home_a = tempfile::tempdir().unwrap();
         let codex_home_b = tempfile::tempdir().unwrap();
@@ -842,21 +860,18 @@ mod tests {
         let settings = codex_settings_at(codex_home_b.path());
 
         let error = prepare_index(&mut db, &settings, workspace.path(), false).unwrap_err();
-        assert_eq!(error.code(), 1);
+        assert_eq!(error.code(), 3);
     }
 
     #[test]
-    fn empty_native_cache_requires_explicit_refresh() {
+    fn empty_native_cache_requires_refresh_without_filesystem_fallback() {
         let temp = tempfile::tempdir().unwrap();
         let codex_home = tempfile::tempdir().unwrap();
         let settings = codex_settings_at(codex_home.path());
         let mut db = index::open(Path::new(":memory:")).unwrap();
 
-        let error = match prepare_index(&mut db, &settings, temp.path(), false) {
-            Ok(_) => panic!("empty native cache unexpectedly passed"),
-            Err(error) => error,
-        };
-        assert_eq!(error.code(), 1);
+        let error = prepare_index(&mut db, &settings, temp.path(), false).unwrap_err();
+        assert_eq!(error.code(), 3);
     }
 
     #[test]

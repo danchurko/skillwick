@@ -85,6 +85,12 @@ pub fn inspect(config_path: &Path, cwd: &Path) -> Result<Report, String> {
             .unwrap_or(false),
         _ => false,
     };
+    if settings.inventory == config::Inventory::Codex && !snapshot {
+        diagnostics.push(
+            "native inventory cache misses this context; run `skillwick refresh` from an unrestricted terminal, then retry"
+                .into(),
+        );
+    }
     let instructions = settings
         .instructions_file
         .clone()

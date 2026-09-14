@@ -67,6 +67,17 @@ are run separately so source tests are not mistaken for release or integration
 evidence. Published release verification additionally checks archive layout,
 checksums, executable versions, installer behavior, and package metadata.
 
+### 0.2.1 corrective release - 2026-09-14
+
+Before the release tag was created, `make release-preflight` passed from an
+unrestricted local terminal on the exact 0.2.1 source tree. The gate included
+formatting, Clippy, 49 Rust tests, CLI and trust-boundary acceptance, Codex
+integration, a live coding-agent search/read inference check, dependency
+assurance, and a fresh `cargo install --path` into a temporary prefix. The
+source-installed executable passed filesystem discovery and real Codex-native
+refresh, search, read, and strict doctor checks across two workspace contexts,
+including first-query refresh for a workspace with no cached native snapshot.
+
 ## Compatibility and limits
 
 - Codex 0.154.0 accepts `skills.include_instructions = false`; its native
