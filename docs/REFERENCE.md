@@ -34,13 +34,16 @@ complete requested result set.
 ## Read
 
 ```text
-skillwick read <ID>
+skillwick read <ID|NAME>
 ```
 
-Read prints the selected live `SKILL.md`, its path, and package base. It first
-checks enabled/model-discoverable state, canonical path identity, file size,
-UTF-8, and content hash. A changed or unavailable source fails with exit code
-3; it is never served as trusted cached content.
+Read accepts either an exact ID or an exact, case-sensitive name. Exact IDs take
+precedence. A unique name prints its resolved full ID before the selected live
+`SKILL.md`, path, and package base. An unknown name reports how to search;
+duplicate names fail closed and list candidate provenance for explicit ID
+selection. Read first checks enabled/model-discoverable state, canonical path
+identity, file size, UTF-8, and content hash. A changed or unavailable source
+fails with exit code 3; it is never served as trusted cached content.
 
 ## Inspect
 

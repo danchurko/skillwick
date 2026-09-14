@@ -187,6 +187,23 @@ pub fn find(
     rows.next()?.map(row_from).transpose()
 }
 
+pub fn find_name(
+    db: &Connection,
+    context: Option<&Context>,
+    name: &str,
+) -> rusqlite::Result<Vec<ResultRow>> {
+    let workspace = context.map(|context| context.workspace.to_string_lossy().into_owned());
+    let codex_home = context.map(|context| context.codex_home.to_string_lossy().into_owned());
+    let mut statement = db.prepare("SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash FROM skills s WHERE s.name=?1 AND s.enabled=1 AND s.model_discoverable=1 AND (s.source_kind='filesystem' OR (s.source_kind='codex' AND s.workspace=?2 AND s.codex_home=?3)) AND NOT (s.source_kind='filesystem' AND EXISTS (SELECT 1 FROM skills n WHERE n.source_kind='codex' AND n.workspace=?2 AND n.codex_home=?3 AND n.canonical=s.canonical)) ORDER BY s.id")?;
+    let rows = statement
+        .query_map(
+            params![name, workspace.as_deref(), codex_home.as_deref()],
+            row_from,
+        )?
+        .collect();
+    rows
+}
+
 fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<ResultRow> {
     Ok(ResultRow {
         id: row.get(0)?,
@@ -298,6 +315,62 @@ mod tests {
     }
 
     #[test]
+    fn exact_name_lookup_is_case_sensitive() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        let skill = fixture_skill("Readable Name", "An exact-name fixture");
+        index::refresh_kind(&mut db, "filesystem", &[skill], true).unwrap();
+
+        let rows = find_name(&db, None, "Readable Name").unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].name, "Readable Name");
+        assert!(find_name(&db, None, "readable name").unwrap().is_empty());
+    }
+
+    #[test]
+    fn exact_name_lookup_returns_duplicate_names_in_id_order() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        let mut first = fixture_skill("duplicate", "first");
+        first.path = "/first/SKILL.md".into();
+        first.canonical = "/first/SKILL.md".into();
+        first.base = "/first".into();
+        let mut second = fixture_skill("duplicate", "second");
+        second.path = "/second/SKILL.md".into();
+        second.canonical = "/second/SKILL.md".into();
+        second.base = "/second".into();
+        index::refresh_kind(&mut db, "filesystem", &[first, second], true).unwrap();
+
+        let rows = find_name(&db, None, "duplicate").unwrap();
+        assert_eq!(rows.len(), 2);
+        let ids: Vec<_> = rows.iter().map(|row| row.id.as_str()).collect();
+        let mut sorted_ids = ids.clone();
+        sorted_ids.sort_unstable();
+        assert_eq!(ids, sorted_ids);
+        assert_eq!(
+            ids,
+            find_name(&db, None, "duplicate")
+                .unwrap()
+                .iter()
+                .map(|row| row.id.as_str())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn exact_name_lookup_excludes_disabled_and_denied_records() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        let mut disabled = fixture_skill("disabled", "disabled");
+        disabled.enabled = false;
+        let mut denied = fixture_skill("denied", "denied");
+        denied.metadata.invocation_policy = crate::metadata::InvocationPolicy::Denied;
+        let visible = fixture_skill("visible", "visible");
+        index::refresh_kind(&mut db, "filesystem", &[disabled, denied, visible], true).unwrap();
+
+        assert!(find_name(&db, None, "disabled").unwrap().is_empty());
+        assert!(find_name(&db, None, "denied").unwrap().is_empty());
+        assert_eq!(find_name(&db, None, "visible").unwrap().len(), 1);
+    }
+
+    #[test]
     fn public_inventory_hides_disabled_records() {
         let mut db = index::open(std::path::Path::new(":memory:")).unwrap();
         let mut skill = Skill {
@@ -401,8 +474,96 @@ mod tests {
         assert_eq!(names_b, vec!["native-b", "shared"]);
         assert_eq!(count(&db, Some(&context_a)).unwrap(), 2);
         assert_eq!(count(&db, Some(&context_b)).unwrap(), 2);
+        assert_eq!(
+            find_name(&db, Some(&context_a), "native-a")
+                .unwrap()
+                .iter()
+                .map(|row| row.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["native-a"]
+        );
+        assert!(find_name(&db, Some(&context_a), "native-b")
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            find_name(&db, Some(&context_b), "native-b")
+                .unwrap()
+                .iter()
+                .map(|row| row.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["native-b"]
+        );
+        assert!(find_name(&db, Some(&context_b), "native-a")
+            .unwrap()
+            .is_empty());
         assert!(find(&db, Some(&context_a), "native-b@missing")
             .unwrap()
             .is_none());
+    }
+
+    #[test]
+    fn exact_name_lookup_partitions_workspace_and_codex_home_independently() {
+        let context = |workspace: &str, codex_home: &str| Context {
+            workspace: PathBuf::from(workspace),
+            codex_home: PathBuf::from(codex_home),
+        };
+        let same_workspace_home_a = context("/shared-workspace", "/home-a");
+        let same_workspace_home_b = context("/shared-workspace", "/home-b");
+        let workspace_a_shared_home = context("/workspace-a", "/shared-home");
+        let workspace_b_shared_home = context("/workspace-b", "/shared-home");
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+
+        let native = |name: &str, context: &Context| {
+            let mut skill = fixture_skill(name, name);
+            skill.source_kind = "codex".into();
+            skill.workspace = Some(context.workspace.clone());
+            skill.codex_home = Some(context.codex_home.clone());
+            skill
+        };
+        let records = [
+            ("same-workspace-home-a", &same_workspace_home_a),
+            ("same-workspace-home-b", &same_workspace_home_b),
+            ("workspace-a-shared-home", &workspace_a_shared_home),
+            ("workspace-b-shared-home", &workspace_b_shared_home),
+        ];
+        for (name, context) in records {
+            let skill = native(name, context);
+            index::refresh_kind_for_context(
+                &mut db,
+                "codex",
+                Some((&context.workspace, &context.codex_home)),
+                &[skill],
+                true,
+            )
+            .unwrap();
+        }
+
+        let names = |context: &Context, name: &str| {
+            find_name(&db, Some(context), name)
+                .unwrap()
+                .into_iter()
+                .map(|row| row.name)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            names(&same_workspace_home_a, "same-workspace-home-a"),
+            vec!["same-workspace-home-a"]
+        );
+        assert!(names(&same_workspace_home_b, "same-workspace-home-a").is_empty());
+        assert!(names(&same_workspace_home_a, "same-workspace-home-b").is_empty());
+        assert_eq!(
+            names(&same_workspace_home_b, "same-workspace-home-b"),
+            vec!["same-workspace-home-b"]
+        );
+        assert_eq!(
+            names(&workspace_a_shared_home, "workspace-a-shared-home"),
+            vec!["workspace-a-shared-home"]
+        );
+        assert!(names(&workspace_b_shared_home, "workspace-a-shared-home").is_empty());
+        assert!(names(&workspace_a_shared_home, "workspace-b-shared-home").is_empty());
+        assert_eq!(
+            names(&workspace_b_shared_home, "workspace-b-shared-home"),
+            vec!["workspace-b-shared-home"]
+        );
     }
 }

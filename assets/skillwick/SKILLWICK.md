@@ -8,7 +8,7 @@ instructions for any skill you select. No match or selecting none is valid.
 
 ```sh
 skillwick search "deploy an AgentCore MCP server with TypeScript"
-skillwick read aws-agentcore@7d92ac
+skillwick read aws-agentcore
 ```
 
 Use `skillwick search "task"` when specialist guidance may help. Review the
@@ -18,6 +18,8 @@ none), then read selected skill instructions before following them.
 Use `skillwick inspect ID` to review selected skill metadata and
 `skillwick inspect ID --files` to list package references without reading them.
 Read selected instructions with `skillwick read ID`.
+Stable instructions may instead use `skillwick read NAME` when the exact,
+case-sensitive name is known. Duplicate names require an explicit ID.
 
 If selected instructions ask to invoke another named skill through a skill tool
 that is unavailable, use `skillwick search` to find that skill and `skillwick
@@ -28,7 +30,8 @@ read ID` to load it. Do not reinterpret ordinary tool references as skill names.
 - `skillwick search "task and important technologies"` searches.
 - `skillwick search "task" --limit 3` searches with an explicit limit (1-20;
   default 5).
-- `skillwick read ID` prints selected skill instructions.
+- `skillwick read ID|NAME` prints selected skill instructions. Exact IDs take
+  precedence; exact names must identify one current skill.
 - `skillwick inspect ID` prints selected skill metadata.
 - `skillwick inspect ID --files` lists package references, scripts, and assets.
 - `skillwick list` prints complete inventory and total.

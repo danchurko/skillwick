@@ -71,10 +71,13 @@ enum Command {
     /// Read one selected instruction file after revalidating its source.
     ///
     /// This command prints text, does not execute package content, and returns
-    /// exit code 3 when the ID is missing or its source is stale or unavailable.
+    /// exit code 3 when the target is missing, ambiguous, stale, or unavailable.
     Read {
-        #[arg(value_name = "ID", help = "Exact ID returned by search or list")]
-        id: String,
+        #[arg(
+            value_name = "ID|NAME",
+            help = "Exact ID returned by search or list, or exact case-sensitive name"
+        )]
+        target: String,
     },
     /// Inspect selected metadata without reading package references.
     ///
@@ -378,7 +381,7 @@ fn dispatch(
                 write_text(&inspect_text(&row))?;
             }
         }
-        Some(Command::Read { id }) => read(db, context, &id)?,
+        Some(Command::Read { target }) => read(db, context, &target)?,
         _ => unreachable!(),
     }
     Ok(())
@@ -511,6 +514,37 @@ fn find(
     id: &str,
 ) -> Result<search::ResultRow, Failure> {
     search::find(db, context, id)?.ok_or_else(|| Failure("skill not found".into(), 3))
+}
+
+fn resolve_read(
+    db: &Connection,
+    context: Option<&config::Context>,
+    target: &str,
+) -> Result<(search::ResultRow, bool), Failure> {
+    if let Some(row) = search::find(db, context, target)? {
+        return Ok((row, false));
+    }
+    let mut rows = search::find_name(db, context, target)?;
+    match rows.len() {
+        0 => Err(Failure(
+            "skill not found; use `skillwick search` to find candidates".into(),
+            3,
+        )),
+        1 => Ok((rows.remove(0), true)),
+        _ => {
+            let mut error = String::from("skill name is ambiguous; use an exact ID:\n");
+            for row in rows {
+                error.push_str(&format!(
+                    "- {} [source: {}; scope: {}; path: {}]\n",
+                    output::clean(&row.id),
+                    output::clean(&row.source),
+                    output::clean(&row.scope),
+                    output::clean(&row.path),
+                ));
+            }
+            Err(Failure(error, 3))
+        }
+    }
 }
 
 struct ValidatedSource {
@@ -651,13 +685,18 @@ fn inspect_files(row: &search::ResultRow, json: bool) -> Result<(), Failure> {
     }
 }
 
-fn read(db: &Connection, context: Option<&config::Context>, id: &str) -> Result<(), Failure> {
-    let row = find(db, context, id)?;
+fn read(db: &Connection, context: Option<&config::Context>, target: &str) -> Result<(), Failure> {
+    let (row, resolved_name) = resolve_read(db, context, target)?;
     let source = validate_source(&row)?;
     let body = String::from_utf8(source.bytes)
         .map_err(|_| Failure("instruction file is not UTF-8".into(), 3))?;
     write_text(&format!(
-        "path: {}\nbase: {}\n\n{}",
+        "{}path: {}\nbase: {}\n\n{}",
+        if resolved_name {
+            format!("resolved-id: {}\n", output::clean(&row.id))
+        } else {
+            String::new()
+        },
         source.path.display(),
         row.base,
         body

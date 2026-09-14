@@ -10,9 +10,14 @@ configured local snapshot and never executes a skill package.
 skillwick search "deploy an AgentCore MCP server with TypeScript"
 skillwick search "SQLite full text ranking" --limit 3
 skillwick read ID
+skillwick read astra-orchestrator
 skillwick inspect ID
 skillwick inspect ID --files
 ```
+
+`read` accepts an exact ID or exact, case-sensitive name. Exact IDs take
+precedence. A name must resolve to one current skill; duplicate names require an
+explicit ID.
 
 Use an ID from search or list output. Search returns up to five candidates by
 default. `--limit N` accepts 1 through 20; choosing none is valid. Read

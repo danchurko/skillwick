@@ -3,6 +3,13 @@
 User-visible changes are recorded here. Release artifacts and verification
 evidence live in [implementation history](IMPLEMENTATION.md).
 
+## 0.2.2 - 2026-09-14
+
+- Allow `skillwick read` to resolve a unique exact, case-sensitive skill name
+  while preserving exact-ID reads and live source validation.
+- Reject unknown or duplicate names with search guidance or explicit candidate
+  provenance instead of choosing a result.
+
 ## 0.2.1 - 2026-09-14
 
 - Explain uncovered-workspace native refresh failures with the real Codex

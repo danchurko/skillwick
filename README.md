@@ -11,7 +11,8 @@ and read the instructions you need.
 
 ```sh
 skillwick search "deploy an AgentCore MCP server with TypeScript"
-skillwick read ID   # use an ID returned by search
+skillwick read astra-orchestrator   # exact names work in stable instructions
+skillwick read ID                   # exact IDs remain supported
 ```
 
 It runs locally as one Rust binary, searches with SQLite FTS5, and leaves skill
@@ -39,8 +40,8 @@ brew install skillwick
 Or install a specific version with a verified checksum:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.2.1/scripts/install.sh
-sh install.sh --version 0.2.1 --prefix "$HOME/.local"
+curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.2.2/scripts/install.sh
+sh install.sh --version 0.2.2 --prefix "$HOME/.local"
 ```
 
 The installer installs only the executable. Release binaries are unsigned and

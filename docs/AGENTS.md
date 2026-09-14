@@ -10,6 +10,7 @@ Use deliberate discovery when a task would benefit from specialist guidance:
 skillwick search "task and important technologies"
 skillwick inspect ID --files
 skillwick read ID
+skillwick read astra-orchestrator
 ```
 
 Review candidates before selecting one. A candidate is not an instruction to
@@ -20,6 +21,8 @@ non-executing until independently authorized.
 Search is explicit and local. No match is valid. The calling workflow owns
 relevance, selection, orchestration, permissions, and whether to delegate.
 Skillwick does not require a search on every turn or a subagent for every task.
+Stable managed instructions may read one known skill by exact, case-sensitive
+name. Use an ID when the name is duplicated.
 
 After installed skills, plugins, native enablement, or configured roots change,
 run `skillwick refresh`. Use `skillwick doctor --strict` when a health result

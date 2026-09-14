@@ -46,6 +46,14 @@ Search returns compact IDs. Copy one ID into `read`:
 skillwick read ID
 ```
 
+Stable instructions may use an exact, case-sensitive name instead:
+
+```sh
+skillwick read astra-orchestrator
+```
+
+Duplicate names require an explicit ID.
+
 The `read` command rechecks the live path, canonical identity, size, and content
 hash. Treat the selected file as instructions to review, not as permission to
 run scripts or change configuration.

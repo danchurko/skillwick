@@ -164,28 +164,28 @@ native_cache="$cache/skillwick/index-v3.sqlite"
 cp "$native_skill/SKILL.md" "$temporary/native-original"
 printf '%s\n' '---' 'name: native' 'description: Native content changed after indexing.' '---' \
   >"$native_skill/SKILL.md"
-if native_changed=$(run_native_with good read "$native_id" 2>&1); then
-  echo "changed native source was read" >&2
-  exit 1
-else
-  native_changed_status=$?
-fi
-test "$native_changed_status" -eq 3
-grep -q 'changed after indexing' <<EOF
-$native_changed
-EOF
+for target in "$native_id" native; do
+  if native_changed=$(run_native_with good read "$target" 2>&1); then
+    echo "changed native source was read" >&2
+    exit 1
+  else
+    native_changed_status=$?
+  fi
+  test "$native_changed_status" -eq 3
+  printf '%s\n' "$native_changed" | grep -q 'changed after indexing'
+done
 cp "$temporary/native-original" "$native_skill/SKILL.md"
 rm "$native_skill/SKILL.md"
-if native_unavailable=$(run_native_with good read "$native_id" 2>&1); then
-  echo "unavailable native source was read" >&2
-  exit 1
-else
-  native_unavailable_status=$?
-fi
-test "$native_unavailable_status" -eq 3
-grep -q 'source is unavailable' <<EOF
-$native_unavailable
-EOF
+for target in "$native_id" native; do
+  if native_unavailable=$(run_native_with good read "$target" 2>&1); then
+    echo "unavailable native source was read" >&2
+    exit 1
+  else
+    native_unavailable_status=$?
+  fi
+  test "$native_unavailable_status" -eq 3
+  printf '%s\n' "$native_unavailable" | grep -q 'source is unavailable'
+done
 cp "$temporary/native-original" "$native_skill/SKILL.md"
 
 before_hash=$(shasum -a 256 "$native_cache" | awk '{print $1}')
@@ -237,16 +237,16 @@ cp "$temporary/native-original" "$native_skill/SKILL.md"
 
 rm "$native_skill/SKILL.md"
 ln -s "$temporary/native-outside/SKILL.md" "$native_skill/SKILL.md"
-if native_path_changed=$(run_native_with good read "$native_id" 2>&1); then
-  echo "changed native path was read" >&2
-  exit 1
-else
-  native_path_status=$?
-fi
-test "$native_path_status" -eq 3
-grep -q 'path changed' <<EOF
-$native_path_changed
-EOF
+for target in "$native_id" native; do
+  if native_path_changed=$(run_native_with good read "$target" 2>&1); then
+    echo "changed native path was read" >&2
+    exit 1
+  else
+    native_path_status=$?
+  fi
+  test "$native_path_status" -eq 3
+  printf '%s\n' "$native_path_changed" | grep -q 'path changed'
+done
 rm "$native_skill/SKILL.md"
 cp "$temporary/native-original" "$native_skill/SKILL.md"
 

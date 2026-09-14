@@ -243,6 +243,13 @@ with tempfile.TemporaryDirectory(prefix="skillwick-docs-") as directory:
                 read = clean_run("read", ids[0])
                 if read.returncode or "name: clean-fixture" not in read.stdout:
                     errors.append("clean filesystem setup could not read its fixture")
+                read_name = clean_run("read", "clean-fixture")
+                if (
+                    read_name.returncode
+                    or f"resolved-id: {ids[0]}" not in read_name.stdout
+                    or "name: clean-fixture" not in read_name.stdout
+                ):
+                    errors.append("clean filesystem setup could not read its fixture by name")
         except (ValueError, KeyError, TypeError) as error:
             errors.append(f"clean filesystem list was not valid JSON: {error}")
 

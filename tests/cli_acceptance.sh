@@ -55,7 +55,17 @@ if run list --limit 1 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 run --json list | grep -q '"version":2,"total":3'
 test "$(run list | grep -c '@')" -eq 3
 identifier=$(run list | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
-run read "$identifier" | grep -q "base: $home/.agents/skills/cpp"
+id_read=$(run read "$identifier")
+printf '%s\n' "$id_read" | grep -q "base: $home/.agents/skills/cpp"
+test "$(printf '%s\n' "$id_read" | sed -n '1p')" = "path: $home/.agents/skills/cpp/SKILL.md"
+! printf '%s\n' "$id_read" | grep -q '^resolved-id:'
+name_read=$(run read C++)
+test "$(printf '%s\n' "$name_read" | sed -n '1p')" = "resolved-id: $identifier"
+printf '%s\n' "$name_read" | grep -q "^base: $home/.agents/skills/cpp$"
+if unknown=$(run read c++ 2>&1); then exit 1; else test "$?" -eq 3; fi
+printf '%s\n' "$unknown" | grep -q 'skillwick search'
+if run read manual-only >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
+if run read policy-deny >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
 if run "read $identifier" >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 run inspect "$identifier" | grep -q '^description: Build native C++ command line tools\.'
 ! run inspect "$identifier" | grep -q '^package:'
@@ -92,6 +102,7 @@ run uninstall --help | grep -q 'installed skills remain untouched'
 run instructions | grep -q '^# Skillwick$'
 run instructions | grep -q 'skillwick search "task"'
 run instructions | grep -q 'another named skill through a skill tool'
+run read --help | grep -Fq '<ID|NAME>'
 if run probe --limit 5 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 if run search test --bogus >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 if run refresh --full >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
@@ -122,6 +133,29 @@ printf '%s\n' "$long_output" | awk 'length($0) > 2000 { exit 1 } END { if (NR !=
 json_output=$(run --json search oversized --limit 2)
 printf '%s\n' "$json_output" | grep -q '"version":2,"results"'
 test "$(printf '%s\n' "$json_output" | grep -o '"id"' | wc -l | tr -d ' ')" -eq 2
+
+mkdir -p "$project/.agents/skills/duplicate-one" "$project/.agents/skills/duplicate-two" \
+  "$project/.agents/skills/namespaced" "$project/.agents/skills/id-collision"
+printf '%s\n' '---' 'name: duplicate' 'description: First duplicate.' '---' \
+  'FIRST_DUPLICATE_BODY' > "$project/.agents/skills/duplicate-one/SKILL.md"
+printf '%s\n' '---' 'name: duplicate' 'description: Second duplicate.' '---' \
+  'SECOND_DUPLICATE_BODY' > "$project/.agents/skills/duplicate-two/SKILL.md"
+printf '%s\n' '---' 'name: ponytail:ponytail' 'description: Namespaced exact name.' '---' \
+  'NAMESPACED_BODY' > "$project/.agents/skills/namespaced/SKILL.md"
+printf '%s\n' '---' "name: $identifier" 'description: ID collision fixture.' '---' \
+  'ID_COLLISION_BODY' > "$project/.agents/skills/id-collision/SKILL.md"
+run refresh
+if duplicate=$(run read duplicate 2>&1); then exit 1; else test "$?" -eq 3; fi
+printf '%s\n' "$duplicate" | grep -q 'ambiguous'
+test "$(printf '%s\n' "$duplicate" | grep -c -- '- duplicate@')" -eq 2
+printf '%s\n' "$duplicate" | grep -q 'source:'
+printf '%s\n' "$duplicate" | grep -q 'scope:'
+printf '%s\n' "$duplicate" | grep -q 'path:'
+! printf '%s\n' "$duplicate" | grep -q 'FIRST_DUPLICATE_BODY'
+! printf '%s\n' "$duplicate" | grep -q 'SECOND_DUPLICATE_BODY'
+run read ponytail:ponytail | grep -q 'NAMESPACED_BODY'
+run read "$identifier" | grep -q 'Build native C++ command line tools.'
+! run read "$identifier" | grep -q 'ID_COLLISION_BODY'
 rm "$project/.agents/skills/agentcore/SKILL.md"
 if run read aws-agentcore@missing >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
 
