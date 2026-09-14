@@ -310,7 +310,7 @@ def formula_digests(formula: Path, version: str) -> dict[str, str]:
         target = target_match.group(1)
         archive_name = f"skillwick-{target}.tar.xz"
         expected_url = (
-            f"https://github.com/churdaa/skillwick/releases/download/v{version}/{archive_name}"
+            f"https://github.com/danchurko/skillwick/releases/download/v{version}/{archive_name}"
         )
         if url != expected_url:
             raise VerificationError(f"formula URL for {target} is {url}, expected {expected_url}")

@@ -9,14 +9,14 @@ you select. It does not install packages or execute package content.
 For a published macOS release, use Homebrew:
 
 ```sh
-brew tap churdaa/skillwick https://github.com/churdaa/skillwick.git
+brew tap danchurko/skillwick https://github.com/danchurko/skillwick.git
 brew install skillwick
 ```
 
 To build from source, install stable Rust and run:
 
 ```sh
-git clone https://github.com/churdaa/skillwick.git
+git clone https://github.com/danchurko/skillwick.git
 cd skillwick
 cargo build --release --locked
 ```

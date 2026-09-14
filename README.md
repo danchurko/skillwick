@@ -1,7 +1,7 @@
 # Skillwick
 
-[![CI](https://github.com/churdaa/skillwick/actions/workflows/ci.yml/badge.svg)](https://github.com/churdaa/skillwick/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/churdaa/skillwick?display_name=tag)](https://github.com/churdaa/skillwick/releases)
+[![CI](https://github.com/danchurko/skillwick/actions/workflows/ci.yml/badge.svg)](https://github.com/danchurko/skillwick/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/danchurko/skillwick?display_name=tag)](https://github.com/danchurko/skillwick/releases)
 
 **Find the skill. Load only what matters.**
 
@@ -32,14 +32,14 @@ for tested versions and platform limits.
 With Homebrew:
 
 ```sh
-brew tap churdaa/skillwick https://github.com/churdaa/skillwick.git
+brew tap danchurko/skillwick https://github.com/danchurko/skillwick.git
 brew install skillwick
 ```
 
 Or install a specific version with a verified checksum:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/churdaa/skillwick/v0.2.0/scripts/install.sh
+curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.2.0/scripts/install.sh
 sh install.sh --version 0.2.0 --prefix "$HOME/.local"
 ```
 

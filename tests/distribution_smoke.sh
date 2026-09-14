@@ -35,13 +35,13 @@ x86_digest=$(shasum -a 256 "$server/skillwick-x86_64-apple-darwin.tar.xz" | awk 
 formula="$tmp/skillwick.rb"
 printf '%s\n' \
   'class Skillwick < Formula' \
-  '  homepage "https://github.com/churdaa/skillwick"' \
+  '  homepage "https://github.com/danchurko/skillwick"' \
   "  version \"$version\"" \
   '  if Hardware::CPU.arm?' \
-  "    url \"https://github.com/churdaa/skillwick/releases/download/v$version/skillwick-aarch64-apple-darwin.tar.xz\"" \
+  "    url \"https://github.com/danchurko/skillwick/releases/download/v$version/skillwick-aarch64-apple-darwin.tar.xz\"" \
   "    sha256 \"$arm_digest\"" \
   '  else' \
-  "    url \"https://github.com/churdaa/skillwick/releases/download/v$version/skillwick-x86_64-apple-darwin.tar.xz\"" \
+  "    url \"https://github.com/danchurko/skillwick/releases/download/v$version/skillwick-x86_64-apple-darwin.tar.xz\"" \
   "    sha256 \"$x86_digest\"" \
   '  end' \
   '  def install' \

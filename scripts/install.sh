@@ -25,7 +25,7 @@ case "$(uname -s):$(uname -m)" in
   *) echo "unsupported platform: $(uname -s) $(uname -m)" >&2; exit 1 ;;
 esac
 
-base_url=${SKILLWICK_BASE_URL:-https://github.com/churdaa/skillwick/releases/download/v$version}
+base_url=${SKILLWICK_BASE_URL:-https://github.com/danchurko/skillwick/releases/download/v$version}
 archive="skillwick-$target.tar.xz"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM

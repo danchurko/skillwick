@@ -9,7 +9,7 @@ they enter the supported surface.
 Install stable Rust, then run:
 
 ```sh
-git clone https://github.com/churdaa/skillwick.git
+git clone https://github.com/danchurko/skillwick.git
 cd skillwick
 cargo build --release --locked
 ./target/release/skillwick --version
