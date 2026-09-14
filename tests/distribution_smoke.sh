@@ -55,7 +55,10 @@ PYTHONDONTWRITEBYTECODE=1 python3 "$root/scripts/verify-release.py" \
 
 bad_server="$tmp/bad-server"
 cp -R "$server" "$bad_server"
-bad_digest="0${arm_digest#?}"
+case "$arm_digest" in
+  0*) bad_digest="1${arm_digest#?}" ;;
+  *) bad_digest="0${arm_digest#?}" ;;
+esac
 printf '%s  %s\n' "$bad_digest" "skillwick-aarch64-apple-darwin.tar.xz" \
   >"$bad_server/skillwick-aarch64-apple-darwin.tar.xz.sha256"
 if PYTHONDONTWRITEBYTECODE=1 python3 "$root/scripts/verify-release.py" \
