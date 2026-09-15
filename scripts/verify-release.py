@@ -20,7 +20,13 @@ from pathlib import Path
 
 
 TARGETS = ("aarch64-apple-darwin", "x86_64-apple-darwin")
-ARCHIVE_MEMBERS = ("LICENSE-APACHE", "LICENSE-MIT", "README.md", "skillwick")
+ARCHIVE_MEMBERS = (
+    "CHANGELOG.md",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "README.md",
+    "skillwick",
+)
 VERSION_PATTERN = re.compile(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\Z")
 URL_PATTERN = re.compile(r'\burl\s+["\']([^"\']+)["\']')
 SHA_PATTERN = re.compile(r'\bsha256\s+["\']([0-9A-Fa-f]{64})["\']')

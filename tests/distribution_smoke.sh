@@ -24,7 +24,7 @@ for target in aarch64-apple-darwin x86_64-apple-darwin; do
   archive="skillwick-$target.tar.xz"
   mkdir -p "$tmp/skillwick-$target"
   cp "$binary" "$tmp/skillwick-$target/skillwick"
-  cp "$root/LICENSE-APACHE" "$root/LICENSE-MIT" "$root/README.md" "$tmp/skillwick-$target/"
+  cp "$root/CHANGELOG.md" "$root/LICENSE-APACHE" "$root/LICENSE-MIT" "$root/README.md" "$tmp/skillwick-$target/"
   COPYFILE_DISABLE=1 tar -cJf "$server/$archive" -C "$tmp" "skillwick-$target"
   (cd "$server" && shasum -a 256 "$archive" >"$archive.sha256")
   tar -tf "$server/$archive" | grep -Fxq "skillwick-$target/skillwick"
