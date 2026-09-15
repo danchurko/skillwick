@@ -1,14 +1,14 @@
 class Skillwick < Formula
   desc "Find relevant installed local skills"
   homepage "https://github.com/danchurko/skillwick"
-  version "0.2.2"
+  version "0.3.0"
 
   if Hardware::CPU.arm?
-    url "https://github.com/danchurko/skillwick/releases/download/v0.2.2/skillwick-aarch64-apple-darwin.tar.xz"
-    sha256 "3a2ff7ecbf8423802a6703a5be301d6cc345c72b8bb415b7952a00849e864ad8"
+    url "https://github.com/danchurko/skillwick/releases/download/v0.3.0/skillwick-aarch64-apple-darwin.tar.xz"
+    sha256 "346906a8ace286b21d3df666195580db86c40d98d7fa00ffb6964e581e07bb46"
   else
-    url "https://github.com/danchurko/skillwick/releases/download/v0.2.2/skillwick-x86_64-apple-darwin.tar.xz"
-    sha256 "3bbf51f67ee9acac7e9b1e9d7edfaaca5c029516af1594854049a6c0d410ae6f"
+    url "https://github.com/danchurko/skillwick/releases/download/v0.3.0/skillwick-x86_64-apple-darwin.tar.xz"
+    sha256 "4389b6644e28034b2bc3759b44639992b912acd3dbc57f0ffe46d19214b29606"
   end
 
   def install
