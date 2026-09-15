@@ -1,57 +1,52 @@
 # Implementation and verification history
 
-This is a dated record of implementation and release evidence. Version numbers,
-test counts, toolchains, and release incidents describe their respective runs,
-not current project status. Use the [getting-started guide](GETTING_STARTED.md),
+This page records dated implementation and release evidence. Version numbers,
+test counts, toolchains, and incidents describe their respective runs, not
+automatically the current working tree. Use the [getting-started guide](GETTING_STARTED.md),
 [operations guide](OPERATIONS.md), and [reference](REFERENCE.md) for the
 current supported surface.
 
-## Initial implementation record
+## Current filesystem-authority implementation
 
-The first implementation established scoped source discovery, bounded metadata
-parsing, one SQLite/FTS5 index, deterministic search, live `read`, short-lived
-Codex inventory, compatibility checks, reversible setup, diagnostics,
-uninstall, and macOS release artifacts.
+The current implementation discovers only explicitly configured filesystem
+roots. Shared roots apply globally; project roots apply to their configured
+workspace and descendants. Each lookup reconciles its applicable scope through
+the same bounded scan and atomic SQLite/FTS5 publication path used by
+`refresh`.
 
-The following decisions remain part of the product history:
+The current invariants are:
 
-- Existing package owners retain installed skills and updates. Skillwick stores
-  derived metadata and integration state only.
-- Search is explicit, local, and lexical. The production path has no MCP
-  server, daemon, remote registry, package installer, or instruction execution.
-- Native catalogue suppression is limited to explicitly supported Codex
-  versions after replacement discovery succeeds.
-- Setup and installer tests use isolated homes and fixture executables; they do
-  not modify persistent user configuration.
-- Integration edits use marked ownership and conditional rollback. Uninstall
-  preserves installed skills and unrelated configuration.
+- Installed package directories and updates remain owned by their existing
+  installer or user; Skillwick stores derived metadata and integration state.
+- Canonical instruction paths are deduplicated for public results while raw
+  root associations remain available for scope and duplicate accounting.
+- Complete scans are required before publication. Missing roots, malformed
+  metadata, unreadable files, and unauthorized symlink escapes fail closed and
+  preserve the previous complete cache.
+- Freshness includes root configuration, canonical instruction identity and
+  content, and adjacent invocation-policy identity, presence, and content.
+- Reads validate the selected live path, size, encoding, and content hash.
+- Search, listing, reading, and package inspection never execute package
+  content or query a second agent-native inventory.
 
-## Retained implementation evidence
+## Shipped surface
 
-The shipped surface includes:
+The binary provides:
 
-- Scoped filesystem discovery for global, project, ancestor, and explicit roots;
-  canonical deduplication; authorized-root symlink checks; and cycle detection.
+- Explicit root setup with `--root` and `--project-root`, optional reversible
+  agent context/reference setup, and conditional uninstall.
 - Bounded Agent Skills frontmatter parsing with Unicode, duplicate-key,
-  size-limit, invalid-YAML, and degraded-description handling.
-- Transactional SQLite/FTS5 refreshes, bounded lock waits, safe incomplete-scan
-  behavior, deterministic ranking, and technical-token aliases.
-- Search, `read`, `inspect`, `list`, `refresh`, `init`, `doctor`, `uninstall`,
-  versioned JSON output, and Zsh completions.
-- A short-lived Codex `skills/list` inventory with bounded newline-delimited
-  JSON, interleaved-notification handling, request IDs, timeout, EOF, and child
-  termination.
-- Reversible Skillwick context/reference and TOML integration with atomic writes,
-  restrictive permissions, ownership journaling, collision checks, and
-  conditional rollback.
-- cargo-dist macOS archives, per-file SHA-256 checksums, a Homebrew formula
-  template, and an explicit-prefix installer.
+  size-limit, invalid-YAML, policy, and degraded-description handling.
+- Transactional SQLite/FTS5 reconciliation, scoped cache locking, atomic
+  publication, deterministic lexical ranking, and technical-token aliases.
+- `search`, `read`, `inspect`, `list`, `refresh`, `init`, `doctor`,
+  `uninstall`, versioned JSON output, and Zsh completions.
+- Bounded package inspection that reports shape without following symlink
+  entries, reading support files, or executing scripts.
+- Reversible integration edits with atomic writes, restrictive permissions,
+  ownership journaling, collision detection, and conditional rollback.
 
-## Verification log
-
-The release checks use isolated temporary homes and fixture packages. Codex
-integration uses the supported CLI contract and does not modify installed skills
-or persistent user configuration.
+## Verification contract
 
 Core source checks are:
 
@@ -59,51 +54,58 @@ Core source checks are:
 cargo fmt --check
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --all-targets --locked
-make check
 ```
 
-The retained CLI, Codex, distribution, documentation, and trust-boundary checks
-are run separately so source tests are not mistaken for release or integration
-evidence. Published release verification additionally checks archive layout,
+Acceptance, trust-boundary, documentation, and integration checks run
+separately so source tests are not mistaken for end-to-end evidence. The
+source-install check must install the current source into a temporary prefix,
+invoke that installed executable, exercise deterministic fixture workflows,
+and run a read-only corpus pass over the maintained configured roots. It also
+compares dynamic JSON/SQLite counts, verifies project isolation and concurrent
+reconciliation, and hashes relevant `SKILL.md` and policy inputs before and
+after the corpus pass.
+
+Before a release tag, run the full gate from the exact source tree:
+
+```sh
+make release-preflight
+```
+
+The gate must pass with a fresh source-installed executable. Do not treat a
+plan, a debug binary, a partial probe, or a test-only result as release
+evidence. Published artifact verification additionally checks archive layout,
 checksums, executable versions, installer behavior, and package metadata.
+
+## Historical release evidence
+
+The following entries describe releases made before the filesystem-authority
+change. They remain useful provenance, but their native-inventory behavior is
+superseded by the current root-only contract.
 
 ### 0.2.2 exact-name reads - 2026-09-14
 
-Before the release tag was created, `make release-preflight` passed from an
-unrestricted local terminal on commit `485ad99`. The gate included formatting,
-Clippy, 53 Rust tests, CLI, documentation, trust-boundary and distribution
-checks, Codex integration, a live coding-agent inference check, dependency
-assurance, and fresh source-installed filesystem and Codex-native workflows.
-
-Release workflow 34889055556 built, published, and verified both macOS archives.
+Before the release tag was created, `make release-preflight` passed on commit
+`485ad99`. The gate included formatting, Clippy, Rust tests, CLI,
+documentation, trust-boundary, distribution, native-inventory integration,
+live inference, dependency assurance, and a fresh source installation.
 Independent published-release verification confirmed archive layout, checksums,
-both executable versions, and isolated installer behavior. The archive SHA-256
-values are `3a2ff7ecbf8423802a6703a5be301d6cc345c72b8bb415b7952a00849e864ad8`
-for arm64 and `3bbf51f67ee9acac7e9b1e9d7edfaaca5c029516af1594854049a6c0d410ae6f`
-for x86_64.
+executable versions, and isolated installer behavior.
 
 ### 0.2.1 corrective release - 2026-09-14
 
-Before the release tag was created, `make release-preflight` passed from an
-unrestricted local terminal on the exact 0.2.1 source tree. The gate included
-formatting, Clippy, 49 Rust tests, CLI and trust-boundary acceptance, Codex
-integration, a live coding-agent search/read inference check, dependency
-assurance, and a fresh `cargo install --path` into a temporary prefix. The
-source-installed executable passed filesystem discovery and real Codex-native
-refresh, search, read, and strict doctor checks across two workspace contexts,
-including first-query refresh for a workspace with no cached native snapshot.
+Before the release tag was created, `make release-preflight` passed on the exact
+0.2.1 source tree. The gate included formatting, Clippy, Rust tests, CLI and
+trust-boundary acceptance, Codex integration, live inference, dependency
+assurance, and a fresh source installation into a temporary prefix.
 
 ## Compatibility and limits
 
-- Codex 0.154.0 accepts `skills.include_instructions = false`; its native
-  `skills/list` contract is covered by the integration fixture. Other versions
-  default to filesystem discovery only.
-- macOS arm64 is the supported runtime. macOS x86_64 archives are built, but
-  hardware and older macOS runtime coverage remain limited.
+- The maintained release target is macOS arm64. macOS x86_64 archives are
+  built, but hardware and older macOS runtime coverage remain limited.
 - Signing and notarization are not claimed unless a release verifies them.
 - Historical benchmark and model-research measurements are not production
-  quality claims. Current research boundaries are recorded in [research](RESEARCH.md).
+  quality claims; current research boundaries are recorded in [research](RESEARCH.md).
 
-The detailed host, path, and release-run metadata remains in the corresponding
-CI or release records. This document keeps only evidence needed to understand
-the product history and its limits.
+Detailed host, path, and release-run metadata belongs in the corresponding CI
+or release records. This document keeps only evidence needed to understand the
+product history and its limits.

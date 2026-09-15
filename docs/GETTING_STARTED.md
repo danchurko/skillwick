@@ -1,8 +1,9 @@
 # Getting started
 
-Skillwick is a local catalogue for installed Agent Skills. It indexes bounded
-metadata, returns deliberate candidates, and reads only the instruction file
-you select. It does not install packages or execute package content.
+Skillwick is a local catalogue for installed Agent Skills. It discovers only
+the filesystem roots you configure, indexes bounded metadata in a disposable
+SQLite database, and reads only the instruction file you select. It never
+installs packages or executes package content.
 
 ## Install
 
@@ -28,86 +29,94 @@ skillwick --version
 skillwick --help
 ```
 
-## First search
+## Configure discovery roots
 
-Skillwick discovers `$HOME/.agents/skills` and applicable `.agents/skills`
-directories from the selected working directory through its ancestors. Create
-or install a skill with its existing package owner, then refresh the local
-snapshot:
+Register a shared root when its packages should be available in every project:
 
 ```sh
-skillwick refresh
+skillwick init --yes --agent none --root "$HOME/.agents/skills"
+```
+
+Register a project root with the workspace it belongs to. It applies in that
+workspace and all descendants, not in sibling projects:
+
+```sh
+skillwick --cwd "$PWD" init --yes --agent none \
+  --root "$HOME/.agents/skills" \
+  --project-root "$PWD/.agents/skills"
+```
+
+Roots are explicit. Unregistered home, ancestor, and agent-specific folders
+are not searched. Existing package owners continue to own package files and
+updates; registering a parent directory is enough to discover packages below
+it.
+
+## Search, inspect, and read
+
+Every lookup reconciles the applicable roots before querying the local index.
+An unchanged inventory reuses SQLite, so a separate refresh is not required
+after ordinary package changes. Search is explicit and accepts one or more
+task words:
+
+```sh
 skillwick search "deploy an AgentCore MCP server with TypeScript"
+skillwick search "SQLite full text ranking" --limit 3
 ```
 
-Search returns compact IDs. Copy one ID into `read`:
-
-```sh
-skillwick read ID
-```
-
-Stable instructions may use an exact, case-sensitive name instead:
-
-```sh
-skillwick read astra-orchestrator
-```
-
-Duplicate names require an explicit ID.
-
-The `read` command rechecks the live path, canonical identity, size, and content
-hash. Treat the selected file as instructions to review, not as permission to
-run scripts or change configuration.
-
-## Inspect before reading
-
-Use metadata inspection when you need package provenance. Add `--files` for a
-bounded relative listing:
+Select an ID from the results and inspect it before reading when provenance or
+package shape matters:
 
 ```sh
 skillwick inspect ID
 skillwick inspect ID --files
+skillwick read ID
 ```
 
-Inspection does not print reference contents and does not execute scripts.
-Symlink entries are reported without being followed. A truncated listing is a
-partial view; it is not proof that omitted files do not exist.
+`read` also accepts a unique, exact, case-sensitive skill name. It validates
+the live canonical path, size, encoding, and content hash before printing the
+file. Treat the file as instructions to review; a successful read does not
+authorize running scripts or changing configuration.
 
-## Check and refresh
+## Check the inventory
 
-Use `list` to see the complete current model-discoverable inventory and
-`doctor` to inspect coverage and integration state:
+`list` is the complete current-scope model-discoverable inventory. `doctor`
+reports source, cache, policy, and integration health:
 
 ```sh
 skillwick list
 skillwick doctor --strict
 ```
 
-Run `skillwick refresh` after installed skills, plugins, native enablement, or
-configured roots change. With Codex inventory enabled, a missing or incompatible
-workspace snapshot triggers one observable automatic refresh; covered searches
-stay local and cache-only.
-
-## Optional Codex integration
-
-Preview setup before writing files:
+Use `--json` with `search`, `list`, `inspect`, or `doctor` for version-2
+machine-readable output. `refresh` is available when a caller wants an
+explicit maintenance reconciliation:
 
 ```sh
-skillwick init --dry-run --yes --agent codex --catalog native
+skillwick refresh
 ```
 
-Apply setup only when you want Skillwick to own its integration files:
+Failed or incomplete source scans fail the affected operation and preserve the
+last complete published cache. They are not reported as an empty inventory.
+
+## Optional agent integration
+
+Setup defaults to the Codex integration target. Apply it only when Skillwick
+should manage its own context file and one reference in the selected agent
+instructions file:
 
 ```sh
-skillwick init --yes --agent codex --catalog native
+skillwick init --dry-run --yes --root "$HOME/.agents/skills"
+skillwick init --yes --root "$HOME/.agents/skills"
 skillwick doctor --strict
 ```
 
-The setup writes Skillwick's owned context/reference and native snapshot. It
-does not move installed skills or take ownership of Codex plugins. Managed
-environments can provide the same context with `skillwick instructions` and
-own their AGENTS and Codex settings themselves.
+Use `--agent none` for filesystem discovery without integration files. A
+managed configuration owner can instead consume the canonical content from
+`skillwick instructions` and keep ownership of its own agent files. Skillwick
+does not query an agent-native catalogue or change installed packages.
 
 ## Next steps
 
-Read the [operations guide](OPERATIONS.md) for recovery and uninstall, or the
-[command reference](REFERENCE.md) for stable scripting details.
+Read the [usage guide](USAGE.md) for workflows, [operations guide](OPERATIONS.md)
+for recovery and ownership, or the [command reference](REFERENCE.md) for
+stable scripting details.

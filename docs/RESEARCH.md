@@ -1,40 +1,58 @@
 # Research record
 
 This page records dated source review and experiments that informed the shipped
-local lexical boundary. It is not a promise of current model quality, a
-security audit, or a production dependency list. The production path remains
-local SQLite FTS5 and the version-bound Codex native inventory documented in
-the [architecture](ARCHITECTURE.md) and [compatibility](COMPATIBILITY.md)
-pages.
+local lookup boundary. It is not a promise of current model quality, a
+security audit, or a production dependency list. The supported path is
+configured filesystem discovery plus local SQLite FTS5.
 
-## Native boundary
+## Filesystem authority review
 
-Codex CLI 0.154.0 exposes `skills.include_instructions = false` and the
-newline-delimited `skills/list` app-server contract. The latter is an
-inventory, not task-ranked search, so Skillwick uses it only to obtain the
-native records that Codex already owns. It does not reconstruct private plugin
-directories, move installed files, or replace Codex's enablement and
-permission decisions.
+The current product treats explicitly configured roots as its sole discovery
+authority. Shared roots apply in every workspace; project roots apply in their
+configured workspace and descendants. The cache is rebuildable derived state.
+
+The implementation review established these boundaries:
+
+- A complete scoped scan is required before publishing a derived snapshot.
+- Root configuration, canonical instruction identity, bounded file contents,
+  and adjacent invocation-policy identity/presence/content participate in
+  freshness.
+- Overlapping roots deduplicate by canonical instruction path for public
+  output while retaining raw root associations for diagnostics.
+- Symlink escapes, malformed metadata, missing roots, and unreadable inputs
+  fail closed and preserve the last complete cache.
+- Selected reads revalidate the live file. Discovery and package inspection do
+  not execute instruction or supporting files.
+
+These are implementation boundaries, not claims about package ownership.
+Existing installers and users continue to own skill directories and updates.
+
+## Historical agent-inventory review
+
+Earlier releases evaluated a Codex-native inventory contract. Codex CLI 0.154.0
+exposed `skills.include_instructions = false` and a newline-delimited
+`skills/list` app-server contract. That work is retained as historical release
+evidence only; the current product does not query, enable, suppress, or
+reconstruct an agent-native catalogue.
 
 The dated source review used these pinned references:
 
 - [Codex skills configuration](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/config/src/skills_config.rs)
 - [Codex skills extension](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/ext/skills/src/extension.rs)
 - [Codex catalogue rendering](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/ext/skills/src/world_state_catalogs.rs)
-- [Codex native inventory schema](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/app-server-protocol/src/protocol/v2/plugin.rs)
+- [Codex inventory schema](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/app-server-protocol/src/protocol/v2/plugin.rs)
 
-The source boundaries were reviewed on 11 September 2026. A new Codex
-version requires a fresh source review, compatibility fixture, and integration
-run before native catalogue policy changes.
+No current compatibility claim follows from that historical review. A future
+agent integration would need a separate product decision, ownership boundary,
+compatibility fixture, and live evidence.
 
 ## Historical semantic evaluation
 
-On 13 September 2026, the benchmark harness evaluated the same frozen profile
-of 531 model-discoverable native records and 105 held-out query perspectives.
-These are offline retrieval measurements; they do not measure agent task
-success, selection quality, instruction following, or safety. The artifacts
-remain in `benchmarks/` so a future experiment can reproduce the inputs and
-report retrieval, resource, and artifact measurements separately.
+On 13 September 2026, an offline benchmark evaluated a frozen profile of 531
+model-discoverable records and 105 held-out query perspectives. The artifacts
+remain in `benchmarks/` so the experiment can be reproduced. They measure
+retrieval only—not task success, selection quality, instruction following, or
+safety.
 
 | Path | Recall@5 | MRR@5 | nDCG@5 | Resource observation |
 | --- | ---: | ---: | ---: | --- |
@@ -46,45 +64,30 @@ The embedding candidate was `Snowflake/snowflake-arctic-embed-xs`, revision
 `d8c86521100d3556476a063fc2342036d45c106f`, with the measured ONNX SHA-256
 `cf2698d30ff05da02c70a088313bad56e5c2f401d734cb24a8390d446111936c`. The
 reranker was `cross-encoder/ms-marco-TinyBERT-L2-v2`, revision
-`81d1926f67cb8eee2c2be17ca9f793c7c3bd20cc`, with ONNX SHA-256
+`81d1926f67cb8eee2cbe17ca9f793c7c3bd20cc`, with ONNX SHA-256
 `7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68`.
-Both artifacts were downloaded and executed locally for this experiment, but
-neither is a Skillwick runtime dependency. The reranker result is a useful
-candidate-pool experiment, not evidence that adding model startup, memory,
-or artifact supply-chain cost improves end-user work.
+Neither artifact is a Skillwick runtime dependency.
 
-The current decision is therefore to keep lexical retrieval authoritative and
-to leave semantic retrieval optional and research-only. Any proposal to add a
-model must preserve lexical fallback and report, on the same held-out profile,
-retrieval quality, final selection, selected-instruction loading, root-context
-size, input/output/cache tokens, latency, memory, artifact size, and unavailable
-model behavior. Vectors would also need a key containing model revision,
-preprocessing, dimension, and content hash; reranking would be limited to a
-small lexical candidate pool.
+The decision remains lexical-only production retrieval. Any future model
+proposal must preserve deterministic lexical behavior when unavailable, pin
+and verify artifacts, and report quality, selected-instruction loading,
+candidate-pool size, latency, memory, storage, and failure behavior on a
+reviewable corpus.
 
-The complete comparison, including the embedding-plus-reranker run and the
-adoption rationale, is recorded in the
+The full comparison and adoption rationale are in the
 [semantic adoption decision](research/semantic-adoption.md).
 
-## Source-review lessons
+## Durable lessons
 
-The earlier comparison of local and hosted skill-search projects produced a
-few durable boundaries:
+- Metadata search and instruction-body loading remain separate.
+- A count check does not prove metadata identity, ordering, or policy coverage.
+- Operational errors remain visible instead of becoming empty search results.
+- One local FTS5 index is easier to keep consistent than separate metadata and
+  text stores at this scale.
+- Package ownership, agent configuration, and Skillwick's derived state stay
+  separate.
 
-- Metadata search and instruction-body loading should remain separate. A
-  prefix-only cache key or a remote first-run sync is not sufficient for a
-  correctness-preserving local cache.
-- A vector-count check does not detect metadata reordering, and a quality
-  threshold is not the same thing as relevance or trust. Operational errors
-  must remain visible instead of becoming empty search results.
-- A single FTS5 database is easier to keep consistent than separate metadata
-  and text indexes at this scale. Optional semantic work must not make a model
-  service a prerequisite for ordinary search.
-- Native plugin ownership includes tools, hooks, configuration, credentials,
-  and package state. Existing installers and Codex retain that ownership;
-  Skillwick owns only its derived index, integration files, and diagnostics.
-
-These lessons are design context, not endorsements of the compared projects
-or claims that their unexecuted source was production-ready. Current behavior
-and limits belong in the [implementation history](IMPLEMENTATION.md) and
+These lessons are design context, not endorsements of compared projects or
+claims that unexecuted source was production-ready. Current behavior belongs
+in the [architecture](ARCHITECTURE.md), [decisions](DECISIONS.md), and
 [security policy](../SECURITY.md).

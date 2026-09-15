@@ -1,6 +1,6 @@
 use crate::metadata;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -10,13 +10,13 @@ pub struct Skill {
     pub path: PathBuf,
     pub canonical: PathBuf,
     pub base: PathBuf,
-    pub workspace: Option<PathBuf>,
-    pub codex_home: Option<PathBuf>,
     pub scope: String,
     pub source: String,
     pub source_kind: String,
     pub enabled: bool,
     pub plugin_id: Option<String>,
+    pub source_fingerprint: String,
+    pub roots: Vec<(PathBuf, String)>,
     pub metadata: metadata::Metadata,
 }
 
@@ -26,48 +26,102 @@ pub struct ScanReport {
     pub complete: bool,
 }
 
-pub fn roots(cwd: &Path, extra: &[PathBuf]) -> Vec<(PathBuf, String)> {
-    let mut roots = Vec::new();
-    if let Some(home) = std::env::var_os("HOME") {
-        roots.push((PathBuf::from(home).join(".agents/skills"), "global".into()));
+pub fn roots(
+    cwd: &Path,
+    shared: &[PathBuf],
+    projects: &[crate::config::Project],
+) -> Vec<(PathBuf, String)> {
+    let normalized_cwd = fs::canonicalize(cwd).unwrap_or_else(|_| cwd.to_path_buf());
+    let mut roots = shared
+        .iter()
+        .cloned()
+        .map(|path| (path, "global".to_owned()))
+        .collect::<Vec<_>>();
+    for project in projects {
+        let Ok(path) = fs::canonicalize(&project.path) else {
+            continue;
+        };
+        if normalized_cwd.starts_with(path) {
+            roots.extend(
+                project
+                    .roots
+                    .iter()
+                    .cloned()
+                    .map(|root| (root, "project".to_owned())),
+            );
+        }
     }
-    for directory in cwd.ancestors() {
-        roots.push((
-            directory.join(".agents/skills"),
-            if directory == cwd {
-                "project".into()
-            } else {
-                "ancestor".into()
-            },
-        ));
-    }
-    roots.extend(extra.iter().cloned().map(|path| (path, "custom".into())));
     let mut seen = HashSet::new();
     roots
         .into_iter()
-        .filter(|(path, _)| seen.insert(path.clone()))
+        .filter(|(path, _)| {
+            let identity = fs::canonicalize(path).unwrap_or_else(|_| path.clone());
+            seen.insert(identity)
+        })
         .collect()
 }
 
-pub fn scan(cwd: &Path, extra: &[PathBuf]) -> ScanReport {
-    let configured: HashSet<_> = extra.iter().collect();
-    let configured_targets: Vec<_> = extra
+pub fn root_keys(
+    cwd: &Path,
+    shared: &[PathBuf],
+    projects: &[crate::config::Project],
+) -> Vec<String> {
+    roots(cwd, shared, projects)
+        .into_iter()
+        .map(|(root, _)| {
+            fs::canonicalize(&root)
+                .unwrap_or(root)
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect()
+}
+
+pub fn configured_roots(
+    shared: &[PathBuf],
+    projects: &[crate::config::Project],
+) -> Vec<(String, String)> {
+    let mut configured = shared
         .iter()
-        .filter_map(|root| fs::canonicalize(root).ok())
+        .map(|root| ("shared".to_owned(), canonical_key(root)))
+        .collect::<Vec<_>>();
+    for project in projects {
+        let project_key = canonical_key(&project.path);
+        configured.extend(
+            project
+                .roots
+                .iter()
+                .map(|root| (format!("project:{project_key}"), canonical_key(root))),
+        );
+    }
+    configured.sort();
+    configured.dedup();
+    configured
+}
+
+fn canonical_key(path: &Path) -> String {
+    fs::canonicalize(path)
+        .unwrap_or_else(|_| path.to_path_buf())
+        .to_string_lossy()
+        .into_owned()
+}
+
+pub fn scan(cwd: &Path, shared: &[PathBuf], projects: &[crate::config::Project]) -> ScanReport {
+    let configured_targets: Vec<_> = roots(cwd, shared, projects)
+        .iter()
+        .filter_map(|(root, _)| fs::canonicalize(root).ok())
         .collect();
-    let mut seen = HashSet::new();
-    let mut skills = Vec::new();
+    let mut seen: HashMap<PathBuf, usize> = HashMap::new();
+    let mut skills: Vec<Skill> = Vec::new();
     let mut diagnostics = Vec::new();
     let mut complete = true;
-    for (root, scope) in roots(cwd, extra) {
+    for (root, scope) in roots(cwd, shared, projects) {
         if !root.exists() {
-            if configured.contains(&root) {
-                diagnostics.push(format!(
-                    "configured root does not exist: {}",
-                    root.display()
-                ));
-                complete = false;
-            }
+            diagnostics.push(format!(
+                "configured root does not exist: {}",
+                root.display()
+            ));
+            complete = false;
             continue;
         }
         let authorized_root = match fs::canonicalize(&root) {
@@ -156,27 +210,38 @@ pub fn scan(cwd: &Path, extra: &[PathBuf]) -> ScanReport {
                     complete = false;
                     continue;
                 }
-                if !seen.insert(canonical.clone()) {
-                    continue;
-                }
                 match metadata::parse(&canonical) {
                     Ok(metadata) => {
                         if let Some(diagnostic) = &metadata.policy_diagnostic {
                             diagnostics.push(format!("{}: {diagnostic}", path.display()));
                         }
-                        skills.push(Skill {
-                            base: path.parent().unwrap_or(&root).to_path_buf(),
-                            path,
-                            canonical,
-                            workspace: None,
-                            codex_home: None,
-                            scope: scope.clone(),
-                            source: root.display().to_string(),
-                            source_kind: "filesystem".into(),
-                            enabled: true,
-                            plugin_id: None,
-                            metadata,
-                        });
+                        let source_fingerprint =
+                            metadata::source_fingerprint(&canonical).map_err(|error| {
+                                diagnostics.push(format!("{}: {error}", path.display()));
+                                complete = false;
+                            });
+                        let Ok(source_fingerprint) = source_fingerprint else {
+                            continue;
+                        };
+                        let association = (authorized_root.clone(), scope.clone());
+                        if let Some(index) = seen.get(&canonical).copied() {
+                            skills[index].roots.push(association);
+                        } else {
+                            seen.insert(canonical.clone(), skills.len());
+                            skills.push(Skill {
+                                base: path.parent().unwrap_or(&root).to_path_buf(),
+                                path,
+                                canonical,
+                                scope: scope.clone(),
+                                source: root.display().to_string(),
+                                source_kind: "filesystem".into(),
+                                enabled: true,
+                                plugin_id: None,
+                                source_fingerprint,
+                                roots: vec![association],
+                                metadata,
+                            });
+                        }
                     }
                     Err(error) => {
                         diagnostics.push(format!("{}: {error}", path.display()));
@@ -221,7 +286,14 @@ mod tests {
             "---\nname: leak\ndescription: must not appear\n---\n",
         )
         .unwrap();
-        let report = scan(&project, &[]);
+        let report = scan(
+            &project,
+            &[],
+            &[crate::config::Project {
+                path: parent.join("one"),
+                roots: vec![project.join(".agents/skills")],
+            }],
+        );
         assert!(report
             .skills
             .iter()
@@ -230,6 +302,53 @@ mod tests {
             .skills
             .iter()
             .any(|skill| skill.metadata.name == "leak"));
+    }
+
+    #[test]
+    fn no_implicit_home_or_ancestor_roots_are_scanned() {
+        let temp = tempfile::tempdir().unwrap();
+        let cwd = temp.path().join("project/child");
+        let ancestor = temp.path().join("project/.agents/skills/ancestor");
+        let home = temp.path().join("home/.agents/skills/home");
+        fs::create_dir_all(&cwd).unwrap();
+        fs::create_dir_all(&ancestor).unwrap();
+        fs::create_dir_all(&home).unwrap();
+        fs::write(
+            ancestor.join("SKILL.md"),
+            "---\nname: ancestor\ndescription: no\n---\n",
+        )
+        .unwrap();
+        fs::write(
+            home.join("SKILL.md"),
+            "---\nname: home\ndescription: no\n---\n",
+        )
+        .unwrap();
+        let report = scan(&cwd, &[], &[]);
+        assert!(report.complete);
+        assert!(report.skills.is_empty());
+    }
+
+    #[test]
+    fn project_roots_apply_to_descendants_only() {
+        let temp = tempfile::tempdir().unwrap();
+        let project = temp.path().join("project");
+        let child = project.join("nested/child");
+        let sibling = temp.path().join("sibling");
+        let project_root = temp.path().join("project-skills");
+        fs::create_dir_all(&child).unwrap();
+        fs::create_dir_all(&sibling).unwrap();
+        fs::create_dir_all(project_root.join("skill")).unwrap();
+        fs::write(
+            project_root.join("skill/SKILL.md"),
+            "---\nname: project\ndescription: project\n---\n",
+        )
+        .unwrap();
+        let configured = [crate::config::Project {
+            path: project,
+            roots: vec![project_root],
+        }];
+        assert_eq!(scan(&child, &[], &configured).skills.len(), 1);
+        assert!(scan(&sibling, &[], &configured).skills.is_empty());
     }
 
     #[cfg(unix)]
@@ -248,7 +367,7 @@ mod tests {
         .unwrap();
         symlink(&outside, root.join("escape")).unwrap();
         symlink(&root, root.join("cycle")).unwrap();
-        let report = scan(temp.path(), &[root]);
+        let report = scan(temp.path(), &[root], &[]);
         assert!(!report.complete);
         assert!(!report
             .skills
@@ -279,7 +398,7 @@ mod tests {
             home.join(".agents/skills/reviewed"),
         )
         .unwrap();
-        let report = scan(&home, &[home.join(".agents/skills"), managed.clone()]);
+        let report = scan(&home, &[home.join(".agents/skills"), managed.clone()], &[]);
         assert!(!report
             .diagnostics
             .iter()
@@ -298,7 +417,7 @@ mod tests {
     fn missing_configured_root_makes_scan_incomplete() {
         let temp = tempfile::tempdir().unwrap();
         let missing = temp.path().join("missing");
-        let report = scan(temp.path(), std::slice::from_ref(&missing));
+        let report = scan(temp.path(), std::slice::from_ref(&missing), &[]);
         assert!(!report.complete);
         assert!(report
             .diagnostics
@@ -317,7 +436,7 @@ mod tests {
         )
         .unwrap();
 
-        let report = scan(temp.path(), &[]);
+        let report = scan(temp.path(), &[temp.path().join(".agents/skills")], &[]);
         let manual = report
             .skills
             .iter()

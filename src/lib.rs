@@ -5,7 +5,6 @@ pub mod index;
 pub mod integration;
 pub mod inventory;
 pub mod metadata;
-pub mod native;
 pub mod output;
 pub mod package;
 pub mod search;

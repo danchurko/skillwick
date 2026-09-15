@@ -22,7 +22,7 @@ trust-boundary regressions. Codex-specific checks are separate because they
 require an installed compatible Codex CLI:
 
 ```sh
-make test-codex
+make test-filesystem
 make test-inference
 ```
 

@@ -11,9 +11,22 @@ package owner. Discovering a skill does not transfer ownership to Skillwick.
 _Avoid_: Skillwick-managed package
 
 **Skill inventory**:
-The installed skills known to Skillwick for a working environment, including
-their source and enablement information.
+The installed skills discovered under the skill roots applicable to a working
+environment, including their source and discovery-policy information.
 _Avoid_: Evaluation dataset
+
+**Skill root**:
+A configured directory containing installed skill packages. Its contents are
+an authoritative source for Skillwick discovery.
+_Avoid_: Agent-native catalogue
+
+**Shared root**:
+A skill root applicable in every project.
+_Avoid_: Project root
+
+**Project root**:
+A skill root applicable only within its associated project.
+_Avoid_: Shared root
 
 **Candidate**:
 A skill returned by a search for the calling agent to assess. A candidate is not
@@ -29,12 +42,6 @@ _Avoid_: Automatically activated skill
 A metadata record discovered under an authorized filesystem root.
 _Avoid_: Native inventory
 
-**Native inventory**:
-
-Records returned by the supported agent-native inventory contract, scoped to a
-normalized workspace and agent home.
-_Avoid_: Filesystem scan
-
 **Raw record**:
 
 One source record before public canonical deduplication.
@@ -42,14 +49,15 @@ _Avoid_: Public candidate
 
 **Model-discoverable**:
 
-Enabled inventory state that passes invocation-policy checks and may appear in
-public search, list, count, read, or inspect results.
+An installed skill under an applicable skill root that passes invocation-policy
+checks and may appear in public search, list, count, read, or inspect results.
 _Avoid_: User-invocable
 
-**Workspace coverage**:
+**Inventory freshness**:
 
-A valid native snapshot for the exact normalized workspace and Codex home.
-_Avoid_: Global native cache
+Whether the inventory reflects the relevant files and discovery policies
+verified under the applicable skill roots for the current lookup.
+_Avoid_: Cache compatibility
 
 **Invocation policy**:
 

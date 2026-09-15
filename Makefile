@@ -1,4 +1,4 @@
-.PHONY: build check dependency-assurance docs-check fmt hooks lint release-preflight test test-cli test-codex test-inference test-source-install test-trust dist
+.PHONY: build check dependency-assurance docs-check fmt hooks lint release-preflight test test-cli test-filesystem test-inference test-source-install test-trust dist
 
 build:
 	cargo build --locked
@@ -19,8 +19,8 @@ test-cli: build
 	sh tests/cli_acceptance.sh target/debug/skillwick
 	sh tests/distribution_smoke.sh target/debug/skillwick
 
-test-codex: build
-	sh tests/codex_integration.sh target/debug/skillwick codex
+test-filesystem: build
+	sh tests/filesystem_integration.sh target/debug/skillwick
 
 test-inference: build
 	sh tests/inference_smoke.sh target/debug/skillwick
@@ -39,7 +39,7 @@ check: fmt lint test test-cli docs-check test-trust
 dependency-assurance:
 	./scripts/dependency-assurance.sh
 
-release-preflight: check test-codex test-inference dependency-assurance test-source-install
+release-preflight: check test-filesystem test-inference dependency-assurance test-source-install
 
 dist:
 	dist build --artifacts=local --target=aarch64-apple-darwin --target=x86_64-apple-darwin

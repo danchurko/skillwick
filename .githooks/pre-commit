@@ -9,6 +9,4 @@ if ! git diff --quiet; then
   exit 1
 fi
 make check
-if command -v codex >/dev/null 2>&1; then
-  make test-codex
-fi
+make test-filesystem

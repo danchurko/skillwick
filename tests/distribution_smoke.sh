@@ -79,7 +79,7 @@ run() {
   env HOME="$home" XDG_CONFIG_HOME="$tmp/config" XDG_CACHE_HOME="$tmp/cache" \
     XDG_STATE_HOME="$tmp/state" "$prefix/bin/skillwick" --cwd "$home" "$@"
 }
-run init --yes --agent none --inventory filesystem
+run init --yes --agent none --root "$home/.agents/skills"
 result=$(run search 'installed packaged executable')
 printf '%s\n' "$result" | grep -q '^packaged@'
 identifier=$(printf '%s\n' "$result" | sed -n 's/^\([^ ]*@[^ ]*\).*/\1/p')

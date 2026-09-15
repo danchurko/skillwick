@@ -67,6 +67,66 @@ pub struct Metadata {
     pub policy_diagnostic: Option<String>,
 }
 
+/// Return a fingerprint for the source material that can affect discovery.
+///
+/// `hash` intentionally remains the instruction-file-only digest used by live
+/// reads. This separate digest also records the canonical instruction path and
+/// the adjacent policy file's identity, presence, and bounded contents so a
+/// policy-only change invalidates the derived inventory.
+pub fn source_fingerprint(path: &Path) -> Result<String, String> {
+    let canonical = fs::canonicalize(path).map_err(|error| error.to_string())?;
+    let instruction = read_bounded(&canonical, MAX_FILE).map_err(|error| error.to_string())?;
+    let policy_path = canonical
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join("agents/openai.yaml");
+
+    let mut hasher = Sha256::new();
+    fingerprint_part(
+        &mut hasher,
+        b"instruction-path",
+        canonical.to_string_lossy().as_bytes(),
+    );
+    fingerprint_part(&mut hasher, b"instruction-content", &instruction);
+    match fs::symlink_metadata(&policy_path) {
+        Ok(_) => {
+            fingerprint_part(&mut hasher, b"policy-presence", b"present");
+            let policy_identity = fs::canonicalize(&policy_path)
+                .unwrap_or_else(|_| policy_path.clone())
+                .to_string_lossy()
+                .into_owned();
+            fingerprint_part(&mut hasher, b"policy-path", policy_identity.as_bytes());
+            match read_bounded(&policy_path, MAX_FRONTMATTER) {
+                Ok(contents) => fingerprint_part(&mut hasher, b"policy-content", &contents),
+                Err(error) => fingerprint_part(
+                    &mut hasher,
+                    b"policy-read-error",
+                    error.to_string().as_bytes(),
+                ),
+            }
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            fingerprint_part(&mut hasher, b"policy-presence", b"missing");
+        }
+        Err(error) => {
+            fingerprint_part(&mut hasher, b"policy-presence", b"unreadable");
+            fingerprint_part(
+                &mut hasher,
+                b"policy-read-error",
+                error.to_string().as_bytes(),
+            );
+        }
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn fingerprint_part(hasher: &mut Sha256, label: &[u8], value: &[u8]) {
+    hasher.update((label.len() as u64).to_le_bytes());
+    hasher.update(label);
+    hasher.update((value.len() as u64).to_le_bytes());
+    hasher.update(value);
+}
+
 pub(crate) fn read_bounded(path: &Path, limit: usize) -> Result<Vec<u8>, ReadError> {
     let file = fs::File::open(path)?;
     if file.metadata()?.len() > limit as u64 {
@@ -510,5 +570,37 @@ mod tests {
             .policy_diagnostic
             .as_deref()
             .is_some_and(|diagnostic| diagnostic.contains("duplicate")));
+    }
+
+    #[test]
+    fn source_fingerprint_covers_policy_material_but_hash_does_not() {
+        let dir = tempfile::tempdir().unwrap();
+        let package = dir.path().join("skill");
+        fs::create_dir_all(package.join("agents")).unwrap();
+        let path = package.join("SKILL.md");
+        fs::write(
+            &path,
+            "---\nname: fingerprint\ndescription: stable\n---\nbody",
+        )
+        .unwrap();
+
+        let original = parse(&path).unwrap();
+        let original_fingerprint = source_fingerprint(&path).unwrap();
+        fs::write(
+            package.join("agents/openai.yaml"),
+            "policy:\n  allow_implicit_invocation: true\n",
+        )
+        .unwrap();
+        let with_policy = parse(&path).unwrap();
+        let with_policy_fingerprint = source_fingerprint(&path).unwrap();
+        assert_eq!(original.hash, with_policy.hash);
+        assert_ne!(original_fingerprint, with_policy_fingerprint);
+
+        fs::write(
+            package.join("agents/openai.yaml"),
+            "policy:\n  allow_implicit_invocation: false\n",
+        )
+        .unwrap();
+        assert_ne!(with_policy_fingerprint, source_fingerprint(&path).unwrap());
     }
 }

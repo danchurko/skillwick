@@ -56,17 +56,26 @@ test "$(shasum -a 256 "$cache_file" | awk '{print $1}')" = "$before_hash"
 # snapshot without cross-project leakage.
 project_b="$temporary/project-b"
 write_skill "$project_b" project-b "Second project source."
-run init --yes --agent none --root "$shared" --project-root "$project_b" >/dev/null
+run_b() {
+  env HOME="$home" CODEX_HOME="$temporary/missing-codex-home" PATH="$no_codex" \
+    XDG_CONFIG_HOME="$config" XDG_CACHE_HOME="$cache" XDG_STATE_HOME="$state" \
+    "$binary" --cwd "$project_b" "$@"
+}
+run_b init --yes --agent none --root "$shared" --project-root "$project_b" >/dev/null
 run refresh >/dev/null & first=$!
-env HOME="$home" CODEX_HOME="$temporary/missing-codex-home" PATH="$no_codex" \
-  XDG_CONFIG_HOME="$config" XDG_CACHE_HOME="$cache" XDG_STATE_HOME="$state" \
-  "$binary" --cwd "$project_b" refresh >/dev/null & second=$!
+run_b refresh >/dev/null & second=$!
 wait "$first"
 wait "$second"
 run list | grep -q '^2 skills in the current inventory\.$'
 run list | grep -q '^shared@'
 run list | grep -q '^project@'
 ! run list | grep -q '^project-b@'
+run_b list | grep -q '^2 skills in the current inventory\.$'
+run_b list | grep -q '^shared@'
+run_b list | grep -q '^project-b@'
+! run_b list | grep -q '^project@'
+test "$(sqlite3 "$cache_file" 'PRAGMA integrity_check;')" = ok
+test "$(sqlite3 "$cache_file" "SELECT count(*) FROM skills WHERE source_kind='filesystem';")" -eq 3
 
 # Provider-specific flags are rejected instead of silently reintroducing the
 # removed native mode.

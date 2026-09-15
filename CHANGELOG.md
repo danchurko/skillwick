@@ -3,6 +3,15 @@
 User-visible changes are recorded here. Release artifacts and verification
 evidence live in [implementation history](docs/IMPLEMENTATION.md).
 
+## Unreleased
+
+- Make explicitly configured shared and project skill roots the sole discovery
+  authority, with automatic per-command freshness and isolated project scope.
+- Remove the Codex native-inventory runtime and its provider-specific options;
+  discovery now works without a Codex executable or writable Codex state.
+- Preserve complete SQLite snapshots across failed scans while reflecting file,
+  invocation-policy, and root-configuration changes on the next lookup.
+
 ## 0.2.2 - 2026-09-14
 
 - Allow `skillwick read` to resolve a unique exact, case-sensitive skill name

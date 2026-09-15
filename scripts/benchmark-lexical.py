@@ -221,7 +221,7 @@ def benchmark(args: argparse.Namespace) -> None:
         common = [str(binary), "--cwd", str(workspace), "--config", str(config)]
         startup = [run_command([str(binary), "--version"], env)[1] for _ in range(args.samples)]
         _, refresh_ms = run_command(
-            [*common, "init", "--yes", "--agent", "none", "--inventory", "filesystem", "--root", str(root)], env
+            [*common, "init", "--yes", "--agent", "none", "--root", str(root)], env
         )
         queries = [
             (f"{case['id']}:{index}", query, set(case["relevant"]))
@@ -251,7 +251,7 @@ def benchmark(args: argparse.Namespace) -> None:
             "corpus_total": profile["corpus"]["total"],
             "conditions": {
                 "cold": "fresh process; kernel file caches were not flushed",
-                "warm": f"separate covered cache-only search processes, {args.samples} samples per query",
+                "warm": f"separate automatically reconciled search processes, {args.samples} samples per query",
                 "optional_model_artifacts": False,
             },
             "machine": {

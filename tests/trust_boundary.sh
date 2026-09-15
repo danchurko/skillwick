@@ -100,12 +100,13 @@ rm "$root/canonical-alias"
 # scripts/symlinked directories.
 package="$root/package"
 mkdir -p "$package/references" "$package/scripts" "$package/flood"
+mkdir -p "$root/inside"
 printf '%s\n' '---' 'name: package' 'description: Bounded package inspection fixture.' '---' \
   >"$package/SKILL.md"
 printf '%s\n' '#!/bin/sh' "touch '$temporary/inspection-executed'" \
   >"$package/scripts/check.sh"
 printf '%s\n' 'secret' >"$outside/secret.txt"
-ln -s "$outside" "$package/references/escape"
+ln -s "$root/inside" "$package/references/escape"
 i=0
 while [ "$i" -le 260 ]; do
   printf '%s\n' "$i" >"$package/flood/flood-$i.txt"

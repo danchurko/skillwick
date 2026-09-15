@@ -5,29 +5,24 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Context {
-    pub workspace: PathBuf,
-    pub codex_home: PathBuf,
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct Project {
+    pub path: PathBuf,
+    #[serde(default)]
+    pub roots: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Config {
+    #[serde(default)]
     pub roots: Vec<PathBuf>,
-    pub inventory: Inventory,
+    #[serde(default)]
+    pub projects: Vec<Project>,
+    #[serde(default)]
     pub agent: Agent,
-    pub codex_home: Option<PathBuf>,
-    pub codex_bin: Option<PathBuf>,
+    #[serde(default)]
     pub instructions_file: Option<PathBuf>,
-}
-
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum Inventory {
-    #[default]
-    Filesystem,
-    Codex,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -42,10 +37,8 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             roots: Vec::new(),
-            inventory: Inventory::Filesystem,
+            projects: Vec::new(),
             agent: Agent::None,
-            codex_home: None,
-            codex_bin: None,
             instructions_file: None,
         }
     }
@@ -70,27 +63,15 @@ pub fn home() -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."))
 }
-pub fn codex_home(config: &Config) -> PathBuf {
-    config
-        .codex_home
-        .clone()
-        .or_else(|| env::var_os("CODEX_HOME").map(PathBuf::from))
+pub fn codex_home() -> PathBuf {
+    env::var_os("CODEX_HOME")
+        .map(PathBuf::from)
         .unwrap_or_else(|| home().join(".codex"))
 }
 
-pub fn normalize_context(cwd: &Path, codex_home: &Path) -> Result<Context, String> {
-    let workspace = fs::canonicalize(cwd)
-        .map_err(|error| format!("cannot normalize workspace {}: {error}", cwd.display()))?;
-    let codex_home = fs::canonicalize(codex_home).map_err(|error| {
-        format!(
-            "cannot normalize Codex home {}: {error}",
-            codex_home.display()
-        )
-    })?;
-    Ok(Context {
-        workspace,
-        codex_home,
-    })
+pub fn normalize_cwd(cwd: &Path) -> Result<PathBuf, String> {
+    fs::canonicalize(cwd)
+        .map_err(|error| format!("cannot normalize workspace {}: {error}", cwd.display()))
 }
 fn config_home() -> PathBuf {
     env::var_os("XDG_CONFIG_HOME")

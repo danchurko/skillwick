@@ -1,15 +1,13 @@
 use crate::{
-    config, doctor, index, integration, inventory, metadata, native, output, package, search,
-    sources,
+    config, doctor, index, integration, inventory, metadata, output, package, search, sources,
 };
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
-use rusqlite::{backup::Backup, Connection};
+use rusqlite::Connection;
 use sha2::{Digest, Sha256};
 use std::{
     env, fs,
     io::{self, Write},
     path::{Path, PathBuf},
-    time::Duration,
 };
 
 const SEARCH_DEFAULT_LIMIT: usize = 5;
@@ -100,16 +98,16 @@ enum Command {
     List,
     /// Rebuild the disposable local index from configured sources.
     ///
-    /// Refresh may call the configured native provider and publishes state only
-    /// after a successful rebuild. Provider or source failures identify the
-    /// failed boundary and preserve the last valid snapshot.
+    /// Refresh publishes state only after all configured roots rebuild.
+    /// Source failures identify the failed boundary and preserve the last valid
+    /// snapshot.
     Refresh,
     /// Print the canonical agent usage instructions.
     ///
     /// Writes Markdown to stdout and performs no indexing or configuration
     /// changes.
     Instructions,
-    /// Preview or apply reversible agent integration and inventory settings.
+    /// Preview or apply reversible agent integration and filesystem roots.
     ///
     /// Without --yes, non-interactive setup fails with exit code 2. --dry-run
     /// performs no persistent writes.
@@ -133,19 +131,6 @@ enum Command {
         agent: AgentArg,
         #[arg(
             long,
-            value_enum,
-            help = "Inventory source (default: codex for agent codex, otherwise filesystem)"
-        )]
-        inventory: Option<InventoryArg>,
-        #[arg(
-            long,
-            value_enum,
-            default_value = "auto",
-            help = "Codex catalogue policy: auto, native, or unchanged (default: auto)"
-        )]
-        catalog: CatalogArg,
-        #[arg(
-            long,
             value_name = "PATH",
             help = "Add an authorized filesystem discovery root; repeat as needed"
         )]
@@ -153,19 +138,13 @@ enum Command {
         #[arg(
             long,
             value_name = "PATH",
+            help = "Add a root associated with the normalized workspace; repeat as needed"
+        )]
+        project_root: Vec<PathBuf>,
+        #[arg(
+            long,
+            value_name = "PATH",
             help = "Use PATH as Codex home (default: CODEX_HOME or ~/.codex)"
-        )]
-        codex_home: Option<PathBuf>,
-        #[arg(
-            long,
-            value_name = "PATH",
-            help = "Use PATH as the Codex executable for inventory and compatibility checks"
-        )]
-        codex_bin: Option<PathBuf>,
-        #[arg(
-            long,
-            value_name = "PATH",
-            help = "Use PATH for the owned agent context reference"
         )]
         instructions_file: Option<PathBuf>,
     },
@@ -196,17 +175,6 @@ enum Command {
 enum AgentArg {
     Codex,
     None,
-}
-#[derive(Clone, Copy, ValueEnum)]
-enum InventoryArg {
-    Codex,
-    Filesystem,
-}
-#[derive(Clone, Copy, ValueEnum)]
-enum CatalogArg {
-    Auto,
-    Native,
-    Unchanged,
 }
 #[derive(Clone, Copy, ValueEnum)]
 enum Shell {
@@ -269,22 +237,13 @@ pub fn run() -> Result<(), Failure> {
             yes,
             dry_run,
             agent,
-            inventory,
-            catalog,
             root,
-            codex_home,
-            codex_bin,
+            project_root,
             instructions_file,
         }) => {
             let agent = match agent {
                 AgentArg::Codex => config::Agent::Codex,
                 AgentArg::None => config::Agent::None,
-            };
-            let inventory = match inventory {
-                Some(InventoryArg::Codex) => config::Inventory::Codex,
-                Some(InventoryArg::Filesystem) => config::Inventory::Filesystem,
-                None if agent == config::Agent::Codex => config::Inventory::Codex,
-                None => config::Inventory::Filesystem,
             };
             let initialized = integration::init(
                 &config_path,
@@ -293,23 +252,13 @@ pub fn run() -> Result<(), Failure> {
                     yes,
                     dry_run,
                     agent,
-                    inventory,
-                    catalog: match catalog {
-                        CatalogArg::Auto => integration::Catalog::Auto,
-                        CatalogArg::Native => integration::Catalog::Native,
-                        CatalogArg::Unchanged => integration::Catalog::Unchanged,
-                    },
                     roots: root,
-                    codex_home,
-                    codex_bin,
+                    project_roots: project_root,
                     instructions_file,
                 },
             )?;
             if !dry_run && initialized.agent == config::Agent::None {
-                let _lock =
-                    index::acquire_cache_lock(&config::cache_path()).map_err(Failure::from)?;
-                let mut db = query_database()?;
-                refresh(&mut db, &initialized, &cwd)?;
+                refresh(&initialized, &cwd)?;
                 config::save(&config_path, &initialized)?;
             }
         }
@@ -334,15 +283,15 @@ pub fn run() -> Result<(), Failure> {
         Some(Command::Instructions) => write_text(integration::instructions())?,
         Some(Command::Refresh) => {
             let settings = config::load(&config_path)?;
-            let _lock = index::acquire_cache_lock(&config::cache_path()).map_err(Failure::from)?;
-            let mut db = query_database()?;
-            refresh(&mut db, &settings, &cwd)?;
+            refresh(&settings, &cwd)?;
         }
         command => {
             let settings = config::load(&config_path)?;
-            let mut db = query_database()?;
-            let context = prepare_index(&mut db, &settings, &cwd, true)?;
-            dispatch(command, args.json, &mut db, context.as_ref())?;
+            let mut db = index::open(Path::new(":memory:"))?;
+            let operation = command_name(command.as_ref());
+            prepare_index(&mut db, &settings, &cwd, operation)?;
+            let roots = sources::root_keys(&cwd, &settings.roots, &settings.projects);
+            dispatch(command, args.json, &mut db, Some(&roots))?;
         }
     }
     Ok(())
@@ -352,19 +301,19 @@ fn dispatch(
     command: Option<Command>,
     json: bool,
     db: &mut Connection,
-    context: Option<&config::Context>,
+    roots: Option<&[String]>,
 ) -> Result<(), Failure> {
     match command {
         None => unreachable!("missing command handled before index setup"),
         Some(Command::Search { query, limit }) => {
             emit(
-                &search::query(db, context, &query.join(" "), search_limit(limit)?)?,
+                &search::query(db, &query.join(" "), search_limit(limit)?, roots)?,
                 json,
             )?;
         }
         Some(Command::List) => {
-            let rows = search::all(db, context, None)?;
-            let total = search::count(db, context)?;
+            let rows = search::all(db, None, roots)?;
+            let total = search::count(db, roots)?;
             if json {
                 write_output(output::list_json(&rows, total))?;
             } else {
@@ -372,7 +321,7 @@ fn dispatch(
             }
         }
         Some(Command::Inspect { id, files }) => {
-            let row = find(db, context, &id)?;
+            let row = find(db, &id, roots)?;
             if files {
                 inspect_files(&row, json)?;
             } else if json {
@@ -381,150 +330,68 @@ fn dispatch(
                 write_text(&inspect_text(&row))?;
             }
         }
-        Some(Command::Read { target }) => read(db, context, &target)?,
+        Some(Command::Read { target }) => read(db, &target, roots)?,
         _ => unreachable!(),
     }
     Ok(())
+}
+
+fn command_name(command: Option<&Command>) -> &'static str {
+    match command {
+        Some(Command::Search { .. }) => "search",
+        Some(Command::List) => "list",
+        Some(Command::Read { .. }) => "read",
+        Some(Command::Inspect { .. }) => "inspect",
+        _ => "lookup",
+    }
 }
 
 fn prepare_index(
     db: &mut Connection,
     settings: &config::Config,
     cwd: &Path,
-    filesystem: bool,
-) -> Result<Option<config::Context>, Failure> {
-    let context = if settings.inventory == config::Inventory::Codex {
-        Some(config::normalize_context(cwd, &config::codex_home(settings)).map_err(Failure::from)?)
-    } else {
-        None
-    };
-    if filesystem {
-        refresh_filesystem(
-            db,
-            settings,
-            context
-                .as_ref()
-                .map_or(cwd, |context| context.workspace.as_path()),
-        )?;
-    }
-    if let Some(context) = &context {
-        if !index::snapshot_compatible(
-            db,
-            &context.workspace,
-            &context.codex_home,
-            settings.codex_bin.as_deref(),
-        )? {
-            eprintln!("notice: native inventory cache misses this context; refreshing");
-            match auto_refresh(settings, cwd, context) {
-                Ok(refreshed) => {
-                    *db = refreshed;
-                    if filesystem {
-                        refresh_filesystem(db, settings, &context.workspace)?;
-                    }
-                }
-                Err(error) => {
-                    let detail = error.to_string().lines().collect::<Vec<_>>().join(" | ");
-                    return Err(Failure(
-                        format!(
-                            "native inventory is unavailable for this workspace; discovery cannot safely continue until Codex enablement is refreshed. Run `skillwick refresh` from an unrestricted terminal, then retry. Detail: {}",
-                            output::clean(&detail)
-                        ),
-                        3,
-                    ));
-                }
-            }
-        }
-    }
-    Ok(context)
-}
-
-fn refresh_filesystem(
-    db: &mut Connection,
-    settings: &config::Config,
-    cwd: &Path,
+    operation: &str,
 ) -> Result<(), Failure> {
-    let scan = sources::scan(cwd, &settings.roots);
-    index::refresh_kind(db, "filesystem", &scan.skills, scan.complete)?;
-    for diagnostic in scan.diagnostics {
-        eprintln!("warning: {diagnostic}");
-    }
-    Ok(())
-}
-
-fn query_database() -> Result<Connection, Failure> {
-    let cache = config::cache_path();
-    match read_only_copy(&cache) {
-        Ok(db) => Ok(db),
-        Err(error) => {
-            if cache.exists() {
-                eprintln!("warning: durable cache unavailable ({error}); using empty memory");
-            }
-            index::open(Path::new(":memory:")).map_err(Into::into)
-        }
-    }
-}
-
-fn auto_refresh(
-    settings: &config::Config,
-    cwd: &Path,
-    context: &config::Context,
-) -> Result<Connection, Failure> {
-    let _lock = index::acquire_cache_lock(&config::cache_path()).map_err(Failure::from)?;
-    let mut db = query_database()?;
-    if !index::snapshot_compatible(
-        &db,
-        &context.workspace,
-        &context.codex_home,
-        settings.codex_bin.as_deref(),
-    )? {
-        refresh(&mut db, settings, cwd)?;
-    }
-    Ok(db)
-}
-
-fn read_only_copy(path: &Path) -> rusqlite::Result<Connection> {
-    let source = index::open_read_only(path)?;
-    let mut destination = index::open(Path::new(":memory:"))?;
-    Backup::new(&source, &mut destination)?.run_to_completion(100, Duration::ZERO, None)?;
-    Ok(destination)
-}
-
-fn refresh(db: &mut Connection, settings: &config::Config, cwd: &Path) -> Result<(), Failure> {
-    let codex = if settings.inventory == config::Inventory::Codex {
-        Some(native::detect(settings)?)
-    } else {
-        None
-    };
-    inventory::refresh(db, settings, cwd, codex.as_ref()).map_err(|error| match &error {
+    let refreshed = inventory::reconcile(settings, cwd, operation).map_err(|error| match &error {
         inventory::Error::Database(database) => Failure(
             format!(
                 "database error: {database}; run `skillwick refresh` to rebuild the disposable cache"
             ),
             1,
         ),
-        inventory::Error::Native(_) | inventory::Error::NoSpecialist => {
+        inventory::Error::Filesystem(_) => Failure(error.to_string(), 3),
+    })?;
+    *db = refreshed;
+    Ok(())
+}
+
+fn refresh(settings: &config::Config, cwd: &Path) -> Result<(), Failure> {
+    inventory::refresh(settings, cwd).map_err(|error| match &error {
+        inventory::Error::Database(database) => Failure(
+            format!(
+                "database error: {database}; run `skillwick refresh` to rebuild the disposable cache"
+            ),
+            1,
+        ),
+        inventory::Error::Filesystem(_) => {
             Failure(error.to_string(), 3)
         }
     })
 }
 
-fn find(
-    db: &Connection,
-    context: Option<&config::Context>,
-    id: &str,
-) -> Result<search::ResultRow, Failure> {
-    search::find(db, context, id)?.ok_or_else(|| Failure("skill not found".into(), 3))
+fn find(db: &Connection, id: &str, roots: Option<&[String]>) -> Result<search::ResultRow, Failure> {
+    search::find(db, id, roots)?.ok_or_else(|| Failure("skill not found".into(), 3))
 }
 
 fn resolve_read(
     db: &Connection,
-    context: Option<&config::Context>,
     target: &str,
+    roots: Option<&[String]>,
 ) -> Result<(search::ResultRow, bool), Failure> {
-    if let Some(row) = search::find(db, context, target)? {
+    if let Some(row) = search::find(db, target, roots)? {
         return Ok((row, false));
     }
-    let mut rows = search::find_name(db, context, target)?;
+    let mut rows = search::find_name(db, target, roots)?;
     match rows.len() {
         0 => Err(Failure(
             "skill not found; use `skillwick search` to find candidates".into(),
@@ -554,7 +421,7 @@ struct ValidatedSource {
 
 fn validate_source(row: &search::ResultRow) -> Result<ValidatedSource, Failure> {
     if !row.enabled {
-        return Err(Failure("skill is disabled by Codex".into(), 3));
+        return Err(Failure("skill is disabled".into(), 3));
     }
     let current = fs::canonicalize(&row.path)
         .map_err(|_| Failure("skill source is unavailable".into(), 3))?;
@@ -685,8 +552,8 @@ fn inspect_files(row: &search::ResultRow, json: bool) -> Result<(), Failure> {
     }
 }
 
-fn read(db: &Connection, context: Option<&config::Context>, target: &str) -> Result<(), Failure> {
-    let (row, resolved_name) = resolve_read(db, context, target)?;
+fn read(db: &Connection, target: &str, roots: Option<&[String]>) -> Result<(), Failure> {
+    let (row, resolved_name) = resolve_read(db, target, roots)?;
     let source = validate_source(&row)?;
     let body = String::from_utf8(source.bytes)
         .map_err(|_| Failure("instruction file is not UTF-8".into(), 3))?;
@@ -739,41 +606,6 @@ fn search_limit(limit: Option<usize>) -> Result<usize, Failure> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{index, metadata::Metadata, sources::Skill};
-    use std::path::PathBuf;
-
-    fn codex_skill() -> Skill {
-        Skill {
-            path: PathBuf::from("/skills/native/SKILL.md"),
-            canonical: PathBuf::from("/skills/native/SKILL.md"),
-            base: PathBuf::from("/skills/native"),
-            workspace: None,
-            codex_home: None,
-            scope: "global".into(),
-            source: "codex:native".into(),
-            source_kind: "codex".into(),
-            enabled: true,
-            plugin_id: None,
-            metadata: Metadata {
-                name: "native".into(),
-                description: "Native skill".into(),
-                keywords: String::new(),
-                degraded: false,
-                hash: "hash".into(),
-                invocation_policy: crate::metadata::InvocationPolicy::Discoverable,
-                policy_diagnostic: None,
-            },
-        }
-    }
-
-    fn codex_settings_at(home: &Path) -> config::Config {
-        config::Config {
-            inventory: config::Inventory::Codex,
-            codex_home: Some(home.to_path_buf()),
-            codex_bin: Some(PathBuf::from("/does/not/exist")),
-            ..config::Config::default()
-        }
-    }
 
     #[test]
     fn search_limit_accepts_one_through_twenty_with_five_default() {
@@ -791,180 +623,9 @@ mod tests {
         assert!(Args::try_parse_from(["skillwick", "list", "--all"]).is_err());
         assert!(Args::try_parse_from(["skillwick", "list", "--limit", "1"]).is_err());
         assert!(Args::try_parse_from(["skillwick", "refresh", "--full"]).is_err());
-    }
-
-    #[test]
-    fn cached_queries_do_not_detect_codex() {
-        let temp = tempfile::tempdir().unwrap();
-        let codex_home = tempfile::tempdir().unwrap();
-        let settings = config::Config {
-            codex_home: Some(codex_home.path().to_path_buf()),
-            inventory: config::Inventory::Codex,
-            ..config::Config::default()
-        };
-        let context = config::normalize_context(temp.path(), codex_home.path()).unwrap();
-        let mut db = index::open(Path::new(":memory:")).unwrap();
-        index::refresh_kind(&mut db, "codex", &[codex_skill()], true).unwrap();
-        index::record_snapshot(
-            &db,
-            &context.workspace,
-            "0.154.0",
-            Path::new("/does/not/exist"),
-            &context.codex_home,
-        )
-        .unwrap();
-
-        assert!(prepare_index(&mut db, &settings, temp.path(), false).is_ok());
-    }
-
-    #[test]
-    fn cached_queries_explain_failed_native_workspace_refresh() {
-        let workspace_a = tempfile::tempdir().unwrap();
-        let workspace_b = tempfile::tempdir().unwrap();
-        let codex_home = tempfile::tempdir().unwrap();
-        let settings = codex_settings_at(codex_home.path());
-        let context_a = config::normalize_context(workspace_a.path(), codex_home.path()).unwrap();
-        let mut skill = codex_skill();
-        skill.scope = "project".into();
-        let mut db = index::open(Path::new(":memory:")).unwrap();
-        index::refresh_kind(&mut db, "codex", &[skill], true).unwrap();
-        index::record_snapshot(
-            &db,
-            &context_a.workspace,
-            "0.154.0",
-            Path::new("/does/not/exist"),
-            &context_a.codex_home,
-        )
-        .unwrap();
-
-        let error = prepare_index(&mut db, &settings, workspace_b.path(), true).unwrap_err();
-        assert_eq!(error.code(), 3);
-        assert!(error
-            .to_string()
-            .contains("discovery cannot safely continue"));
-        assert!(error.to_string().contains("unrestricted terminal"));
-    }
-
-    #[test]
-    fn latest_workspace_marker_rejects_older_workspace_queries() {
-        let workspace_a = tempfile::tempdir().unwrap();
-        let workspace_b = tempfile::tempdir().unwrap();
-        let codex_home = tempfile::tempdir().unwrap();
-        let settings = config::Config {
-            codex_home: Some(codex_home.path().to_path_buf()),
-            inventory: config::Inventory::Codex,
-            ..config::Config::default()
-        };
-        let context_a = config::normalize_context(workspace_a.path(), codex_home.path()).unwrap();
-        let context_b = config::normalize_context(workspace_b.path(), codex_home.path()).unwrap();
-        let mut skill = codex_skill();
-        skill.scope = "project".into();
-        let mut db = index::open(Path::new(":memory:")).unwrap();
-        index::refresh_kind(&mut db, "codex", &[skill], true).unwrap();
-        index::record_snapshot(
-            &db,
-            &context_a.workspace,
-            "0.154.0",
-            Path::new("/does/not/exist"),
-            &context_a.codex_home,
-        )
-        .unwrap();
-        index::record_snapshot(
-            &db,
-            &context_b.workspace,
-            "0.154.0",
-            Path::new("/does/not/exist"),
-            &context_b.codex_home,
-        )
-        .unwrap();
-
-        assert!(prepare_index(&mut db, &settings, workspace_a.path(), false).is_ok());
-    }
-
-    #[test]
-    fn another_codex_home_requires_refresh_without_filesystem_fallback() {
-        let workspace = tempfile::tempdir().unwrap();
-        let codex_home_a = tempfile::tempdir().unwrap();
-        let codex_home_b = tempfile::tempdir().unwrap();
-        let mut db = index::open(Path::new(":memory:")).unwrap();
-        index::refresh_kind(&mut db, "codex", &[codex_skill()], true).unwrap();
-        index::record_snapshot(
-            &db,
-            workspace.path(),
-            "0.154.0",
-            Path::new("/does/not/exist"),
-            codex_home_a.path(),
-        )
-        .unwrap();
-        let settings = codex_settings_at(codex_home_b.path());
-
-        let error = prepare_index(&mut db, &settings, workspace.path(), false).unwrap_err();
-        assert_eq!(error.code(), 3);
-    }
-
-    #[test]
-    fn empty_native_cache_requires_refresh_without_filesystem_fallback() {
-        let temp = tempfile::tempdir().unwrap();
-        let codex_home = tempfile::tempdir().unwrap();
-        let settings = codex_settings_at(codex_home.path());
-        let mut db = index::open(Path::new(":memory:")).unwrap();
-
-        let error = prepare_index(&mut db, &settings, temp.path(), false).unwrap_err();
-        assert_eq!(error.code(), 3);
-    }
-
-    #[test]
-    fn read_only_copy_preserves_native_inventory() {
-        let temp = tempfile::tempdir().unwrap();
-        let codex_home = tempfile::tempdir().unwrap();
-        let path = temp.path().join("cache%?#.sqlite3");
-        let mut durable = index::open(Path::new(":memory:")).unwrap();
-        index::refresh_kind_for_context(
-            &mut durable,
-            "codex",
-            Some((temp.path(), codex_home.path())),
-            &[codex_skill()],
-            true,
-        )
-        .unwrap();
-        index::publish(&durable, &path).unwrap();
-
-        let copied = read_only_copy(&path).unwrap();
-        assert!(index::has_kind(&copied, "codex").unwrap());
-        let context = config::Context {
-            workspace: temp.path().to_path_buf(),
-            codex_home: codex_home.path().to_path_buf(),
-        };
-        assert_eq!(search::count(&copied, Some(&context)).unwrap(), 1);
-    }
-
-    #[test]
-    fn read_uses_published_native_policy_without_starting_codex() {
-        let temp = tempfile::tempdir().unwrap();
-        let path = temp.path().join("SKILL.md");
-        let body = b"---\nname: native\ndescription: Native skill\n---\n";
-        fs::write(&path, body).unwrap();
-        let mut skill = codex_skill();
-        skill.path = path.clone();
-        skill.canonical = fs::canonicalize(&path).unwrap();
-        skill.base = temp.path().to_path_buf();
-        skill.metadata.hash = format!("{:x}", Sha256::digest(body));
-        let mut db = index::open(Path::new(":memory:")).unwrap();
-        index::refresh_kind_for_context(
-            &mut db,
-            "codex",
-            Some((temp.path(), temp.path())),
-            &[skill],
-            true,
-        )
-        .unwrap();
-        let context = config::Context {
-            workspace: temp.path().to_path_buf(),
-            codex_home: temp.path().to_path_buf(),
-        };
-        let id = search::all(&db, Some(&context), None).unwrap().remove(0).id;
-
-        assert!(read(&db, Some(&context), &id).is_ok());
+        assert!(Args::try_parse_from(["skillwick", "init", "--inventory", "codex"]).is_err());
+        assert!(Args::try_parse_from(["skillwick", "init", "--catalog", "native"]).is_err());
+        assert!(Args::try_parse_from(["skillwick", "init", "--codex-bin", "/tmp/codex"]).is_err());
     }
 
     #[test]

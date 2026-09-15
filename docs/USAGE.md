@@ -1,102 +1,116 @@
 # Usage and configuration
 
-Skillwick is a deliberate local lookup tool. Search is always an explicit
-command; a bare query is not interpreted as a search. Discovery reads the
-configured local snapshot and never executes a skill package.
+Skillwick is an explicit local lookup tool. Configured filesystem roots are
+the complete discovery authority; the SQLite database is only a rebuildable
+derived index. Lookup commands reconcile their applicable roots before reading
+the index and never execute skill files.
 
-## Search and read
+## Configure roots
+
+Use `init --agent none` when you only want to configure discovery:
+
+```sh
+skillwick init --yes --agent none --root "$HOME/.agents/skills"
+skillwick --cwd "$PWD" init --yes --agent none \
+  --project-root "$PWD/.agents/skills"
+```
+
+`--root` registers a shared root. It applies in every workspace. Each
+`--project-root` is associated with the normalized `--cwd` and applies in that
+directory and its descendants. Roots are canonicalized at setup and must be
+directories. Unregistered home and ancestor directories are not searched.
+
+The resulting configuration is conceptually:
+
+```toml
+roots = ["/Users/example/.agents/skills"]
+agent = "none"
+
+[[projects]]
+path = "/Users/example/project"
+roots = ["/Users/example/project/.agents/skills"]
+```
+
+The config file is owned by Skillwick. Installed package directories and their
+updates remain owned by the package installer or the user who placed them.
+
+## Search and select
+
+Search takes one or more task words and returns up to five candidates by
+default. `--limit` accepts 1 through 20:
 
 ```sh
 skillwick search "deploy an AgentCore MCP server with TypeScript"
 skillwick search "SQLite full text ranking" --limit 3
-skillwick read ID
-skillwick read astra-orchestrator
+```
+
+Search is lexical SQLite FTS5 retrieval. It is not an instruction to load a
+candidate. Review the result, then use its exact ID:
+
+```sh
 skillwick inspect ID
 skillwick inspect ID --files
+skillwick read ID
 ```
 
-`read` accepts an exact ID or exact, case-sensitive name. Exact IDs take
-precedence. A name must resolve to one current skill; duplicate names require an
-explicit ID.
+`read` also accepts a unique, exact, case-sensitive name. Duplicate names are
+reported with their source and scope so the caller can choose an ID. Reads
+recheck the live canonical path, size, UTF-8 encoding, and content hash. A
+changed or unavailable source fails closed instead of returning cached text.
 
-Use an ID from search or list output. Search returns up to five candidates by
-default. `--limit N` accepts 1 through 20; choosing none is valid. Read
-selected instructions before following them.
+## Inventory behavior
 
-Text search output bounds each record to 2,000 bytes. A long description is
-truncated with `[truncated]`; later requested candidates remain visible. JSON
-search output has no presentation-byte limit and returns every selected result
-up to the requested limit.
+Each search, list, read, and inspect command reconciles the configured roots
+applicable to its `--cwd`. A complete scan parses bounded `SKILL.md` metadata,
+checks adjacent invocation policy, updates only the relevant root associations,
+and publishes the derived SQLite/FTS5 snapshot atomically. Unchanged source
+material leaves the durable cache untouched. `refresh` runs the same
+reconciliation path explicitly.
 
-`read` prints the live `SKILL.md` with its package base directory. Resolve
-relative references against that directory, not the shell working directory.
+Overlapping roots are deduplicated by canonical instruction path for public
+results. Raw root associations remain in the index for diagnostics and
+duplicate accounting. A project lookup cannot use a row associated only with
+another project, even when both projects share a cache.
 
-`inspect` prints indexed metadata. Add `--files` for a bounded live listing of
-relative package paths and file types. The listing distinguishes Markdown from
-other files, reports truncation, and does not follow symbolic links. File
-counts distinguish regular files from directories and symlinks, including how
-many files are additional to `SKILL.md`. File extensions describe contents;
-they do not establish whether a file is safe to execute.
+Additions, edits, renames, removals, and policy-file presence or content changes
+are visible on the next lookup. Missing roots, unreadable files, malformed
+metadata, and unauthorized symlink escapes fail the affected operation with
+the previous complete cache preserved. They are never silently converted into
+an empty inventory.
 
-Inspection does not print reference contents or execute scripts. Read only the
-references needed for the task. Skill content does not authorize execution,
-installation, permission changes, or actions outside the user's request.
+## Visibility and package safety
 
-## Inventory and refresh
+Only enabled, model-discoverable records under applicable roots appear in
+search, list, counts, read, or inspect results. `disable-model-invocation:
+true` in frontmatter and `policy.allow_implicit_invocation: false` in the
+adjacent `agents/openai.yaml` deny discovery. Invalid recognized policy fails
+closed and remains visible through `doctor` diagnostics.
+
+`inspect --files` reports a bounded relative package listing. It does not read
+supporting-file bodies, follow symlink entries, or execute scripts. A successful
+`read` only returns the selected `SKILL.md`; it does not authorize running
+anything in the package or changing configuration.
+
+## Optional agent integration
+
+The default setup target is Codex, but its integration is only Skillwick's
+context/reference files. It does not query a native catalogue or change
+installed packages. Preview and apply it separately:
 
 ```sh
-skillwick list
-skillwick --json list
-skillwick refresh
+skillwick init --dry-run --yes --root "$HOME/.agents/skills"
+skillwick init --yes --root "$HOME/.agents/skills"
 skillwick doctor --strict
 ```
 
-`list` always reports every current-scope model-discoverable record and its
-total; it has no pagination or compatibility flags. Filesystem discovery
-covers `$HOME/.agents/skills` and applicable `.agents/skills` directories from
-`--cwd` through its ancestors. Add authorized roots with repeatable `--root
-PATH` during setup. Symlink escapes are rejected.
+Use `--agent none` to avoid integration files. Use `--instructions-file PATH`
+when the managed agent instructions live somewhere other than the default
+`$CODEX_HOME/AGENTS.md`. A managed configuration owner may instead consume
+`skillwick instructions` and own the destination itself.
 
-The local index and Codex inventory are durable snapshots of the configured
-scope. With Codex inventory enabled, ordinary queries use the published native
-snapshot without starting Codex. Run `skillwick refresh` after installed skills,
-plugins, native enablement, or configured roots change. A missing or incomplete
-snapshot is reported as a diagnostic rather than treated as an empty library;
-`read` still rechecks the selected live file and its content hash.
-If automatic native refresh fails, search, list, read, and inspect fail closed
-because filesystem metadata cannot prove Codex enablement. The diagnostic
-includes the provider detail and tells the agent to run `skillwick refresh`
-from an unrestricted terminal before retrying.
-
-## Codex setup
-
-Preview and apply ordinary setup as separate steps:
-
-```sh
-skillwick init --dry-run --yes --agent codex --catalog native
-skillwick init --yes --agent codex --catalog native
-skillwick refresh
-skillwick doctor --strict
-```
-
-For a filesystem-only setup, use `--agent none --inventory filesystem`.
-
-An external configuration manager can own the agent reference and Codex setting
-itself. Use `skillwick instructions` as the canonical content source, then run
-`skillwick init --yes --agent none --inventory codex` to configure and refresh
-the local snapshot without editing those managed files.
-
-Setup writes the owned `$CODEX_HOME/SKILLWICK.md` and one absolute reference in
-the selected AGENTS file. When the detected Codex version supports it, native
-setup indexes the inventory before setting
-`skills.include_instructions = false`. Existing installers retain package
-ownership. `--dry-run` performs no persistent writes, and repeat setup preserves
-modified or borrowed files rather than overwriting them.
-
-`skillwick uninstall` removes only Skillwick's owned integration. Add
-`--purge-cache` to remove the disposable index. Conditional rollback preserves
-unrelated edits and reports drift; installed skills, third-party configuration,
-and the binary remain in place.
+`--dry-run` performs no persistent writes. Setup and uninstall preserve
+unrelated files and report ownership drift rather than overwriting another
+writer's changes.
 
 ## Paths and output
 
@@ -108,38 +122,24 @@ $XDG_CACHE_HOME/skillwick/index-v3.sqlite
 $XDG_STATE_HOME/skillwick/integration.json
 $CODEX_HOME/SKILLWICK.md
 $CODEX_HOME/AGENTS.md
-$CODEX_HOME/config.toml
 ```
 
-`--json` is supported by `search`, `list`, `inspect`, and `doctor`. It emits a
-version-2 contract. Search and inspection results use this envelope:
+`--json` is supported by `search`, `list`, `inspect`, and `doctor` and emits a
+version-2 envelope. Search and inspection results have this shape:
 
 ```json
 {"version":2,"results":[{"id":"name@abcdef","name":"name","description":"..."}]}
 ```
 
-`list` adds `total` and returns the complete inventory:
+`list` adds a complete `total` and `doctor` adds its health and count fields.
+Human search output bounds each record independently and marks a truncated
+description so later candidates remain visible.
 
-```json
-{"version":2,"total":1,"results":[...]}
-```
-
-`inspect ID --files` keeps the result envelope and adds the bounded `package`
-object. `doctor --json` returns its version-2 diagnostic object. Other commands
-print text and reject `--json` with exit code 2 rather than silently ignoring
-the option. Run `skillwick --help` and each subcommand's `--help` for the
-complete interface, defaults, ranges, output, side effects, and failures.
-
-Exit codes:
+## Exit codes
 
 - `0`: successful command, including a valid search with no matches.
-- `1`: operational, cache, configuration, or local database failure.
-- `2`: unknown command or option, invalid argument, unsupported output mode,
-  or non-interactive setup without `--yes`.
-- `3`: selected skill missing, stale, disabled, unavailable, or blocked by
-  native/provider state; the message identifies the failed boundary. Some
-  executable or database failures use code `1` and retain their specific text.
-
-Refresh may publish a new disposable snapshot and can call the configured
-native provider. Ordinary covered searches, list, read, and inspect operations
-use the cache and revalidate only the selected source for read/inspect.
+- `1`: operational, configuration, or database failure.
+- `2`: invalid command or option, unsupported output mode, invalid limit, or
+  non-interactive setup without `--yes`.
+- `3`: incomplete source, stale or unavailable selected skill, policy-denied
+  target, project-scope mismatch, or strict doctor failure.

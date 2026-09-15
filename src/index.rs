@@ -1,5 +1,7 @@
-use crate::{native, search, sources::Skill};
-use rusqlite::{params, Connection, DatabaseName, OpenFlags, OptionalExtension};
+use crate::{search, sources::Skill};
+use rusqlite::{
+    params, params_from_iter, types::Value, Connection, DatabaseName, OpenFlags, OptionalExtension,
+};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
@@ -8,7 +10,7 @@ use std::{
     time::Duration,
 };
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 6;
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
     if path != Path::new(":memory:") {
@@ -59,7 +61,7 @@ fn schema_exists(db: &Connection) -> rusqlite::Result<bool> {
 }
 
 fn create_schema(db: &Connection) -> rusqlite::Result<()> {
-    db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE skills (id TEXT PRIMARY KEY, identity TEXT NOT NULL UNIQUE, name TEXT NOT NULL, description TEXT NOT NULL, keywords TEXT NOT NULL, degraded INTEGER NOT NULL, path TEXT NOT NULL, canonical TEXT NOT NULL, base TEXT NOT NULL, scope TEXT NOT NULL, source TEXT NOT NULL, source_kind TEXT NOT NULL, enabled INTEGER NOT NULL, model_discoverable INTEGER NOT NULL, policy_diagnostic TEXT, plugin_id TEXT, hash TEXT NOT NULL, workspace TEXT NOT NULL, codex_home TEXT NOT NULL); CREATE INDEX skills_kind_canonical ON skills(source_kind, canonical); CREATE VIRTUAL TABLE skills_fts USING fts5(id UNINDEXED, name, description, keywords); CREATE TABLE native_snapshots (workspace TEXT NOT NULL, version TEXT NOT NULL, executable TEXT NOT NULL, codex_home TEXT NOT NULL, refreshed_at INTEGER NOT NULL, PRIMARY KEY (workspace,codex_home)); PRAGMA user_version=3;")
+    db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE skills (id TEXT PRIMARY KEY, identity TEXT NOT NULL UNIQUE, name TEXT NOT NULL, description TEXT NOT NULL, keywords TEXT NOT NULL, degraded INTEGER NOT NULL, path TEXT NOT NULL, canonical TEXT NOT NULL, base TEXT NOT NULL, scope TEXT NOT NULL, source TEXT NOT NULL, source_kind TEXT NOT NULL, enabled INTEGER NOT NULL, model_discoverable INTEGER NOT NULL, policy_diagnostic TEXT, plugin_id TEXT, hash TEXT NOT NULL, source_fingerprint TEXT NOT NULL); CREATE INDEX skills_kind_canonical ON skills(source_kind, canonical); CREATE TABLE skill_roots (skill_id TEXT NOT NULL, root TEXT NOT NULL, scope TEXT NOT NULL, PRIMARY KEY(skill_id, root, scope)); CREATE INDEX skill_roots_root_scope ON skill_roots(root, scope); CREATE TABLE configured_roots (scope_key TEXT NOT NULL, root TEXT NOT NULL, PRIMARY KEY(scope_key, root)); CREATE VIRTUAL TABLE skills_fts USING fts5(id UNINDEXED, name, description, keywords); PRAGMA user_version=6;")
 }
 
 fn validate_schema(db: &Connection) -> rusqlite::Result<()> {
@@ -67,11 +69,10 @@ fn validate_schema(db: &Connection) -> rusqlite::Result<()> {
     if version != SCHEMA_VERSION {
         return Err(rusqlite::Error::InvalidQuery);
     }
-    db.prepare("SELECT id,identity,name,description,keywords,degraded,path,canonical,base,scope,source,source_kind,enabled,model_discoverable,policy_diagnostic,plugin_id,hash,workspace,codex_home FROM skills LIMIT 0")?;
+    db.prepare("SELECT id,identity,name,description,keywords,degraded,path,canonical,base,scope,source,source_kind,enabled,model_discoverable,policy_diagnostic,plugin_id,hash,source_fingerprint FROM skills LIMIT 0")?;
+    db.prepare("SELECT skill_id,root,scope FROM skill_roots LIMIT 0")?;
+    db.prepare("SELECT scope_key,root FROM configured_roots LIMIT 0")?;
     db.prepare("SELECT id,name,description,keywords FROM skills_fts LIMIT 0")?;
-    db.prepare(
-        "SELECT workspace,version,executable,codex_home,refreshed_at FROM native_snapshots LIMIT 0",
-    )?;
     Ok(())
 }
 
@@ -103,100 +104,138 @@ pub fn refresh_kind(
     skills: &[Skill],
     complete: bool,
 ) -> rusqlite::Result<()> {
-    let context = skills
-        .first()
-        .and_then(|skill| skill.workspace.as_deref().zip(skill.codex_home.as_deref()));
-    refresh_kind_for_context(db, kind, context, skills, complete)
+    debug_assert_eq!(kind, "filesystem");
+    let transaction = db.transaction()?;
+    if complete {
+        transaction.execute(
+            "DELETE FROM skills_fts WHERE id IN (SELECT id FROM skills WHERE source_kind=?1)",
+            [kind],
+        )?;
+        transaction.execute(
+            "DELETE FROM skill_roots WHERE skill_id IN (SELECT id FROM skills WHERE source_kind=?1)",
+            [kind],
+        )?;
+        transaction.execute("DELETE FROM skills WHERE source_kind=?1", [kind])?;
+    }
+    for skill in skills {
+        upsert_skill(&transaction, skill)?;
+    }
+    transaction.commit()
 }
 
-pub fn refresh_kind_for_context(
+/// Refresh only the configured roots in `roots`, preserving rows and
+/// associations belonging to other projects in the shared cache.
+pub fn refresh_filesystem_scope(
     db: &mut Connection,
-    kind: &str,
-    context: Option<(&Path, &Path)>,
     skills: &[Skill],
+    roots: &[(PathBuf, String)],
     complete: bool,
 ) -> rusqlite::Result<()> {
     let transaction = db.transaction()?;
     if complete {
-        match context {
-            Some((workspace, codex_home)) if kind == "codex" => {
-                let workspace = workspace.to_string_lossy();
-                let codex_home = codex_home.to_string_lossy();
-                transaction.execute(
-                    "DELETE FROM skills_fts WHERE id IN (SELECT id FROM skills WHERE source_kind=?1 AND workspace=?2 AND codex_home=?3)",
-                    params![kind, workspace.as_ref(), codex_home.as_ref()],
-                )?;
-                transaction.execute(
-                    "DELETE FROM skills WHERE source_kind=?1 AND workspace=?2 AND codex_home=?3",
-                    params![kind, workspace.as_ref(), codex_home.as_ref()],
-                )?;
-            }
-            _ => {
-                transaction.execute(
-                    "DELETE FROM skills_fts WHERE id IN (SELECT id FROM skills WHERE source_kind=?1)",
-                    [kind],
-                )?;
-                transaction.execute("DELETE FROM skills WHERE source_kind=?1", [kind])?;
-            }
+        for (root, scope) in roots {
+            transaction.execute(
+                "DELETE FROM skill_roots WHERE root=?1 AND scope=?2",
+                params![canonical_root(root), scope],
+            )?;
         }
     }
     for skill in skills {
-        let workspace = context
-            .map(|(workspace, _)| workspace)
-            .or(skill.workspace.as_deref())
-            .map(|path| path.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        let codex_home = context
-            .map(|(_, codex_home)| codex_home)
-            .or(skill.codex_home.as_deref())
-            .map(|path| path.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        let identity = if skill.source_kind == "codex" {
-            format!(
-                "{}:{}:{}:{}",
-                skill.source_kind,
-                workspace,
-                codex_home,
-                skill.canonical.display()
-            )
-        } else {
-            format!("{}:{}", skill.source_kind, skill.canonical.display())
-        };
-        let id = display_id(&transaction, &skill.metadata.name, &identity)?;
-        let keywords = format!(
-            "{}{}{}",
-            skill.metadata.keywords,
-            search::alias_terms(&skill.metadata.name),
-            search::alias_terms(&skill.metadata.description)
-        );
-        if !complete {
-            let previous_id: Option<String> = transaction
-                .query_row(
-                    "SELECT id FROM skills WHERE identity=?1",
-                    [&identity],
-                    |row| row.get(0),
-                )
-                .optional()?;
-            if previous_id
-                .as_deref()
-                .is_some_and(|previous| previous != id)
-            {
-                transaction.execute("DELETE FROM skills_fts WHERE id=?1", [previous_id])?;
-            }
-            transaction.execute("DELETE FROM skills_fts WHERE id=?1", [&id])?;
+        let id = upsert_skill(&transaction, skill)?;
+        for (root, scope) in &skill.roots {
+            transaction.execute(
+                "INSERT OR IGNORE INTO skill_roots (skill_id,root,scope) VALUES (?1,?2,?3)",
+                params![id, canonical_root(root), scope],
+            )?;
         }
-        transaction.execute("INSERT INTO skills (id,identity,name,description,keywords,degraded,path,canonical,base,scope,source,source_kind,enabled,model_discoverable,policy_diagnostic,plugin_id,hash,workspace,codex_home) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19) ON CONFLICT(identity) DO UPDATE SET id=excluded.id,name=excluded.name,description=excluded.description,keywords=excluded.keywords,degraded=excluded.degraded,path=excluded.path,canonical=excluded.canonical,base=excluded.base,scope=excluded.scope,source=excluded.source,source_kind=excluded.source_kind,enabled=excluded.enabled,model_discoverable=excluded.model_discoverable,policy_diagnostic=excluded.policy_diagnostic,plugin_id=excluded.plugin_id,hash=excluded.hash,workspace=excluded.workspace,codex_home=excluded.codex_home", params![id,identity,skill.metadata.name,skill.metadata.description,keywords,skill.metadata.degraded as i32,skill.path.to_string_lossy(),skill.canonical.to_string_lossy(),skill.base.to_string_lossy(),skill.scope,skill.source,skill.source_kind,skill.enabled as i32,skill.metadata.invocation_policy.model_discoverable() as i32,skill.metadata.policy_diagnostic,skill.plugin_id,skill.metadata.hash,workspace,codex_home])?;
-        transaction.execute(
-            "INSERT INTO skills_fts (id,name,description,keywords) VALUES (?1,?2,?3,?4)",
-            params![
-                id,
-                skill.metadata.name,
-                skill.metadata.description,
-                keywords
-            ],
-        )?;
+    }
+    if complete {
+        prune_orphaned_filesystem_rows(&transaction)?;
     }
     transaction.commit()
+}
+
+pub fn replace_root_configuration(
+    db: &mut Connection,
+    configured: &[(String, String)],
+) -> rusqlite::Result<()> {
+    let transaction = db.transaction()?;
+    transaction.execute("DELETE FROM configured_roots", [])?;
+    for (scope_key, root) in configured {
+        transaction.execute(
+            "INSERT INTO configured_roots (scope_key,root) VALUES (?1,?2)",
+            params![scope_key, root],
+        )?;
+    }
+    transaction.execute(
+        "DELETE FROM skill_roots WHERE root NOT IN (SELECT root FROM configured_roots)",
+        [],
+    )?;
+    prune_orphaned_filesystem_rows(&transaction)?;
+    transaction.commit()
+}
+
+fn upsert_skill(
+    transaction: &rusqlite::Transaction<'_>,
+    skill: &Skill,
+) -> rusqlite::Result<String> {
+    let identity = format!("{}:{}", skill.source_kind, skill.canonical.display());
+    let id = display_id(transaction, &skill.metadata.name, &identity)?;
+    let previous_id: Option<String> = transaction
+        .query_row(
+            "SELECT id FROM skills WHERE identity=?1",
+            [&identity],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if previous_id
+        .as_deref()
+        .is_some_and(|previous| previous != id)
+    {
+        let previous = previous_id.as_deref().expect("previous ID was present");
+        transaction.execute("DELETE FROM skills_fts WHERE id=?1", [previous])?;
+        transaction.execute(
+            "UPDATE skill_roots SET skill_id=?1 WHERE skill_id=?2",
+            params![id, previous],
+        )?;
+    }
+    let keywords = format!(
+        "{}{}{}",
+        skill.metadata.keywords,
+        search::alias_terms(&skill.metadata.name),
+        search::alias_terms(&skill.metadata.description)
+    );
+    transaction.execute("DELETE FROM skills_fts WHERE id=?1", [&id])?;
+    transaction.execute("INSERT INTO skills (id,identity,name,description,keywords,degraded,path,canonical,base,scope,source,source_kind,enabled,model_discoverable,policy_diagnostic,plugin_id,hash,source_fingerprint) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18) ON CONFLICT(identity) DO UPDATE SET id=excluded.id,name=excluded.name,description=excluded.description,keywords=excluded.keywords,degraded=excluded.degraded,path=excluded.path,canonical=excluded.canonical,base=excluded.base,scope=excluded.scope,source=excluded.source,source_kind=excluded.source_kind,enabled=excluded.enabled,model_discoverable=excluded.model_discoverable,policy_diagnostic=excluded.policy_diagnostic,plugin_id=excluded.plugin_id,hash=excluded.hash,source_fingerprint=excluded.source_fingerprint", params![id,identity,skill.metadata.name,skill.metadata.description,keywords,skill.metadata.degraded as i32,skill.path.to_string_lossy(),skill.canonical.to_string_lossy(),skill.base.to_string_lossy(),skill.scope,skill.source,skill.source_kind,skill.enabled as i32,skill.metadata.invocation_policy.model_discoverable() as i32,skill.metadata.policy_diagnostic,skill.plugin_id,skill.metadata.hash,skill.source_fingerprint])?;
+    transaction.execute(
+        "INSERT INTO skills_fts (id,name,description,keywords) VALUES (?1,?2,?3,?4)",
+        params![
+            id,
+            skill.metadata.name,
+            skill.metadata.description,
+            keywords
+        ],
+    )?;
+    Ok(id)
+}
+
+fn prune_orphaned_filesystem_rows(transaction: &rusqlite::Transaction<'_>) -> rusqlite::Result<()> {
+    transaction.execute(
+        "DELETE FROM skills_fts WHERE id IN (SELECT s.id FROM skills s WHERE s.source_kind='filesystem' AND NOT EXISTS (SELECT 1 FROM skill_roots r WHERE r.skill_id=s.id))",
+        [],
+    )?;
+    transaction.execute(
+        "DELETE FROM skills WHERE source_kind='filesystem' AND NOT EXISTS (SELECT 1 FROM skill_roots r WHERE r.skill_id=skills.id)",
+        [],
+    )?;
+    Ok(())
+}
+
+fn canonical_root(root: &Path) -> String {
+    fs::canonicalize(root)
+        .unwrap_or_else(|_| root.to_path_buf())
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn display_id(db: &Connection, name: &str, identity: &str) -> rusqlite::Result<String> {
@@ -225,17 +264,6 @@ fn display_id(db: &Connection, name: &str, identity: &str) -> rusqlite::Result<S
         }
     }
     unreachable!("SHA-256 collision")
-}
-
-pub fn record_snapshot(
-    db: &Connection,
-    workspace: &Path,
-    version: &str,
-    executable: &Path,
-    codex_home: &Path,
-) -> rusqlite::Result<()> {
-    db.execute("INSERT INTO native_snapshots (workspace,version,executable,codex_home,refreshed_at) VALUES (?1,?2,?3,?4,unixepoch()) ON CONFLICT(workspace,codex_home) DO UPDATE SET version=excluded.version,executable=excluded.executable,refreshed_at=excluded.refreshed_at", params![workspace.to_string_lossy(), version, executable.to_string_lossy(), codex_home.to_string_lossy()])?;
-    Ok(())
 }
 
 pub fn publish(db: &Connection, path: &Path) -> rusqlite::Result<()> {
@@ -271,62 +299,6 @@ pub fn publish(db: &Connection, path: &Path) -> rusqlite::Result<()> {
     result
 }
 
-pub fn has_snapshot(
-    db: &Connection,
-    cwd: &Path,
-    version: &str,
-    executable: &Path,
-    codex_home: &Path,
-) -> rusqlite::Result<bool> {
-    db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM native_snapshots WHERE workspace=?1 AND version=?2 AND executable=?3 AND codex_home=?4)",
-        params![cwd.to_string_lossy(), version, executable.to_string_lossy(), codex_home.to_string_lossy()],
-        |row| row.get(0),
-    )
-}
-
-pub fn has_workspace_snapshot(
-    db: &Connection,
-    workspace: &Path,
-    codex_home: &Path,
-) -> rusqlite::Result<bool> {
-    db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM native_snapshots WHERE workspace=?1 AND codex_home=?2)",
-        params![workspace.to_string_lossy(), codex_home.to_string_lossy()],
-        |row| row.get(0),
-    )
-}
-
-pub fn snapshot_compatible(
-    db: &Connection,
-    workspace: &Path,
-    codex_home: &Path,
-    configured_executable: Option<&Path>,
-) -> rusqlite::Result<bool> {
-    let snapshot: Option<(String, String)> = db
-        .query_row(
-            "SELECT version,executable FROM native_snapshots WHERE workspace=?1 AND codex_home=?2",
-            params![workspace.to_string_lossy(), codex_home.to_string_lossy()],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        )
-        .optional()?;
-    let Some((version, executable)) = snapshot else {
-        return Ok(false);
-    };
-    if !native::supports_native_catalog(&version) {
-        return Ok(false);
-    }
-    if let Some(configured_executable) = configured_executable {
-        let Ok(configured_executable) = fs::canonicalize(configured_executable) else {
-            return Ok(false);
-        };
-        if configured_executable != Path::new(&executable) {
-            return Ok(false);
-        }
-    }
-    Ok(true)
-}
-
 pub struct CacheLock {
     _connection: Connection,
 }
@@ -356,90 +328,96 @@ pub fn has_kind(db: &Connection, kind: &str) -> rusqlite::Result<bool> {
     )
 }
 
-pub fn has_kind_for_context(
-    db: &Connection,
-    kind: &str,
-    context: Option<&crate::config::Context>,
-) -> rusqlite::Result<bool> {
-    if kind != "codex" {
-        return has_kind(db, kind);
-    }
-    let Some(context) = context else {
-        return has_kind(db, kind);
-    };
-    db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM skills WHERE source_kind=?1 AND workspace=?2 AND codex_home=?3)",
-        params![
-            kind,
-            context.workspace.to_string_lossy(),
-            context.codex_home.to_string_lossy()
-        ],
-        |row| row.get(0),
-    )
-}
-
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct Counts {
     pub filesystem: usize,
-    pub native: usize,
     pub raw: usize,
     pub duplicates: usize,
     pub model_discoverable: usize,
 }
 
-pub fn counts(
-    db: &Connection,
-    context: Option<&crate::config::Context>,
-) -> rusqlite::Result<Counts> {
-    let filesystem = count_kind(db, "filesystem")?;
-    let workspace = context.map(|context| context.workspace.to_string_lossy().into_owned());
-    let codex_home = context.map(|context| context.codex_home.to_string_lossy().into_owned());
-    let native: usize = db.query_row(
-        "SELECT count(*) FROM skills WHERE source_kind='codex' AND workspace=?1 AND codex_home=?2",
-        params![workspace.as_deref(), codex_home.as_deref()],
-        |row| row.get(0),
-    )?;
-    let raw = filesystem + native;
-    let unique: usize = db.query_row(
-        "SELECT count(DISTINCT canonical) FROM skills WHERE source_kind='filesystem' OR (source_kind='codex' AND workspace=?1 AND codex_home=?2)",
-        params![workspace.as_deref(), codex_home.as_deref()],
-        |row| row.get(0),
-    )?;
+pub fn counts(db: &Connection, roots: Option<&[String]>) -> rusqlite::Result<Counts> {
+    let mut filesystem_sql =
+        "SELECT count(*) FROM skills s WHERE s.source_kind='filesystem'".to_owned();
+    filesystem_sql.push_str(&search::root_filter("s", roots, 1));
+    let mut root_values = Vec::new();
+    search::append_root_values(&mut root_values, roots);
+    let filesystem = db.query_row(&filesystem_sql, params_from_iter(root_values), |row| {
+        row.get(0)
+    })?;
+    let raw = match roots {
+        Some([]) => 0,
+        Some(roots) => {
+            let placeholders = (1..=roots.len())
+                .map(|index| format!("?{index}"))
+                .collect::<Vec<_>>()
+                .join(",");
+            let values = roots.iter().cloned().map(Value::Text).collect::<Vec<_>>();
+            db.query_row(
+                &format!("SELECT count(*) FROM skill_roots WHERE root IN ({placeholders})"),
+                params_from_iter(values),
+                |row| row.get(0),
+            )?
+        }
+        None => filesystem,
+    };
     Ok(Counts {
         filesystem,
-        native,
         raw,
-        duplicates: raw.saturating_sub(unique),
-        model_discoverable: search::count(db, context)?,
+        duplicates: raw.saturating_sub(filesystem),
+        model_discoverable: search::count(db, roots)?,
     })
 }
 
-fn count_kind(db: &Connection, kind: &str) -> rusqlite::Result<usize> {
-    db.query_row(
-        "SELECT count(*) FROM skills WHERE source_kind=?1",
-        [kind],
-        |row| row.get(0),
-    )
+pub fn digest(db: &Connection) -> rusqlite::Result<String> {
+    let mut statement = db.prepare("SELECT id,identity,name,description,keywords,degraded,path,canonical,base,scope,source,source_kind,enabled,model_discoverable,policy_diagnostic,plugin_id,hash,source_fingerprint FROM skills ORDER BY identity")?;
+    let mut rows = statement.query([])?;
+    let mut hasher = Sha256::new();
+    while let Some(row) = rows.next()? {
+        for index in 0..18 {
+            let value: Option<String> = match index {
+                5 | 12 | 13 => row
+                    .get::<_, i32>(index)
+                    .map(|value| Some(value.to_string()))?,
+                _ => row.get(index)?,
+            };
+            if let Some(value) = value {
+                hasher.update(value.as_bytes());
+            }
+            hasher.update([0]);
+        }
+    }
+    drop(rows);
+    drop(statement);
+    for sql in [
+        "SELECT skill_id,root,scope FROM skill_roots ORDER BY skill_id,root,scope",
+        "SELECT scope_key,root,NULL FROM configured_roots ORDER BY scope_key,root",
+    ] {
+        let mut statement = db.prepare(sql)?;
+        let mut rows = statement.query([])?;
+        while let Some(row) = rows.next()? {
+            for index in 0..3 {
+                let value: Option<String> = row.get(index)?;
+                if let Some(value) = value {
+                    hasher.update(value.as_bytes());
+                }
+                hasher.update([0]);
+            }
+        }
+    }
+    Ok(format!("{:x}", hasher.finalize()))
 }
 
-pub fn policy_diagnostics(
-    db: &Connection,
-    context: Option<&crate::config::Context>,
-) -> rusqlite::Result<Vec<String>> {
-    let workspace = context.map(|context| context.workspace.to_string_lossy().into_owned());
-    let codex_home = context.map(|context| context.codex_home.to_string_lossy().into_owned());
+pub fn policy_diagnostics(db: &Connection) -> rusqlite::Result<Vec<String>> {
     let mut statement = db.prepare(
-        "SELECT path,policy_diagnostic FROM skills WHERE policy_diagnostic IS NOT NULL AND (source_kind='filesystem' OR (source_kind='codex' AND workspace=?1 AND codex_home=?2)) ORDER BY path",
+        "SELECT path,policy_diagnostic FROM skills WHERE policy_diagnostic IS NOT NULL AND source_kind='filesystem' ORDER BY path",
     )?;
     let rows = statement
-        .query_map(
-            params![workspace.as_deref(), codex_home.as_deref()],
-            |row| {
-                let path: String = row.get(0)?;
-                let diagnostic: String = row.get(1)?;
-                Ok(format!("{path}: {diagnostic}"))
-            },
-        )?
+        .query_map([], |row| {
+            let path: String = row.get(0)?;
+            let diagnostic: String = row.get(1)?;
+            Ok(format!("{path}: {diagnostic}"))
+        })?
         .collect();
     rows
 }
@@ -449,18 +427,19 @@ mod tests {
     use super::*;
     use crate::metadata::Metadata;
     use std::path::PathBuf;
+
     fn skill(path: &str, description: &str) -> Skill {
         Skill {
             path: path.into(),
             canonical: path.into(),
             base: PathBuf::from(path).parent().unwrap().into(),
-            workspace: None,
-            codex_home: None,
             scope: "global".into(),
             source: "/skills".into(),
             source_kind: "filesystem".into(),
             enabled: true,
             plugin_id: None,
+            source_fingerprint: description.into(),
+            roots: Vec::new(),
             metadata: Metadata {
                 name: "demo".into(),
                 description: description.into(),
@@ -472,8 +451,9 @@ mod tests {
             },
         }
     }
+
     #[test]
-    fn incomplete_refresh_preserves_unseen_records() {
+    fn complete_refresh_replaces_filesystem_records_and_fts_rows() {
         let mut db = open(Path::new(":memory:")).unwrap();
         refresh_kind(
             &mut db,
@@ -482,28 +462,83 @@ mod tests {
             true,
         )
         .unwrap();
-        refresh_kind(&mut db, "filesystem", &[], false).unwrap();
+        let mut renamed = skill("/skills/b/SKILL.md", "b");
+        renamed.metadata.name = "renamed".into();
+        refresh_kind(&mut db, "filesystem", &[renamed], true).unwrap();
         assert_eq!(
             db.query_row("SELECT count(*) FROM skills", [], |row| row
                 .get::<_, i64>(0))
                 .unwrap(),
             1
         );
+        assert_eq!(
+            db.query_row("SELECT count(*) FROM skills_fts", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        assert!(search::query(&db, "renamed", 5, None).unwrap().len() == 1);
     }
 
     #[test]
-    fn renamed_skill_replaces_its_fts_row() {
+    fn digest_changes_for_metadata_and_policy_changes() {
         let mut db = open(Path::new(":memory:")).unwrap();
         let original = skill("/skills/a/SKILL.md", "alpha");
         refresh_kind(&mut db, "filesystem", std::slice::from_ref(&original), true).unwrap();
-        let mut renamed = original;
-        renamed.metadata.name = "renamed".into();
-        refresh_kind(&mut db, "filesystem", &[renamed], false).unwrap();
+        let before = digest(&db).unwrap();
+        let mut changed = original;
+        changed.metadata.description = "changed".into();
+        changed.metadata.policy_diagnostic = Some("policy changed".into());
+        changed.metadata.invocation_policy = crate::metadata::InvocationPolicy::Denied;
+        refresh_kind(&mut db, "filesystem", &[changed], true).unwrap();
+        assert_ne!(before, digest(&db).unwrap());
+    }
 
-        assert!(search::query(&db, None, "demo", 5).unwrap().is_empty());
-        assert_eq!(search::query(&db, None, "renamed", 5).unwrap().len(), 1);
+    #[test]
+    fn digest_includes_source_fingerprints_and_root_configuration() {
+        let mut db = open(Path::new(":memory:")).unwrap();
+        let mut record = skill("/skills/a/SKILL.md", "alpha");
+        refresh_kind(&mut db, "filesystem", std::slice::from_ref(&record), true).unwrap();
+        let before_source = digest(&db).unwrap();
+        record.source_fingerprint = "policy-added".into();
+        refresh_kind(&mut db, "filesystem", &[record], true).unwrap();
+        assert_ne!(before_source, digest(&db).unwrap());
+
+        let before_config = digest(&db).unwrap();
+        replace_root_configuration(&mut db, &[("shared".into(), "/configured/root".into())])
+            .unwrap();
+        assert_ne!(before_config, digest(&db).unwrap());
+    }
+
+    #[test]
+    fn removed_root_configuration_prunes_only_orphaned_records() {
+        let mut db = open(Path::new(":memory:")).unwrap();
+        let root_a = PathBuf::from("/roots/a");
+        let root_b = PathBuf::from("/roots/b");
+        let mut a = skill("/roots/a/one/SKILL.md", "alpha");
+        a.roots = vec![(root_a.clone(), "global".into())];
+        let mut b = skill("/roots/b/two/SKILL.md", "beta");
+        b.roots = vec![(root_b.clone(), "project".into())];
+        refresh_filesystem_scope(
+            &mut db,
+            &[a, b],
+            &[
+                (root_a.clone(), "global".into()),
+                (root_b.clone(), "project".into()),
+            ],
+            true,
+        )
+        .unwrap();
+
+        replace_root_configuration(
+            &mut db,
+            &[("project:/workspace".into(), canonical_root(&root_b))],
+        )
+        .unwrap();
+
+        assert_eq!(search::count(&db, None).unwrap(), 1);
         assert_eq!(
-            db.query_row("SELECT count(*) FROM skills_fts", [], |row| row
+            db.query_row("SELECT count(*) FROM skill_roots", [], |row| row
                 .get::<_, i64>(0))
                 .unwrap(),
             1
@@ -511,108 +546,68 @@ mod tests {
     }
 
     #[test]
-    fn reports_cached_source_kinds() {
+    fn scoped_refresh_preserves_unrelated_project_records() {
         let mut db = open(Path::new(":memory:")).unwrap();
-        assert!(!has_kind(&db, "codex").unwrap());
-        let mut native = skill("/skills/native/SKILL.md", "native");
-        native.source_kind = "codex".into();
-        refresh_kind(&mut db, "codex", &[native], true).unwrap();
-        assert!(has_kind(&db, "codex").unwrap());
-    }
+        let root_a = PathBuf::from("/roots/a");
+        let root_b = PathBuf::from("/roots/b");
+        let mut a = skill("/skills/a/SKILL.md", "alpha");
+        a.metadata.name = "alpha".into();
+        a.roots = vec![(root_a.clone(), "project".into())];
+        let mut b = skill("/skills/b/SKILL.md", "beta");
+        b.metadata.name = "beta".into();
+        b.roots = vec![(root_b.clone(), "project".into())];
 
-    #[test]
-    fn retains_native_snapshots_for_multiple_contexts() {
-        let workspace_a = tempfile::tempdir().unwrap();
-        let workspace_b = tempfile::tempdir().unwrap();
-        let home_a = tempfile::tempdir().unwrap();
-        let home_b = tempfile::tempdir().unwrap();
-        let db = open(Path::new(":memory:")).unwrap();
-
-        record_snapshot(
-            &db,
-            workspace_a.path(),
-            "0.154.0",
-            Path::new("/codex-a"),
-            home_a.path(),
+        refresh_filesystem_scope(
+            &mut db,
+            std::slice::from_ref(&b),
+            &[(root_b.clone(), "project".into())],
+            true,
         )
         .unwrap();
-        record_snapshot(
-            &db,
-            workspace_b.path(),
-            "0.154.0",
-            Path::new("/codex-b"),
-            home_b.path(),
+        refresh_filesystem_scope(
+            &mut db,
+            std::slice::from_ref(&a),
+            &[(root_a.clone(), "project".into())],
+            true,
         )
         .unwrap();
 
-        assert!(has_workspace_snapshot(&db, workspace_a.path(), home_a.path()).unwrap());
-        assert!(has_workspace_snapshot(&db, workspace_b.path(), home_b.path()).unwrap());
+        assert_eq!(
+            search::all(&db, None, Some(&[root_a.to_string_lossy().into_owned()]))
+                .unwrap()
+                .into_iter()
+                .map(|row| row.name)
+                .collect::<Vec<_>>(),
+            vec!["alpha"]
+        );
+        assert_eq!(
+            search::all(&db, None, Some(&[root_b.to_string_lossy().into_owned()]))
+                .unwrap()
+                .into_iter()
+                .map(|row| row.name)
+                .collect::<Vec<_>>(),
+            vec!["beta"]
+        );
+        assert_eq!(
+            db.query_row(
+                "SELECT count(*) FROM skills WHERE source_kind='filesystem'",
+                [],
+                |row| row.get::<_, usize>(0),
+            )
+            .unwrap(),
+            2
+        );
     }
 
     #[test]
-    fn reports_raw_duplicate_and_model_discoverable_counts() {
-        let workspace = tempfile::tempdir().unwrap();
-        let home = tempfile::tempdir().unwrap();
+    fn reports_raw_and_model_discoverable_counts() {
         let mut db = open(Path::new(":memory:")).unwrap();
         let filesystem = skill("/skills/demo/SKILL.md", "filesystem");
-        let mut native = filesystem.clone();
-        native.source_kind = "codex".into();
-        native.source = "codex:native".into();
         refresh_kind(&mut db, "filesystem", &[filesystem], true).unwrap();
-        refresh_kind_for_context(
-            &mut db,
-            "codex",
-            Some((workspace.path(), home.path())),
-            &[native],
-            true,
-        )
-        .unwrap();
-        let context = crate::config::Context {
-            workspace: workspace.path().to_path_buf(),
-            codex_home: home.path().to_path_buf(),
-        };
-
-        let counts = counts(&db, Some(&context)).unwrap();
+        let counts = counts(&db, None).unwrap();
         assert_eq!(counts.filesystem, 1);
-        assert_eq!(counts.native, 1);
-        assert_eq!(counts.raw, 2);
-        assert_eq!(counts.duplicates, 1);
-        assert_eq!(counts.model_discoverable, 1);
-    }
-
-    #[test]
-    fn counts_only_the_requested_native_partition() {
-        let workspace_a = tempfile::tempdir().unwrap();
-        let workspace_b = tempfile::tempdir().unwrap();
-        let home = tempfile::tempdir().unwrap();
-        let mut db = open(Path::new(":memory:")).unwrap();
-        let mut native_a = skill("/skills/a/SKILL.md", "a");
-        native_a.source_kind = "codex".into();
-        let mut native_b = skill("/skills/b/SKILL.md", "b");
-        native_b.source_kind = "codex".into();
-        refresh_kind_for_context(
-            &mut db,
-            "codex",
-            Some((workspace_a.path(), home.path())),
-            &[native_a],
-            true,
-        )
-        .unwrap();
-        refresh_kind_for_context(
-            &mut db,
-            "codex",
-            Some((workspace_b.path(), home.path())),
-            &[native_b],
-            true,
-        )
-        .unwrap();
-        let context = crate::config::Context {
-            workspace: workspace_a.path().to_path_buf(),
-            codex_home: home.path().to_path_buf(),
-        };
-
-        let counts = counts(&db, Some(&context)).unwrap();
-        assert_eq!(counts.native, 1);
+        assert_eq!(counts.raw, 1);
+        assert_eq!(counts.duplicates, 0);
         assert_eq!(counts.model_discoverable, 1);
     }
 

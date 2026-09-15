@@ -71,12 +71,23 @@ grep -q '^project-b@' "$temporary/list-b"
 # Ordinary lookup reconciles current files, but an unchanged inventory does
 # not replace the durable snapshot.
 cache="$cache_home/skillwick/index-v3.sqlite"
+run_a list >/dev/null
 before_hash=$(shasum -a 256 "$cache" | awk '{print $1}')
 before_mtime=$(stat -f '%m' "$cache")
 sleep 1
 run_a list >/dev/null
 test "$(shasum -a 256 "$cache" | awk '{print $1}')" = "$before_hash"
 test "$(stat -f '%m' "$cache")" = "$before_mtime"
+
+# Policy file presence and content are freshness inputs even when the effective
+# policy remains discoverable.
+mkdir -p "$shared/shared/agents"
+printf '%s\n' 'policy:' '  allow_implicit_invocation: true' \
+  >"$shared/shared/agents/openai.yaml"
+run_a list >/dev/null
+test "$(shasum -a 256 "$cache" | awk '{print $1}')" != "$before_hash"
+rm "$shared/shared/agents/openai.yaml"
+run_a list >/dev/null
 
 # Add, edit, rename, remove, and policy-only changes are visible on the next
 # ordinary command without a human refresh step.
@@ -90,7 +101,6 @@ rm "$project_a/project-a/renamed.tmp"
 run_a list >"$temporary/list-renamed"
 grep -q '^project-a-renamed@' "$temporary/list-renamed"
 ! grep -q '^project-a@' "$temporary/list-renamed"
-mkdir -p "$shared/shared/agents"
 printf '%s\n' 'policy:' '  allow_implicit_invocation: false' \
   >"$shared/shared/agents/openai.yaml"
 run_a list >"$temporary/list-policy-denied"
@@ -139,7 +149,7 @@ for obsolete in \
   if run_a $obsolete list >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 done
 
-run_a --help | grep -q -- '--project-root'
-! run_a --help | grep -q -- '--catalog'
-! run_a --help | grep -q -- '--codex-bin'
+run_a init --help | grep -q -- '--project-root'
+! run_a init --help | grep -q -- '--catalog'
+! run_a init --help | grep -q -- '--codex-bin'
 echo "CLI acceptance passed"

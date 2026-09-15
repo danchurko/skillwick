@@ -1,6 +1,6 @@
 use crate::{
-    config::{self, Agent, Config, Inventory},
-    inventory, native,
+    config::{self, Agent, Config},
+    inventory,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -10,19 +10,11 @@ use std::{
     io::IsTerminal,
     path::{Path, PathBuf},
 };
-use toml_edit::{value, DocumentMut};
 
 const BEGIN: &str = "<!-- skillwick:begin -->";
 const END: &str = "<!-- skillwick:end -->";
 const CONTEXT: &str = include_str!("../assets/skillwick/SKILLWICK.md");
 const HOOK_STATUS: &str = "Finding relevant skills with Skillwick";
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Catalog {
-    Auto,
-    Native,
-    Unchanged,
-}
 
 pub fn instructions() -> &'static str {
     CONTEXT
@@ -33,11 +25,8 @@ pub struct InitRequest {
     pub yes: bool,
     pub dry_run: bool,
     pub agent: Agent,
-    pub inventory: Inventory,
-    pub catalog: Catalog,
     pub roots: Vec<PathBuf>,
-    pub codex_home: Option<PathBuf>,
-    pub codex_bin: Option<PathBuf>,
+    pub project_roots: Vec<PathBuf>,
     pub instructions_file: Option<PathBuf>,
 }
 
@@ -59,9 +48,6 @@ struct Journal {
     legacy_block: bool,
     #[serde(default)]
     router_file: Option<PathBuf>,
-    codex_config: PathBuf,
-    previous_catalog: Option<bool>,
-    wrote_catalog: bool,
     #[serde(default)]
     router_hash: Option<String>,
     #[serde(default)]
@@ -75,65 +61,60 @@ struct Journal {
 pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> {
     let mut settings = config::load(config_path)?;
     for root in request.roots {
+        let root = normalize_root(&root)?;
         if !settings.roots.contains(&root) {
             settings.roots.push(root);
         }
     }
+    if !request.project_roots.is_empty() {
+        let path = config::normalize_cwd(&request.cwd)?;
+        let project = settings.projects.iter_mut().find(|project| {
+            fs::canonicalize(&project.path)
+                .ok()
+                .is_some_and(|existing| existing == path)
+        });
+        if let Some(project) = project {
+            for root in request.project_roots {
+                let root = normalize_root(&root)?;
+                if !project.roots.contains(&root) {
+                    project.roots.push(root);
+                }
+            }
+        } else {
+            let roots = request
+                .project_roots
+                .iter()
+                .map(|root| normalize_root(root))
+                .collect::<Result<Vec<_>, _>>()?;
+            settings.projects.push(config::Project { path, roots });
+        }
+    }
     settings.agent = request.agent;
-    settings.inventory = request.inventory;
-    if request.codex_home.is_some() {
-        settings.codex_home = request.codex_home;
-    }
-    if request.codex_bin.is_some() {
-        settings.codex_bin = request.codex_bin;
-    }
     if request.instructions_file.is_some() {
         settings.instructions_file = request.instructions_file;
     }
     if settings.agent == Agent::None {
-        print_plan(config_path, &settings, false);
+        print_plan(config_path, &settings);
         if request.dry_run {
             return Ok(settings);
         }
         confirm(request.yes)?;
         return Ok(settings);
     }
-    let codex_home = config::codex_home(&settings);
+    let codex_home = config::codex_home();
     let instructions = effective_instructions(&settings, &codex_home)?;
-    let codex_config = codex_home.join("config.toml");
     let hook_file = codex_home.join("hooks.json");
     let previous_journal = fs::read(config::state_dir().join("integration.json"))
         .ok()
         .and_then(|bytes| serde_json::from_slice::<Journal>(&bytes).ok());
     let context = context_file(&codex_home)?;
     let reference = reference_line(&context)?;
-    let codex = native::detect(&settings)?;
-    let compatible = native::supports_native_catalog(&codex.version);
-    let write_catalog = match request.catalog {
-        Catalog::Native if !compatible => {
-            return Err(format!(
-                "Codex {} does not have a verified native catalogue contract",
-                codex.version
-            ))
-        }
-        Catalog::Native => true,
-        Catalog::Auto => compatible,
-        Catalog::Unchanged => false,
-    };
-    if !compatible && request.catalog == Catalog::Auto {
-        settings.inventory = Inventory::Filesystem;
-        eprintln!(
-            "warning: Codex {} is unverified; using discovery-only filesystem inventory",
-            codex.version
-        );
-    }
-    print_plan(config_path, &settings, write_catalog);
+    print_plan(config_path, &settings);
     if request.dry_run {
         return Ok(settings);
     }
     confirm(request.yes)?;
     config::refuse_symlink(&instructions)?;
-    config::refuse_symlink(&codex_config)?;
     config::refuse_symlink(&context)?;
     if let Some(hook_file) = previous_journal
         .as_ref()
@@ -222,24 +203,6 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     } else {
         instruction_reference_count == 0
     };
-    let (observed_catalog, codex_updated) = if write_catalog {
-        patch_catalog(
-            &fs::read_to_string(&codex_config).unwrap_or_default(),
-            false,
-        )?
-    } else {
-        (None, None)
-    };
-    let continuing_catalog = previous_journal
-        .as_ref()
-        .is_some_and(|journal| journal.wrote_catalog && journal.codex_config == codex_config);
-    let catalog_previous = if continuing_catalog {
-        previous_journal
-            .as_ref()
-            .and_then(|journal| journal.previous_catalog)
-    } else {
-        observed_catalog
-    };
     let hook_retirement = previous_journal.as_ref().and_then(|journal| {
         journal.hook_command.as_ref().and_then(|command| {
             journal_hook_file(journal, &hook_file)
@@ -264,9 +227,6 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
         router_file: previous_journal
             .as_ref()
             .and_then(|journal| journal.router_file.clone()),
-        codex_config: codex_config.clone(),
-        previous_catalog: catalog_previous,
-        wrote_catalog: write_catalog || continuing_catalog,
         router_hash: previous_journal
             .as_ref()
             .and_then(|journal| journal.router_hash.clone()),
@@ -274,8 +234,7 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
         hook_command: None,
         hook_file_created: false,
     };
-    prime_index(&settings, &codex, &request.cwd)
-        .map_err(|error| format!("{error}; native catalogue was not changed"))?;
+    prime_index(&settings, &request.cwd).map_err(|error| error.to_string())?;
     if let Some((hook_file, hook_updated, hook_file_created)) = hook_updated {
         if hook_file_created && hook_document_empty(&hook_updated) {
             if hook_file.exists() {
@@ -294,17 +253,24 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, String> 
     config::save(config_path, &settings)?;
     config::atomic_write(&context, CONTEXT.as_bytes(), 0o600)?;
     config::atomic_write(&instructions, instruction_updated.as_bytes(), 0o600)?;
-    if let Some(updated) = codex_updated {
-        config::atomic_write(&codex_config, updated.as_bytes(), 0o600)?;
-    }
     if let Some(router) = &legacy_router {
         fs::remove_file(router).map_err(|e| e.to_string())?;
     }
     Ok(settings)
 }
 
-fn prime_index(settings: &Config, codex: &native::Codex, cwd: &Path) -> Result<(), String> {
-    inventory::prime(settings, codex, cwd).map_err(|error| error.to_string())
+fn normalize_root(root: &Path) -> Result<PathBuf, String> {
+    let root = fs::canonicalize(root)
+        .map_err(|error| format!("cannot normalize skill root {}: {error}", root.display()))?;
+    if root.is_dir() {
+        Ok(root)
+    } else {
+        Err(format!("skill root is not a directory: {}", root.display()))
+    }
+}
+
+fn prime_index(settings: &Config, cwd: &Path) -> Result<(), String> {
+    inventory::prime(settings, cwd).map_err(|error| error.to_string())
 }
 
 pub fn uninstall(purge_cache: bool) -> Result<(), String> {
@@ -314,15 +280,6 @@ pub fn uninstall(purge_cache: bool) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     let mut drift: Vec<String> = Vec::new();
-    if journal.wrote_catalog {
-        let current = fs::read_to_string(&journal.codex_config).map_err(|e| e.to_string())?;
-        match restore_catalog(&current, journal.previous_catalog)? {
-            Some(updated) => {
-                config::atomic_write(&journal.codex_config, updated.as_bytes(), 0o600)?
-            }
-            None => drift.push("Codex catalogue setting changed after setup".into()),
-        }
-    }
     if let (Some(hook_file), Some(command)) = (&journal.hook_file, &journal.hook_command) {
         let current = fs::read_to_string(hook_file).unwrap_or_default();
         match remove_hook(&current, command) {
@@ -438,7 +395,7 @@ pub fn integration_present(instructions: &Path, codex_home: &Path) -> bool {
     fs::read_to_string(&context).is_ok_and(|text| {
         text.starts_with("# Skillwick\n")
             && text.contains("skillwick --json list")
-            && text.contains("`skillwick read ID`")
+            && text.contains("skillwick read ID")
     }) && fs::read_to_string(instructions).is_ok_and(|text| reference_count(&text, &reference) == 1)
 }
 
@@ -594,44 +551,13 @@ fn remove_block(current: &str) -> Result<String, &'static str> {
         &current[end..]
     ))
 }
-fn patch_catalog(current: &str, target: bool) -> Result<(Option<bool>, Option<String>), String> {
-    let mut document = current
-        .parse::<DocumentMut>()
-        .map_err(|e| format!("invalid Codex config TOML: {e}"))?;
-    let previous = document
-        .get("skills")
-        .and_then(|item| item.get("include_instructions"))
-        .and_then(|item| item.as_bool());
-    document["skills"]["include_instructions"] = value(target);
-    Ok((previous, Some(document.to_string())))
-}
-fn restore_catalog(current: &str, previous: Option<bool>) -> Result<Option<String>, String> {
-    let mut document = current.parse::<DocumentMut>().map_err(|e| e.to_string())?;
-    if document
-        .get("skills")
-        .and_then(|item| item.get("include_instructions"))
-        .and_then(|item| item.as_bool())
-        != Some(false)
-    {
-        return Ok(None);
-    }
-    if let Some(previous) = previous {
-        document["skills"]["include_instructions"] = value(previous);
-    } else if let Some(skills) = document
-        .get_mut("skills")
-        .and_then(|item| item.as_table_mut())
-    {
-        skills.remove("include_instructions");
-    }
-    Ok(Some(document.to_string()))
-}
-fn print_plan(config_path: &Path, settings: &Config, catalog: bool) {
+fn print_plan(config_path: &Path, settings: &Config) {
     eprintln!(
-        "config: {}\ninventory: {:?}\nagent: {:?}\ncatalogue suppression: {}",
+        "config: {}\nroots: {}\nprojects: {}\nagent: {:?}",
         config_path.display(),
-        settings.inventory,
+        settings.roots.len(),
+        settings.projects.len(),
         settings.agent,
-        catalog,
     );
 }
 fn confirm(yes: bool) -> Result<(), String> {
@@ -686,16 +612,6 @@ mod tests {
         assert!(integration_present(&instructions, codex_home));
         fs::write(&context, CONTEXT).unwrap();
         assert!(integration_present(&instructions, codex_home));
-    }
-    #[test]
-    fn catalog_patch_preserves_unrelated_toml_and_restores_leaf() {
-        let source = "model = \"x\"\n[skills]\nmax_context_tokens = 100\n";
-        let (_, patched) = patch_catalog(source, false).unwrap();
-        let patched = patched.unwrap();
-        assert!(patched.contains("model = \"x\""));
-        assert!(patched.contains("max_context_tokens = 100"));
-        let restored = restore_catalog(&patched, None).unwrap().unwrap();
-        assert!(!restored.contains("include_instructions"));
     }
     #[test]
     fn hook_retirement_preserves_other_hooks_and_removes_only_its_group() {

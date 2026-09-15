@@ -254,7 +254,9 @@ with tempfile.TemporaryDirectory(prefix="skillwick-docs-") as directory:
             check=False,
         )
 
-    initialized = clean_run("init", "--yes", "--agent", "none", "--inventory", "filesystem")
+    initialized = clean_run(
+        "init", "--yes", "--agent", "none", "--root", str(work / ".agents/skills")
+    )
     if initialized.returncode:
         errors.append(f"clean filesystem setup failed: {initialized.stderr.strip()}")
     listed = clean_run("--json", "list")
