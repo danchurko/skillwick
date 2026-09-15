@@ -5,162 +5,141 @@ binary=${1:-target/debug/skillwick}
 case "$binary" in /*) ;; *) binary="$(pwd)/$binary" ;; esac
 temporary=$(mktemp -d /private/tmp/skillwick-cli.XXXXXX)
 trap 'rm -rf "$temporary"' EXIT HUP INT TERM
-home="$temporary/home with spaces"
-project="$temporary/project/child"
-sibling="$temporary/sibling"
-mkdir -p "$home/.agents/skills/cpp/references" "$home/.agents/skills/cpp/scripts" "$home/.agents/skills/manual-only" "$home/.agents/skills/user-hidden" "$home/.agents/skills/policy-deny/agents" "$home/.agents/skills/malformed-policy" "$project/.agents/skills/agentcore" "$sibling/.agents/skills/leak" "$temporary/config" "$temporary/cache" "$temporary/state"
 
-printf '%s\n' '---' 'name: C++' 'description: Build native C++ command line tools.' 'keywords: [cpp, C#, .NET, Node.js]' '---' 'Read references/guide.md.' > "$home/.agents/skills/cpp/SKILL.md"
-printf '%s\n' 'relative reference' > "$home/.agents/skills/cpp/references/guide.md"
-printf '%s\n' '#!/bin/sh' "touch '$temporary/support-script-ran'" > "$home/.agents/skills/cpp/scripts/check.sh"
-printf '%s\n' '---' 'name: aws-agentcore' 'description: Deploy and debug AgentCore runtimes.' '---' > "$project/.agents/skills/agentcore/SKILL.md"
-printf '%s\n' '---' 'name: manual-only' 'description: Manual only workflow.' 'disable-model-invocation: true' '---' > "$home/.agents/skills/manual-only/SKILL.md"
-printf '%s\n' '---' 'name: user-hidden' 'description: Model discoverable workflow.' 'user-invocable: false' '---' > "$home/.agents/skills/user-hidden/SKILL.md"
-printf '%s\n' '---' 'name: policy-deny' 'description: Policy denied workflow.' '---' > "$home/.agents/skills/policy-deny/SKILL.md"
-printf '%s\n' 'policy:' '  allow_implicit_invocation: false' > "$home/.agents/skills/policy-deny/agents/openai.yaml"
-printf '%s\n' '---' 'name: malformed-policy' 'description: Malformed policy workflow.' 'disable-model-invocation: maybe' '---' > "$home/.agents/skills/malformed-policy/SKILL.md"
-printf '%s\n' '---' 'name: leak' 'description: Never cross project boundaries.' '---' > "$sibling/.agents/skills/leak/SKILL.md"
-ln -s "$sibling/.agents/skills/leak" "$home/.agents/skills/cpp/references/escape"
+home="$temporary/home"
+shared="$temporary/shared"
+project_a="$temporary/project-a"
+project_b="$temporary/project-b"
+project_a_child="$project_a/packages/child"
+config_home="$temporary/config"
+cache_home="$temporary/cache"
+state_home="$temporary/state"
+mkdir -p "$home" "$shared" "$project_a_child" "$project_b" "$config_home" \
+  "$cache_home" "$state_home" "$temporary/no-codex"
 
-run() {
-  env HOME="$home" XDG_CONFIG_HOME="$temporary/config" XDG_CACHE_HOME="$temporary/cache" XDG_STATE_HOME="$temporary/state" "$binary" --cwd "$project" "$@"
+write_skill() {
+  directory=$1
+  name=$2
+  description=$3
+  mkdir -p "$directory/$name"
+  printf '%s\n' '---' "name: $name" "description: $description" '---' \
+    >"$directory/$name/SKILL.md"
 }
 
-run init --yes --agent none --inventory filesystem
-run init --yes --agent none --inventory filesystem
-test -f "$temporary/cache/skillwick/index-v3.sqlite"
-test ! -e "$temporary/cache/skillwick/index-v3.sqlite-wal"
-test ! -e "$temporary/cache/skillwick/index-v3.sqlite-shm"
-run search C++ | grep -q 'C++@'
-run search 'deploy AgentCore runtime' | grep -q 'aws-agentcore@'
-! run list | grep -q 'leak@'
-run list | grep -q '^3 skills in the current inventory\.$'
-test "$(run list | grep -c '@')" -eq 3
-! run list | grep -q 'manual-only@'
-! run list | grep -q 'policy-deny@'
-run list | grep -q 'user-hidden@'
-! run search 'manual only workflow' | grep -q 'manual-only@'
-! run search 'policy denied workflow' | grep -q 'policy-deny@'
-hidden_id="manual-only@$(printf 'filesystem:%s' "$home/.agents/skills/manual-only/SKILL.md" | shasum -a 256 | awk '{print substr($1,1,6)}')"
-if run read "$hidden_id" >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
-if run inspect "$hidden_id" >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
-run refresh 2>&1 | grep -q 'invocation policy'
-run doctor 2>&1 | grep -q 'filesystem:'
-run doctor 2>&1 | grep -q 'native:'
-run doctor 2>&1 | grep -q 'raw:'
-run doctor 2>&1 | grep -q 'duplicates:'
-run doctor 2>&1 | grep -q 'model-discoverable:'
-run --json doctor | grep -q '"version":2'
-if run list --limit 1 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
-run --json list | grep -q '"version":2,"total":3'
-test "$(run list | grep -c '@')" -eq 3
-identifier=$(run list | sed -n 's/^\(C++@[0-9a-f]*\).*/\1/p')
-id_read=$(run read "$identifier")
-printf '%s\n' "$id_read" | grep -q "base: $home/.agents/skills/cpp"
-test "$(printf '%s\n' "$id_read" | sed -n '1p')" = "path: $home/.agents/skills/cpp/SKILL.md"
-! printf '%s\n' "$id_read" | grep -q '^resolved-id:'
-name_read=$(run read C++)
-test "$(printf '%s\n' "$name_read" | sed -n '1p')" = "resolved-id: $identifier"
-printf '%s\n' "$name_read" | grep -q "^base: $home/.agents/skills/cpp$"
-if unknown=$(run read c++ 2>&1); then exit 1; else test "$?" -eq 3; fi
-printf '%s\n' "$unknown" | grep -q 'skillwick search'
-if run read manual-only >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
-if run read policy-deny >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
-if run "read $identifier" >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
-run inspect "$identifier" | grep -q '^description: Build native C++ command line tools\.'
-! run inspect "$identifier" | grep -q '^package:'
-run --json inspect "$identifier" | grep -q '"version":2,"results"'
-run inspect "$identifier" --files | grep -Fq -- '- references/guide.md [markdown; file, .md]'
-run inspect "$identifier" --files | grep -Fq -- '- scripts/check.sh [non-markdown; file, .sh]'
-! run inspect "$identifier" --files | grep -q 'support-script-ran'
-test ! -e "$temporary/support-script-ran"
-run inspect "$identifier" --files | grep -Fq -- '- references/escape [non-markdown; symlink]'
-! run inspect "$identifier" --files | grep -q 'escape/SKILL.md'
-run inspect "$identifier" --files | grep -q '^counts: complete$'
-run inspect "$identifier" --files | grep -q '^regular files: 3$'
-run inspect "$identifier" --files | grep -q '^additional regular files: 2$'
-run --json inspect "$identifier" --files | grep -q '"version":2'
-run --json inspect "$identifier" --files | grep -q '"package"'
-run --json inspect "$identifier" --files | grep -q '"counts_scope":"complete"'
-run --json inspect "$identifier" --files | grep -q '"classification":"markdown"'
-mkdir -p "$home/.agents/skills/cpp/flood"
-i=0
-while [ "$i" -le 256 ]; do
-  printf '%s\n' "$i" > "$home/.agents/skills/cpp/flood/file-$i.txt"
-  i=$((i + 1))
+write_skill "$shared" shared "Shared workspace guidance."
+write_skill "$project_a" project-a "Project A guidance."
+write_skill "$project_b" project-b "Project B guidance."
+
+run_a() {
+  env HOME="$home" CODEX_HOME="$temporary/no-codex-home" PATH="$temporary/no-codex" \
+    XDG_CONFIG_HOME="$config_home" XDG_CACHE_HOME="$cache_home" \
+    XDG_STATE_HOME="$state_home" "$binary" --cwd "$project_a" "$@"
+}
+run_a_child() {
+  env HOME="$home" CODEX_HOME="$temporary/no-codex-home" PATH="$temporary/no-codex" \
+    XDG_CONFIG_HOME="$config_home" XDG_CACHE_HOME="$cache_home" \
+    XDG_STATE_HOME="$state_home" "$binary" --cwd "$project_a_child" "$@"
+}
+run_b() {
+  env HOME="$home" CODEX_HOME="$temporary/no-codex-home" PATH="$temporary/no-codex" \
+    XDG_CONFIG_HOME="$config_home" XDG_CACHE_HOME="$cache_home" \
+    XDG_STATE_HOME="$state_home" "$binary" --cwd "$project_b" "$@"
+}
+
+# Shared roots are visible everywhere; project roots apply to their project and
+# descendants only. No implicit HOME or ancestor discovery is permitted.
+run_a init --yes --agent none --root "$shared" --project-root "$project_a"
+run_b init --yes --agent none --root "$shared" --project-root "$project_b"
+grep -Fq '[[projects]]' "$config_home/skillwick/config.toml"
+grep -Fq "path = \"$project_a\"" "$config_home/skillwick/config.toml"
+grep -Fq "path = \"$project_b\"" "$config_home/skillwick/config.toml"
+
+run_a list >"$temporary/list-a"
+grep -q '^2 skills in the current inventory\.$' "$temporary/list-a"
+grep -q '^shared@' "$temporary/list-a"
+grep -q '^project-a@' "$temporary/list-a"
+! grep -q '^project-b@' "$temporary/list-a"
+run_a_child list >"$temporary/list-a-child"
+grep -q '^project-a@' "$temporary/list-a-child"
+! grep -q '^project-b@' "$temporary/list-a-child"
+run_b list >"$temporary/list-b"
+grep -q '^2 skills in the current inventory\.$' "$temporary/list-b"
+grep -q '^shared@' "$temporary/list-b"
+grep -q '^project-b@' "$temporary/list-b"
+! grep -q '^project-a@' "$temporary/list-b"
+
+# Ordinary lookup reconciles current files, but an unchanged inventory does
+# not replace the durable snapshot.
+cache="$cache_home/skillwick/index-v3.sqlite"
+before_hash=$(shasum -a 256 "$cache" | awk '{print $1}')
+before_mtime=$(stat -f '%m' "$cache")
+sleep 1
+run_a list >/dev/null
+test "$(shasum -a 256 "$cache" | awk '{print $1}')" = "$before_hash"
+test "$(stat -f '%m' "$cache")" = "$before_mtime"
+
+# Add, edit, rename, remove, and policy-only changes are visible on the next
+# ordinary command without a human refresh step.
+printf '%s\n' '---' 'name: project-a' \
+  'description: Project A changed in place.' '---' >"$project_a/project-a/SKILL.md"
+run_a search 'changed in place' | grep -q '^project-a@'
+mv "$project_a/project-a/SKILL.md" "$project_a/project-a/renamed.tmp"
+printf '%s\n' '---' 'name: project-a-renamed' \
+  'description: Project A renamed.' '---' >"$project_a/project-a/SKILL.md"
+rm "$project_a/project-a/renamed.tmp"
+run_a list >"$temporary/list-renamed"
+grep -q '^project-a-renamed@' "$temporary/list-renamed"
+! grep -q '^project-a@' "$temporary/list-renamed"
+mkdir -p "$shared/shared/agents"
+printf '%s\n' 'policy:' '  allow_implicit_invocation: false' \
+  >"$shared/shared/agents/openai.yaml"
+run_a list >"$temporary/list-policy-denied"
+! grep -q '^shared@' "$temporary/list-policy-denied"
+rm "$shared/shared/agents/openai.yaml"
+run_a list | grep -q '^shared@'
+rm "$project_a/project-a/SKILL.md"
+run_a list >"$temporary/list-removed"
+! grep -q '^project-a-renamed@' "$temporary/list-removed"
+
+# A record from another project cannot be read or inspected by ID or name.
+project_b_id=$(run_b list | sed -n 's/^\(project-b@[0-9a-f]*\).*/\1/p')
+[ -n "$project_b_id" ]
+if run_a read "$project_b_id" >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
+if run_a inspect project-b >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
+
+# A missing configured root fails the affected operation and preserves the
+# last published snapshot. Making it valid lets the next operation recover.
+missing="$temporary/missing-root"
+missing_config="$temporary/missing.toml"
+printf '%s\n' "roots = [\"$shared\", \"$missing\"]" 'agent = "none"' \
+  >"$missing_config"
+cp "$cache" "$temporary/cache-before-missing"
+if missing_output=$(run_a --config "$missing_config" list 2>&1); then
+  echo "missing configured root unexpectedly succeeded" >&2
+  exit 1
+else
+  missing_status=$?
+fi
+test "$missing_status" -eq 3
+printf '%s\n' "$missing_output" | grep -q 'list'
+printf '%s\n' "$missing_output" | grep -q 'configured root does not exist'
+cmp -s "$temporary/cache-before-missing" "$cache"
+write_skill "$missing" recovered "Recovered configured root."
+run_a --config "$missing_config" list | grep -q '^recovered@'
+
+# An explicitly valid empty root set is a successful empty inventory.
+empty_config="$temporary/empty.toml"
+printf '%s\n' 'roots = []' 'agent = "none"' >"$empty_config"
+run_a --config "$empty_config" list | grep -q '^0 skills in the current inventory\.$'
+
+# Native inventory modes and provider-specific options are gone, with no
+# compatibility alias that could reintroduce an executable/state dependency.
+for obsolete in \
+  '--inventory codex' '--catalog native' '--codex-home /tmp/codex' '--codex-bin /tmp/codex'; do
+  if run_a $obsolete list >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
 done
-run inspect "$identifier" --files | grep -q 'truncated; max 256 entries'
-run | grep -q 'Usage:'
-run --help | grep -q 'version-2 JSON'
-run search --help | grep -q '1-20'
-run search --help | grep -q 'default: 5'
-run inspect --help | grep -q 'does not execute files'
-run refresh --help | grep -q 'disposable local index'
-run init --help | grep -q 'required in non-interactive mode'
-run doctor --help | grep -q 'exit code 3'
-run uninstall --help | grep -q 'installed skills remain untouched'
-run instructions | grep -q '^# Skillwick$'
-run instructions | grep -q 'skillwick search "task"'
-run instructions | grep -q 'another named skill through a skill tool'
-run read --help | grep -Fq '<ID|NAME>'
-if run probe --limit 5 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
-if run search test --bogus >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
-if run refresh --full >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
-if run --json refresh >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
-run search --limit 1 C++ | grep -q 'C++@'
-run search C++ --limit 1 | grep -q 'C++@'
-run search C++ --limit 20 | grep -q 'C++@'
-if run search test --limit 21 >/dev/null 2>&1; then exit 1; else test "$?" -eq 2; fi
-test "$(run search no-such-skill)" = 'No matching skills.'
-run --json search C++ | grep -q '"version":2,"results"'
-direct=$(run search C++)
-chained=$(true && run search C++)
-test "$direct" = "$chained"
-short_circuit="$temporary/short-circuit"
-(false && run search C++ >"$short_circuit") || true
-test ! -e "$short_circuit"
 
-mkdir -p "$project/.agents/skills/oversized"
-long_description=$(awk 'BEGIN { for (i = 0; i < 2500; i++) printf "x" }')
-printf '%s\n' '---' 'name: oversized' "description: $long_description" '---' > "$project/.agents/skills/oversized/SKILL.md"
-mkdir -p "$project/.agents/skills/oversized-two"
-printf '%s\n' '---' 'name: oversized-two' "description: $long_description" '---' > "$project/.agents/skills/oversized-two/SKILL.md"
-run refresh
-long_output=$(run search oversized)
-test "$(printf '%s\n' "$long_output" | grep -c '^oversized')" -eq 2
-printf '%s\n' "$long_output" | grep -q '\[truncated\]'
-printf '%s\n' "$long_output" | awk 'length($0) > 2000 { exit 1 } END { if (NR != 2) exit 1 }'
-json_output=$(run --json search oversized --limit 2)
-printf '%s\n' "$json_output" | grep -q '"version":2,"results"'
-test "$(printf '%s\n' "$json_output" | grep -o '"id"' | wc -l | tr -d ' ')" -eq 2
-
-mkdir -p "$project/.agents/skills/duplicate-one" "$project/.agents/skills/duplicate-two" \
-  "$project/.agents/skills/namespaced" "$project/.agents/skills/id-collision"
-printf '%s\n' '---' 'name: duplicate' 'description: First duplicate.' '---' \
-  'FIRST_DUPLICATE_BODY' > "$project/.agents/skills/duplicate-one/SKILL.md"
-printf '%s\n' '---' 'name: duplicate' 'description: Second duplicate.' '---' \
-  'SECOND_DUPLICATE_BODY' > "$project/.agents/skills/duplicate-two/SKILL.md"
-printf '%s\n' '---' 'name: ponytail:ponytail' 'description: Namespaced exact name.' '---' \
-  'NAMESPACED_BODY' > "$project/.agents/skills/namespaced/SKILL.md"
-printf '%s\n' '---' "name: $identifier" 'description: ID collision fixture.' '---' \
-  'ID_COLLISION_BODY' > "$project/.agents/skills/id-collision/SKILL.md"
-run refresh
-if duplicate=$(run read duplicate 2>&1); then exit 1; else test "$?" -eq 3; fi
-printf '%s\n' "$duplicate" | grep -q 'ambiguous'
-test "$(printf '%s\n' "$duplicate" | grep -c -- '- duplicate@')" -eq 2
-printf '%s\n' "$duplicate" | grep -q 'source:'
-printf '%s\n' "$duplicate" | grep -q 'scope:'
-printf '%s\n' "$duplicate" | grep -q 'path:'
-! printf '%s\n' "$duplicate" | grep -q 'FIRST_DUPLICATE_BODY'
-! printf '%s\n' "$duplicate" | grep -q 'SECOND_DUPLICATE_BODY'
-run read ponytail:ponytail | grep -q 'NAMESPACED_BODY'
-run read "$identifier" | grep -q 'Build native C++ command line tools.'
-! run read "$identifier" | grep -q 'ID_COLLISION_BODY'
-rm "$project/.agents/skills/agentcore/SKILL.md"
-if run read aws-agentcore@missing >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
-
-dry="$temporary/dry"
-mkdir -p "$dry"
-env HOME="$dry" XDG_CONFIG_HOME="$dry/config" XDG_CACHE_HOME="$dry/cache" XDG_STATE_HOME="$dry/state" "$binary" init --dry-run --yes --agent none --inventory filesystem
-test ! -e "$dry/config/skillwick/config.toml"
+run_a --help | grep -q -- '--project-root'
+! run_a --help | grep -q -- '--catalog'
+! run_a --help | grep -q -- '--codex-bin'
 echo "CLI acceptance passed"
