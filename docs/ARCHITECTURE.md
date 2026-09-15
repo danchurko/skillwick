@@ -38,10 +38,12 @@ explicit shared/project roots + --cwd
   canonical paths, and rejects unauthorized symlink escapes.
 - `metadata` parses bounded `SKILL.md` frontmatter and invocation policy.
 - `package` lists bounded live package entries without following symlinks.
-- `index` owns SQLite schema, scope filtering, locking, and atomic publication.
+- `index` owns SQLite schema, root/scope associations, locking, and atomic
+  publication.
 - `inventory` reconciles complete source scans before a lookup and keeps the
   explicit maintenance refresh command on the same path.
-- `search` owns token normalization and deterministic lexical ranking.
+- `search` owns scope-filtered SQLite queries, token normalization, and
+  deterministic lexical ranking.
 - `integration` owns reversible context/reference edits and managed setup.
 - `doctor` reports source, scope, cache, and integration health.
 - `cli` maps commands to those owning modules.

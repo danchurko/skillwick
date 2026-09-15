@@ -18,8 +18,8 @@ make check
 
 `make check` formats, lints, runs Rust tests, exercises the filesystem CLI and
 installer with temporary homes, checks documentation contracts, and runs
-trust-boundary regressions. Codex-specific checks are separate because they
-require an installed compatible Codex CLI:
+trust-boundary regressions. The filesystem integration is separate; live model
+inference also requires an installed compatible Codex CLI:
 
 ```sh
 make test-filesystem
@@ -27,9 +27,9 @@ make test-inference
 ```
 
 Neither command installs Skillwick into the current home. The integration test
-uses isolated `HOME`, `CODEX_HOME`, and XDG directories. The inference test uses
-the caller's existing Codex authentication but gives the model only a temporary
-fixture library.
+uses isolated `HOME` and XDG directories. The inference test uses the caller's
+existing Codex authentication but gives the model only a temporary fixture
+library.
 
 Run the documentation and trust checks directly when changing their surfaces:
 
@@ -52,8 +52,8 @@ See [the architecture](docs/ARCHITECTURE.md), [command reference](docs/REFERENCE
 [decisions](docs/DECISIONS.md), and [verification history](docs/IMPLEMENTATION.md).
 
 Keep the CLI's search path explicit and local. Tests should use temporary homes
-and fixture skill packages for filesystem and Codex integration coverage; do not
-modify a developer's installed skills or persistent configuration.
+and fixture skill packages for filesystem integration coverage; do not modify a
+developer's installed skills or persistent configuration.
 
 ## Pull requests
 
@@ -70,17 +70,16 @@ out, run:
 make release-preflight
 ```
 
-This is the mandatory pre-tag gate. It runs the complete source checks, real
-Codex integration and inference checks, dependency assurance, then performs a
+This is the mandatory pre-tag gate. It runs the complete source checks,
+filesystem integration, inference, and dependency assurance, then performs a
 fresh `cargo install --path` into a temporary prefix. The installed executable
-must pass filesystem search/read/doctor and native refresh/search/doctor in two
-workspace contexts using the developer's real Codex home. Temporary XDG homes
-keep Skillwick configuration and cache changes out of the developer's account.
+must pass the deterministic fixtures and a read-only run against the configured
+local skill roots. Temporary XDG homes keep Skillwick configuration and cache
+changes out of the developer's account, and a sentinel proves that inventory
+does not invoke Codex.
 
 Do not create or push the release tag, and therefore do not start release CI,
-until this command passes for the exact versioned source commit. A coding-agent
-sandbox that cannot initialize the real Codex state is not release evidence;
-run the gate from the local terminal instead.
+until this command passes for the exact versioned source commit.
 
 Publish the arm64 and x86_64 archives with their per-file SHA-256 checksums.
 Keep build manifests in CI and use `scripts/install.sh` as the script installer.

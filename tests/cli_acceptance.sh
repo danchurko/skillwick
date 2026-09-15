@@ -117,6 +117,23 @@ project_b_id=$(run_b list | sed -n 's/^\(project-b@[0-9a-f]*\).*/\1/p')
 if run_a read "$project_b_id" >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
 if run_a inspect project-b >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; fi
 
+# Reassigning an existing root changes its project scope without leaving an
+# obsolete association readable from the former project.
+reassigned_config="$temporary/reassigned.toml"
+printf '%s\n' \
+  "roots = [\"$shared\"]" 'agent = "none"' \
+  '[[projects]]' "path = \"$project_a\"" "roots = [\"$project_b\"]" \
+  '[[projects]]' "path = \"$project_b\"" 'roots = []' >"$reassigned_config"
+run_a --config "$reassigned_config" list | grep -q '^project-b@'
+run_a --config "$reassigned_config" read "$project_b_id" >/dev/null
+run_a --config "$reassigned_config" inspect "$project_b_id" >/dev/null
+! run_b --config "$reassigned_config" list | grep -q '^project-b@'
+if run_b --config "$reassigned_config" read "$project_b_id" >/dev/null 2>&1; then
+  exit 1
+else
+  test "$?" -eq 3
+fi
+
 # A missing configured root fails the affected operation and preserves the
 # last published snapshot. Making it valid lets the next operation recover.
 missing="$temporary/missing-root"

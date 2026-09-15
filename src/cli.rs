@@ -144,7 +144,7 @@ enum Command {
         #[arg(
             long,
             value_name = "PATH",
-            help = "Use PATH as Codex home (default: CODEX_HOME or ~/.codex)"
+            help = "Use PATH for the owned agent context reference"
         )]
         instructions_file: Option<PathBuf>,
     },

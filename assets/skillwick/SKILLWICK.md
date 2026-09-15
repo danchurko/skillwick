@@ -28,7 +28,9 @@ and adjacent invocation-policy changes appear on the next command. Use
 Public results are enabled, model-discoverable records only. A failed or
 incomplete source update is not an empty inventory: the command fails and the
 last complete cache remains intact. `skillwick doctor --strict` is the health
-check for automation.
+check for automation. For a permission failure, retry that same failed command
+once through the host's supported permission approval when authorized. Stop and
+report the concrete blocker if that bounded recovery is unavailable or fails.
 
 Read only selected live instructions. Skillwick validates the source path, size,
 encoding, and content hash, but skill content does not authorize scripts,

@@ -42,13 +42,19 @@ config_home="$temporary/config"
 cache_home="$temporary/cache"
 state_home="$temporary/state"
 workspace="$temporary/workspace"
+workspace_child="$workspace/nested/child"
+workspace_b="$temporary/workspace-b"
 project_root="$temporary/project-skills"
+project_root_b="$temporary/project-skills-b"
 sentinel="$temporary/sentinel"
-mkdir -p "$home" "$config_home" "$cache_home" "$state_home" "$workspace" \
-  "$project_root/source-install" "$sentinel"
+mkdir -p "$home" "$config_home" "$cache_home" "$state_home" "$workspace_child" \
+  "$workspace_b" "$project_root/source-install" "$project_root_b/source-install-b" "$sentinel"
 printf '%s\n' '---' 'name: source-install' \
   'description: Verify a fresh installed binary against project scope.' '---' \
   >"$project_root/source-install/SKILL.md"
+printf '%s\n' '---' 'name: source-install-b' \
+  'description: Verify a second installed-binary project scope.' '---' \
+  >"$project_root_b/source-install-b/SKILL.md"
 printf '%s\n' '#!/bin/sh' "touch '$temporary/codex-invoked'" 'exit 99' >"$sentinel/codex"
 chmod +x "$sentinel/codex"
 
@@ -58,12 +64,25 @@ run() {
     XDG_CACHE_HOME="$cache_home" XDG_STATE_HOME="$state_home" \
     "$binary" --cwd "$workspace" "$@"
 }
+run_child() {
+  env HOME="$home" CODEX_HOME="$temporary/unavailable-codex-home" \
+    PATH="$sentinel:$PATH" XDG_CONFIG_HOME="$config_home" \
+    XDG_CACHE_HOME="$cache_home" XDG_STATE_HOME="$state_home" \
+    "$binary" --cwd "$workspace_child" "$@"
+}
+run_b() {
+  env HOME="$home" CODEX_HOME="$temporary/unavailable-codex-home" \
+    PATH="$sentinel:$PATH" XDG_CONFIG_HOME="$config_home" \
+    XDG_CACHE_HOME="$cache_home" XDG_STATE_HOME="$state_home" \
+    "$binary" --cwd "$workspace_b" "$@"
+}
 
 run init --yes --agent none \
   --root "$shared_agents" \
   --root "$managed_agents" \
   --root "$codex_agents" \
-  --project-root "$project_root"
+  --project-root "$project_root" \
+  --project-root "$shared_agents"
 
 inventory=$(run --json list)
 total=$(printf '%s\n' "$inventory" | jq -r '.total')
@@ -72,6 +91,7 @@ project_id=$(printf '%s\n' "$inventory" | jq -r \
   '.results[] | select(.name == "source-install") | .id' | sed -n '1p')
 test -n "$project_id"
 run search 'fresh installed binary project scope' | grep -q '^source-install@'
+run_child list | grep -q '^source-install@'
 run read "$project_id" | grep -q '^name: source-install$'
 run --json inspect "$project_id" | jq -e '.results[0].name == "source-install"' >/dev/null
 run --json inspect "$project_id" --files | jq -e '.package.counts_scope' >/dev/null
@@ -103,6 +123,28 @@ sleep 1
 run list >/dev/null
 test "$(shasum -a 256 "$cache" | awk '{print $1}')" = "$before_cache"
 test "$(stat -f '%m' "$cache")" = "$before_mtime"
+
+# Keep the real shared roots registered while controlled project material
+# changes and two project scopes reconcile concurrently.
+printf '%s\n' '---' 'name: source-install' \
+  'description: Fresh project edit beside the real shared corpus.' '---' \
+  >"$project_root/source-install/SKILL.md"
+run search 'Fresh project edit beside the real shared corpus' | grep -q '^source-install@'
+mkdir -p "$project_root/source-install/agents"
+printf '%s\n' 'policy:' '  allow_implicit_invocation: false' \
+  >"$project_root/source-install/agents/openai.yaml"
+! run list | grep -q '^source-install@'
+rm "$project_root/source-install/agents/openai.yaml"
+run list | grep -q '^source-install@'
+run_b init --yes --agent none --project-root "$project_root_b" >/dev/null
+! run list | grep -q '^source-install-b@'
+run_b list | grep -q '^source-install-b@'
+run list >/dev/null & first=$!
+run_b list >/dev/null & second=$!
+wait "$first"
+wait "$second"
+! run list | grep -q '^source-install-b@'
+run_b list | grep -q '^source-install-b@'
 
 # A failed alternate configuration preserves the last publication and recovers
 # on the next ordinary lookup after its controlled root is repaired.
