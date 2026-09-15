@@ -3,7 +3,7 @@
 User-visible changes are recorded here. Release artifacts and verification
 evidence live in [implementation history](docs/IMPLEMENTATION.md).
 
-## Unreleased
+## 0.3.0 - 2026-09-15
 
 - Make explicitly configured shared and project skill roots the sole discovery
   authority, with automatic per-command freshness and isolated project scope.

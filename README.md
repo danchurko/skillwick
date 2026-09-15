@@ -28,8 +28,8 @@ brew install skillwick
 Or install a specific version with a verified checksum:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.2.2/scripts/install.sh
-sh install.sh --version 0.2.2 --prefix "$HOME/.local"
+curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.3.0/scripts/install.sh
+sh install.sh --version 0.3.0 --prefix "$HOME/.local"
 ```
 
 The installer installs only the executable. Release binaries are unsigned and
