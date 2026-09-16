@@ -514,15 +514,16 @@ def verify(arguments: argparse.Namespace) -> None:
             checksum_name = f"{archive_name}.sha256"
             archive = assets[archive_name]
             digest = checksum_asset(archive, assets[checksum_name])
-            if formula is not None and formula[target] != digest:
+            formula_digest = formula.get(target) if formula is not None else None
+            if formula_digest is not None and formula_digest != digest:
                 raise VerificationError(
-                    f"formula checksum for {target} is {formula[target]}, archive is {digest}"
+                    f"formula checksum for {target} is {formula_digest}, archive is {digest}"
                 )
             executable = archive_layout(archive, target, extraction)
             if target in execution_commands:
                 version_output(executable, version, environment, execution_commands[target])
             execution_note = " executable OK" if target in execution_commands else " executable deferred"
-            formula_note = "formula deferred;" if formula is None else "formula OK;"
+            formula_note = "formula OK;" if formula_digest is not None else "formula deferred;"
             print(f"archive {archive_name}: checksum and layout OK; {formula_note}{execution_note}")
 
         if arguments.source_binary is not None:
