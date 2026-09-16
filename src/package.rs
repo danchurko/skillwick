@@ -93,15 +93,16 @@ pub fn inspect(root: &Path) -> Result<Report, String> {
             truncated = true;
             break;
         }
-        let directory_entries = fs::read_dir(&directory)
+        let mut directory_entries = fs::read_dir(&directory)
+            .map_err(|error| format!("{}: {error}", directory.display()))?
+            .collect::<Result<Vec<_>, _>>()
             .map_err(|error| format!("{}: {error}", directory.display()))?;
+        directory_entries.sort_by_key(fs::DirEntry::file_name);
         for directory_entry in directory_entries {
             if entries.len() >= MAX_ENTRIES {
                 truncated = true;
                 break;
             }
-            let directory_entry =
-                directory_entry.map_err(|error| format!("{}: {error}", directory.display()))?;
             let path = directory_entry.path();
             let relative = path
                 .strip_prefix(root)
@@ -271,6 +272,28 @@ mod tests {
         assert_eq!(report.entries.len(), MAX_ENTRIES);
         assert_eq!(report.counts.total_entries, MAX_ENTRIES);
         assert_eq!(report.counts.regular_files, MAX_ENTRIES);
+    }
+
+    #[test]
+    fn bounded_listing_selects_entries_deterministically() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("skill");
+        fs::create_dir_all(root.join("flood")).unwrap();
+        fs::create_dir_all(root.join("scripts")).unwrap();
+        fs::write(root.join("SKILL.md"), "instructions").unwrap();
+        fs::write(root.join("scripts/check.sh"), "check").unwrap();
+        for index in 0..MAX_ENTRIES {
+            fs::write(root.join("flood").join(format!("{index:03}.txt")), "item").unwrap();
+        }
+
+        let first = inspect(&root).unwrap();
+        let second = inspect(&root).unwrap();
+        assert!(first.truncated);
+        assert_eq!(first.entries, second.entries);
+        assert!(first
+            .entries
+            .iter()
+            .any(|entry| entry.path == "scripts/check.sh"));
     }
 
     #[cfg(unix)]
