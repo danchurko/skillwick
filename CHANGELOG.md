@@ -3,7 +3,7 @@
 User-visible changes are recorded here. Release artifacts and verification
 evidence live in [implementation history](docs/IMPLEMENTATION.md).
 
-## [0.4.0] - Unreleased
+## [0.4.0] - 2026-09-16
 
 - Discover supported shared, Codex, and Claude sources automatically, with explicit
   project registration and custom roots. Resolve active plugin versions without
