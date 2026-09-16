@@ -54,7 +54,7 @@ mkdir -p "$tmp/$archive_root"
 cp "$binary" "$tmp/$archive_root/skillwick"
 cp "$root/CHANGELOG.md" "$root/LICENSE-APACHE" "$root/LICENSE-MIT" "$root/README.md" "$tmp/$archive_root/"
 COPYFILE_DISABLE=1 tar -cJf "$server/$archive" -C "$tmp" "$archive_root"
-(cd "$server" && printf '%s  %s\n' "$(sha256 "$archive")" "$archive" >"$archive.sha256")
+(cd "$server" && printf '%s *%s\n' "$(sha256 "$archive")" "$archive" >"$archive.sha256")
 tar -tf "$server/$archive" | grep -Fxq "$archive_root/skillwick"
 
 PYTHONDONTWRITEBYTECODE=1 python3 "$root/scripts/verify-release.py" \

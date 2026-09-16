@@ -137,6 +137,7 @@ checksum_fields=$(awk '
 }
 expected=$(printf '%s\n' "$checksum_fields" | sed -n '1p')
 checksum_name=$(printf '%s\n' "$checksum_fields" | sed -n '2p')
+checksum_name=${checksum_name#\*}
 checksum_name=${checksum_name##*/}
 case "$expected" in
   ''|*[!0-9A-Fa-f]*) echo "invalid checksum file" >&2; exit 1 ;;
