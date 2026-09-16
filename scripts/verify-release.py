@@ -9,6 +9,7 @@ import os
 import platform
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tarfile
@@ -19,7 +20,10 @@ import urllib.request
 from pathlib import Path
 
 
-TARGETS = ("aarch64-apple-darwin", "x86_64-apple-darwin")
+DARWIN_TARGETS = ("aarch64-apple-darwin", "x86_64-apple-darwin")
+LINUX_TARGETS = ("aarch64-unknown-linux-musl", "x86_64-unknown-linux-musl")
+TARGETS = DARWIN_TARGETS + LINUX_TARGETS
+FORMULA_TARGETS = DARWIN_TARGETS
 ARCHIVE_MEMBERS = (
     "CHANGELOG.md",
     "LICENSE-APACHE",
@@ -40,7 +44,7 @@ def parser() -> argparse.ArgumentParser:
     root = Path(__file__).resolve().parents[1]
     command = argparse.ArgumentParser(
         description=(
-            "Verify both supported Skillwick release archives, their checksums, "
+            "Verify Skillwick release archives, checksums, architecture, "
             "the isolated installer path, and Homebrew formula metadata."
         )
     )
@@ -90,7 +94,14 @@ def parser() -> argparse.ArgumentParser:
     command.add_argument(
         "--execute-target",
         choices=TARGETS,
-        help="archive target to execute (defaults to the host target)",
+        help="archive target to execute (defaults to every executable host target)",
+    )
+    command.add_argument(
+        "--target",
+        dest="targets",
+        choices=TARGETS,
+        action="append",
+        help="limit shape checks to this target (repeat as needed; release checks use all targets)",
     )
     command.add_argument(
         "--skip-execution",
@@ -119,13 +130,18 @@ def require_file(path: Path, label: str) -> Path:
 
 
 def host_target() -> Optional[str]:
-    if platform.system() != "Darwin":
-        return None
     machine = platform.machine()
-    if machine == "arm64":
-        return "aarch64-apple-darwin"
-    if machine == "x86_64":
-        return "x86_64-apple-darwin"
+    system = platform.system()
+    if system == "Darwin":
+        if machine in {"arm64", "aarch64"}:
+            return "aarch64-apple-darwin"
+        if machine in {"x86_64", "amd64"}:
+            return "x86_64-apple-darwin"
+    if system == "Linux":
+        if machine in {"arm64", "aarch64"}:
+            return "aarch64-unknown-linux-musl"
+        if machine in {"x86_64", "amd64"}:
+            return "x86_64-unknown-linux-musl"
     return None
 
 
@@ -136,6 +152,20 @@ def execution_command(target: str, host: Optional[str]) -> Optional[list[str]]:
         arch = shutil.which("arch")
         if arch is not None:
             return [arch, "-x86_64"]
+    emulators = {
+        ("x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl"): (
+            "qemu-aarch64-static",
+            "qemu-aarch64",
+        ),
+        ("aarch64-unknown-linux-musl", "x86_64-unknown-linux-musl"): (
+            "qemu-x86_64-static",
+            "qemu-x86_64",
+        ),
+    }
+    for name in emulators.get((host or "", target), ()):
+        emulator = shutil.which(name)
+        if emulator is not None:
+            return [emulator]
     return None
 
 
@@ -170,8 +200,16 @@ def isolated_environment(root: Path) -> dict[str, str]:
         "XDG_CONFIG_HOME": str(root / "config"),
         "XDG_CACHE_HOME": str(root / "cache"),
         "XDG_STATE_HOME": str(root / "state"),
+        "TMPDIR": str(root / "tmp"),
     }
-    for key in ("HOME", "CODEX_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"):
+    for key in (
+        "HOME",
+        "CODEX_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_CACHE_HOME",
+        "XDG_STATE_HOME",
+        "TMPDIR",
+    ):
         Path(environment[key]).mkdir(parents=True, exist_ok=True)
     return environment
 
@@ -201,13 +239,14 @@ def fetch_assets(
     archive_dir: Optional[Path],
     base_url: Optional[str],
     destination: Path,
+    targets: tuple[str, ...] = TARGETS,
 ) -> tuple[dict[str, Path], str]:
     destination.mkdir(parents=True, exist_ok=True)
     assets: dict[str, Path] = {}
     if archive_dir is not None:
         if not archive_dir.is_dir() or archive_dir.is_symlink():
             raise VerificationError(f"archive directory is not a directory: {archive_dir}")
-        for target in TARGETS:
+        for target in targets:
             archive_name = f"skillwick-{target}.tar.xz"
             checksum_name = f"{archive_name}.sha256"
             for name in (archive_name, checksum_name):
@@ -219,7 +258,7 @@ def fetch_assets(
 
     assert base_url is not None
     clean_url = base_url.rstrip("/")
-    for target in TARGETS:
+    for target in targets:
         archive_name = f"skillwick-{target}.tar.xz"
         checksum_name = f"{archive_name}.sha256"
         for name in (archive_name, checksum_name):
@@ -255,6 +294,47 @@ def checksum_asset(archive: Path, checksum_file: Path) -> str:
     return actual
 
 
+def executable_architecture(executable: Path) -> str:
+    """Return a target-independent architecture label for a thin binary."""
+    header = executable.read_bytes()[:64]
+    if header[:4] in {b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf"}:
+        endian = "<" if header[:4] == b"\xcf\xfa\xed\xfe" else ">"
+        if len(header) < 8:
+            raise VerificationError(f"{executable.name} has a truncated Mach-O header")
+        cpu_type = struct.unpack(f"{endian}I", header[4:8])[0]
+        return {0x01000007: "x86_64", 0x0100000C: "aarch64"}.get(
+            cpu_type, f"mach-o-cpu-{cpu_type:#x}"
+        )
+    if header[:4] == b"\x7fELF":
+        if len(header) < 20:
+            raise VerificationError(f"{executable.name} has a truncated ELF header")
+        endian = "<" if header[5] == 1 else ">" if header[5] == 2 else None
+        if endian is None:
+            raise VerificationError(f"{executable.name} has an invalid ELF byte order")
+        machine = struct.unpack(f"{endian}H", header[18:20])[0]
+        return {62: "x86_64", 183: "aarch64"}.get(machine, f"elf-machine-{machine}")
+    if header[:4] in {b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}:
+        return "universal"
+    return "unknown"
+
+
+def expected_architecture(target: str) -> str:
+    if target.startswith("aarch64-"):
+        return "aarch64"
+    if target.startswith("x86_64-"):
+        return "x86_64"
+    raise VerificationError(f"unsupported artifact target: {target}")
+
+
+def validate_executable_architecture(executable: Path, target: str) -> None:
+    actual = executable_architecture(executable)
+    expected = expected_architecture(target)
+    if actual != expected:
+        raise VerificationError(
+            f"{executable} architecture is {actual}, expected {expected} for {target}"
+        )
+
+
 def archive_layout(archive: Path, target: str, extraction_root: Path) -> Path:
     root_name = f"skillwick-{target}"
     expected_names = {root_name} | {f"{root_name}/{member}" for member in ARCHIVE_MEMBERS}
@@ -284,6 +364,7 @@ def archive_layout(archive: Path, target: str, extraction_root: Path) -> Path:
                 raise VerificationError(f"{archive.name} executable could not be read")
             extracted.write_bytes(source.read())
             extracted.chmod(executable_member.mode & 0o777 or 0o755)
+            validate_executable_architecture(extracted, target)
             return extracted
     except (tarfile.TarError, OSError) as error:
         raise VerificationError(f"could not inspect {archive.name}: {error}") from error
@@ -310,7 +391,9 @@ def formula_digests(formula: Path, version: str) -> dict[str, str]:
     result: dict[str, str] = {}
     for index, url_match in enumerate(urls):
         url = url_match.group(1)
-        target_match = re.search(r"skillwick-(aarch64-apple-darwin|x86_64-apple-darwin)\.tar\.xz\Z", url)
+        target_match = re.search(
+            r"skillwick-(aarch64-apple-darwin|x86_64-apple-darwin)\.tar\.xz\Z", url
+        )
         if target_match is None:
             continue
         target = target_match.group(1)
@@ -327,8 +410,10 @@ def formula_digests(formula: Path, version: str) -> dict[str, str]:
         if len(checksums) != 1:
             raise VerificationError(f"formula URL for {target} must have one following sha256")
         result[target] = checksums[0].lower()
-    if set(result) != set(TARGETS):
-        raise VerificationError(f"formula must contain both supported targets; found {sorted(result)}")
+    if set(result) != set(FORMULA_TARGETS):
+        raise VerificationError(
+            f"formula must contain both supported macOS targets; found {sorted(result)}"
+        )
     return result
 
 
@@ -379,13 +464,18 @@ def verify(arguments: argparse.Namespace) -> None:
             f"Cargo manifest version is {manifest_version_value}, expected release {version}"
         )
     formula = None if arguments.skip_formula else formula_digests(arguments.formula, version)
+    targets = tuple(arguments.targets or TARGETS)
+    if arguments.execute_target is not None and arguments.execute_target not in targets:
+        raise VerificationError(
+            f"--execute-target {arguments.execute_target} is not included in --target selection"
+        )
     host = host_target()
     execution_commands: dict[str, list[str]] = {}
     if arguments.skip_execution:
         pass
     elif host is None:
         raise VerificationError(
-            "archive execution requires a supported macOS host; pass --skip-execution only for shape checks"
+            "archive execution requires a supported host; pass --skip-execution only for shape checks"
         )
     elif arguments.execute_target is not None:
         command_prefix = execution_command(arguments.execute_target, host)
@@ -395,16 +485,20 @@ def verify(arguments: argparse.Namespace) -> None:
             )
         execution_commands[arguments.execute_target] = command_prefix
     else:
-        for target in TARGETS:
+        for target in targets:
             command_prefix = execution_command(target, host)
             if command_prefix is not None:
                 execution_commands[target] = command_prefix
 
     if arguments.skip_installer and not arguments.skip_execution and host is None:
-        raise VerificationError("installer can only be exercised on a supported macOS host")
+        raise VerificationError("installer can only be exercised on a supported host")
     if not arguments.skip_installer and host is None:
         raise VerificationError(
-            "installer execution requires a supported macOS host; pass --skip-installer for shape checks"
+            "installer execution requires a supported host; pass --skip-installer for shape checks"
+        )
+    if not arguments.skip_installer and host not in targets:
+        raise VerificationError(
+            f"installer target {host} is not included in --target selection; pass --skip-installer"
         )
 
     with tempfile.TemporaryDirectory(prefix="skillwick-release-verify-") as temporary:
@@ -412,10 +506,10 @@ def verify(arguments: argparse.Namespace) -> None:
         environment = isolated_environment(workspace)
         asset_dir = workspace / "assets"
         assets, installer_base_url = fetch_assets(
-            version, arguments.archive_dir, arguments.base_url, asset_dir
+            version, arguments.archive_dir, arguments.base_url, asset_dir, targets
         )
         extraction = workspace / "extracted"
-        for target in TARGETS:
+        for target in targets:
             archive_name = f"skillwick-{target}.tar.xz"
             checksum_name = f"{archive_name}.sha256"
             archive = assets[archive_name]

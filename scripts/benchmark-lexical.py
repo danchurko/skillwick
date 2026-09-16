@@ -91,19 +91,25 @@ def freeze(args: argparse.Namespace) -> None:
 
 
 def validate_profile(profile: dict) -> None:
-    if profile.get("version") != 1 or profile.get("kind") != "skillwick-lexical-profile":
+    if profile.get("version") not in (1, 2) or profile.get("kind") != "skillwick-lexical-profile":
         raise ValueError("unsupported benchmark profile")
     corpus = profile["corpus"]
     records = corpus["records"]
     if corpus["total"] != len(records) or corpus["sha256"] != canonical_hash(records):
         raise ValueError("corpus identity does not match its records")
-    names = {record["name"] for record in records}
+    names = {record.get("fixture_id", record["name"]) for record in records}
     if len(names) != len(records):
-        raise ValueError("corpus names are not unique")
+        raise ValueError("corpus fixture identities are not unique")
     cases = profile["heldout"]["cases"]
     if profile["heldout"]["case_count"] != len(cases):
         raise ValueError("held-out case count is incorrect")
+    if profile["heldout"]["query_count"] != sum(len(case["queries"]) for case in cases):
+        raise ValueError("held-out query count is incorrect")
+    if profile["version"] == 2 and profile["heldout"].get("sha256") != canonical_hash(cases):
+        raise ValueError("held-out labels differ from frozen identity")
     for case in cases:
+        if (case["kind"] == "negative") != (not case["relevant"]):
+            raise ValueError(f"case kind and relevance disagree: {case['id']}")
         if case["kind"] not in {"positive", "negative"} or not set(case["relevant"]) <= names:
             raise ValueError(f"invalid labels for {case['id']}")
 
@@ -118,10 +124,21 @@ def validate(args: argparse.Namespace) -> None:
         if result.get("profile_sha256") != profile_hash:
             raise ValueError(f"result profile identity mismatch: {path}")
         rankings = result.get("rankings", [])
-        if len(rankings) != query_count or result.get("quality") != ranking_metrics(
+        expected = [(f"{case['id']}:{index}", query, sorted(case["relevant"]))
+                    for case in profile["heldout"]["cases"]
+                    for index, query in enumerate(case["queries"], 1)]
+        actual = [(item["id"], item["query"], sorted(item["relevant"])) for item in rankings]
+        if actual != expected:
+            raise ValueError(f"result queries or labels differ from frozen profile: {path}")
+        if len(rankings) != query_count or result.get("quality") != (task_metrics if result.get("version") == 2 else ranking_metrics)(
             [(item["ranked"], set(item["relevant"])) for item in rankings]
         ):
             raise ValueError(f"result rankings or metrics are inconsistent: {path}")
+        identities = {record.get("fixture_id", record["name"]) for record in profile["corpus"]["records"]}
+        for item in rankings:
+            ranked = item["ranked"]
+            if len(ranked) > 20 or len(ranked) != len(set(ranked)) or not set(ranked) <= identities:
+                raise ValueError(f"result has invalid candidate identities: {path}")
         executable = result.get("executable")
         if executable and Path(executable["path"]).is_absolute():
             raise ValueError(f"result exposes an absolute executable path: {path}")
@@ -145,7 +162,7 @@ def summary(values: list[float]) -> dict:
 
 def run_command(command: list[str], env: dict[str, str], check: bool = True) -> tuple[subprocess.CompletedProcess[str], float]:
     started = time.perf_counter_ns()
-    completed = subprocess.run(command, env=env, text=True, capture_output=True)
+    completed = subprocess.run(command, env=env, text=True, capture_output=True, timeout=30)
     elapsed_ms = (time.perf_counter_ns() - started) / 1_000_000
     if check and completed.returncode:
         raise RuntimeError(f"command failed ({completed.returncode}): {' '.join(command)}\n{completed.stderr}")
@@ -153,7 +170,7 @@ def run_command(command: list[str], env: dict[str, str], check: bool = True) -> 
 
 
 def maximum_rss_kib(command: list[str], env: dict[str, str]) -> int | None:
-    if not Path("/usr/bin/time").exists():
+    if sys.platform != "darwin" or not Path("/usr/bin/time").exists():
         return None
     completed = subprocess.run(["/usr/bin/time", "-l", *command], env=env, text=True, capture_output=True)
     match = re.search(r"(\d+)\s+maximum resident set size", completed.stderr)
@@ -197,6 +214,27 @@ def ranking_metrics(rankings: list[tuple[list[str], set[str]]]) -> dict:
     }
 
 
+def task_metrics(rankings: list[tuple[list[str], set[str]]]) -> dict:
+    positives = [(ranked, relevant) for ranked, relevant in rankings if relevant]
+    negatives = [(ranked, relevant) for ranked, relevant in rankings if not relevant]
+    metrics = {"queries": len(rankings), "positive_queries": len(positives), "negative_queries": len(negatives)}
+    for limit in (5, 20):
+        metrics[f"positive_recall_at_{limit}"] = statistics.fmean(
+            len(set(ranked[:limit]) & relevant) / len(relevant) for ranked, relevant in positives
+        ) if positives else None
+    metrics["positive_mrr_at_5"] = statistics.fmean(
+        next((1 / (index + 1) for index, name in enumerate(ranked[:5]) if name in relevant), 0.0)
+        for ranked, relevant in positives
+    ) if positives else None
+    metrics["positive_ndcg_at_5"] = statistics.fmean(
+        sum((name in relevant) / math.log2(index + 2) for index, name in enumerate(ranked[:5])) /
+        sum(1 / math.log2(index + 2) for index in range(min(5, len(relevant))))
+        for ranked, relevant in positives
+    ) if positives else None
+    metrics["negative_false_positive_rate"] = statistics.fmean(bool(ranked) for ranked, _ in negatives) if negatives else None
+    return metrics
+
+
 def benchmark(args: argparse.Namespace) -> None:
     profile = read_json(args.profile)
     validate_profile(profile)
@@ -213,6 +251,7 @@ def benchmark(args: argparse.Namespace) -> None:
         env.update(
             HOME=str(temporary / "home"),
             CODEX_HOME=str(temporary / "codex"),
+            CLAUDE_CONFIG_DIR=str(temporary / "claude"),
             XDG_CONFIG_HOME=str(temporary / "config"),
             XDG_CACHE_HOME=str(temporary / "cache"),
             XDG_STATE_HOME=str(temporary / "state"),
@@ -220,9 +259,14 @@ def benchmark(args: argparse.Namespace) -> None:
         config = temporary / "config.toml"
         common = [str(binary), "--cwd", str(workspace), "--config", str(config)]
         startup = [run_command([str(binary), "--version"], env)[1] for _ in range(args.samples)]
-        _, refresh_ms = run_command(
-            [*common, "init", "--yes", "--agent", "none", "--root", str(root)], env
-        )
+        version = run_command([str(binary), "--version"], env)[0].stdout.strip()
+        init = [*common, "init", "--yes", "--agent", "none", "--root", str(root)]
+        # Historical baseline binaries retain their original setup contract.
+        if tuple(int(part) for part in version.split()[-1].split(".")[:2]) >= (0, 4):
+            init += ["--discovery", "explicit"]
+        _, refresh_ms = run_command(init, env)
+        fixture_ids = {f"skill-{index:04d}": record.get("fixture_id", record["name"])
+                       for index, record in enumerate(profile["corpus"]["records"])}
         queries = [
             (f"{case['id']}:{index}", query, set(case["relevant"]))
             for case in profile["heldout"]["cases"]
@@ -236,14 +280,15 @@ def benchmark(args: argparse.Namespace) -> None:
             for _ in range(args.samples):
                 completed, elapsed = run_command(command, env)
                 warm_ms.append(elapsed)
-            ranked = [row["name"] for row in result_rows(json.loads(completed.stdout))]
+            ranked = [fixture_ids[Path(row["canonical"]).parent.name] if profile["version"] == 2 else row["name"]
+                      for row in result_rows(json.loads(completed.stdout))]
             rankings.append((ranked, relevant))
             ranking_records.append({"id": query_id, "query": query, "relevant": sorted(relevant), "ranked": ranked})
-        cache = temporary / "cache" / "skillwick" / "index-v3.sqlite"
+        cache = next((temporary / "cache" / "skillwick").glob("index-*.sqlite"))
         version = run_command([str(binary), "--version"], env)[0].stdout.strip()
         rss = maximum_rss_kib([*common, "--json", "search", queries[0][1], "--limit", "20"], env)
         result = {
-            "version": 1,
+            "version": profile["version"],
             "kind": "skillwick-lexical-baseline",
             "measured_at": datetime.now(timezone.utc).isoformat(),
             "profile_sha256": hashlib.sha256(args.profile.read_bytes()).hexdigest(),
@@ -259,7 +304,7 @@ def benchmark(args: argparse.Namespace) -> None:
                 "processor": platform.processor(), "python": platform.python_version(),
             },
             "executable": {
-                "path": binary_label, "version": version,
+                "path": Path(binary_label).name, "version": version,
                 "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(), "bytes": binary.stat().st_size,
             },
             "measurements": {
@@ -267,7 +312,8 @@ def benchmark(args: argparse.Namespace) -> None:
                 "warm_search_ms": summary(warm_ms), "refresh_ms": refresh_ms,
                 "index_bytes": cache.stat().st_size, "search_max_rss_kib": rss,
             },
-            "quality": ranking_metrics(rankings),
+            "case_count": len(profile["heldout"]["cases"]),
+            "quality": (task_metrics if profile["version"] == 2 else ranking_metrics)(rankings),
             "rankings": ranking_records,
         }
         args.output.write_text(json.dumps(result, indent=2) + "\n")
@@ -293,6 +339,8 @@ def main() -> None:
     run_parser.add_argument("--samples", type=int, default=5)
     run_parser.set_defaults(handler=benchmark)
     args = parser.parse_args()
+    if hasattr(args, "samples") and args.samples < 1:
+        parser.error("samples must be positive")
     args.handler(args)
 
 

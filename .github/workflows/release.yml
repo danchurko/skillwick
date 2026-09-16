@@ -138,6 +138,13 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           fi
+      - name: "Install verification Python"
+        uses: "actions/setup-python@v5"
+        with:
+          "python-version": "3.12"
+      - name: "Install Linux verification tools"
+        if: "runner.os == 'Linux'"
+        run: "sudo apt-get update && sudo apt-get install -y jq xz-utils"
       - name: "Install verification toolchain"
         uses: "dtolnay/rust-toolchain@stable"
         with:
@@ -231,9 +238,8 @@ jobs:
             ${{ steps.cargo-dist.outputs.paths }}
             ${{ env.BUILD_MANIFEST_NAME }}
 
-  # Check the combined artifacts before the release is created.  Ubuntu can
-  # validate every checksum and archive member, while the published gate below
-  # runs the native macOS installer and executable against the real assets.
+  # Execute each architecture's actual archive and installer on a native
+  # runner before publication; validate the published assets again below.
   verify-release-artifacts:
     needs:
       - dependency-assurance
@@ -241,7 +247,19 @@ jobs:
       - build-local-artifacts
       - build-global-artifacts
     if: ${{ always() && needs.dependency-assurance.result == 'success' && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
-    runs-on: "ubuntu-22.04"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     steps:
@@ -249,6 +267,9 @@ jobs:
         with:
           persist-credentials: false
           submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Fetch built artifacts
         uses: actions/download-artifact@v8
         with:
@@ -263,9 +284,8 @@ jobs:
           python3 scripts/verify-release.py \
             --version "$version" \
             --archive-dir target/distrib \
-            --skip-formula \
-            --skip-execution \
-            --skip-installer
+            --target '${{ matrix.target }}' \
+            --skip-formula
 
   # Determines if we should publish/announce
   host:
@@ -328,7 +348,11 @@ jobs:
               -name 'skillwick-aarch64-apple-darwin.tar.xz' -o \
               -name 'skillwick-aarch64-apple-darwin.tar.xz.sha256' -o \
               -name 'skillwick-x86_64-apple-darwin.tar.xz' -o \
-              -name 'skillwick-x86_64-apple-darwin.tar.xz.sha256' \
+              -name 'skillwick-x86_64-apple-darwin.tar.xz.sha256' -o \
+              -name 'skillwick-aarch64-unknown-linux-musl.tar.xz' -o \
+              -name 'skillwick-aarch64-unknown-linux-musl.tar.xz.sha256' -o \
+              -name 'skillwick-x86_64-unknown-linux-musl.tar.xz' -o \
+              -name 'skillwick-x86_64-unknown-linux-musl.tar.xz.sha256' \
             \) -delete
       - name: Create GitHub Release
         env:
@@ -343,14 +367,25 @@ jobs:
           gh release create "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" artifacts/*
 
   # Re-run the supported installation path against the assets that GitHub
-  # actually published.  This is intentionally a macOS job because the
-  # archives are Mach-O binaries.
+  # actually published, on each supported platform and architecture.
   verify-published-release:
     needs:
       - plan
       - host
     if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && needs.host.result == 'success' }}
-    runs-on: "macos-14"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     steps:
@@ -358,6 +393,9 @@ jobs:
         with:
           persist-credentials: false
           submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Verify published release contract
         env:
           RELEASE_TAG: ${{ needs.plan.outputs.tag }}
@@ -367,6 +405,7 @@ jobs:
           python3 scripts/verify-release.py \
             --version "$version" \
             --base-url "https://github.com/$RELEASE_REPOSITORY/releases/download/v$version" \
+            --target '${{ matrix.target }}' \
             --skip-formula
 
   announce:

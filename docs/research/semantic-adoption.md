@@ -36,6 +36,19 @@ not establish other-platform performance.
   corrupt artifacts fail deterministically in the research runner, and neither
   experiment changes or participates in lexical search.
 
+## Evidence limits and current evaluation
+
+The 105 perspectives represent only 35 underlying cases. All are positive,
+with one relevant skill each, and 104 queries overlap a relevant description.
+The lexical binary was 0.2.0. These measurements do not establish quality for
+0.4, negative-query behavior, multiple relevant results, or task success.
+
+The separately frozen [task corpus](../../benchmarks/profile-v2.json) adds
+explicit negatives, multiple relevant results, duplicate names and provenance.
+It combines one sanitized user request with synthetic cases; it does not claim
+to be an independent traffic sample. Compare current installed binaries on the
+same corpus before attributing any improvement to this architecture change.
+
 ## Decision
 
 FTS5 remains the only production retrieval path. Do not add an embedding or

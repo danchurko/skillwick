@@ -1,4 +1,4 @@
-use crate::metadata;
+use crate::{discovery, metadata};
 use std::{
     collections::{HashMap, HashSet},
     fs,
@@ -26,101 +26,54 @@ pub struct ScanReport {
     pub complete: bool,
 }
 
-pub fn roots(
-    cwd: &Path,
-    shared: &[PathBuf],
-    projects: &[crate::config::Project],
-) -> Vec<(PathBuf, String)> {
-    let normalized_cwd = fs::canonicalize(cwd).unwrap_or_else(|_| cwd.to_path_buf());
-    let mut roots = shared
-        .iter()
-        .cloned()
-        .map(|path| (path, "global".to_owned()))
-        .collect::<Vec<_>>();
-    for project in projects {
-        let Ok(path) = fs::canonicalize(&project.path) else {
-            continue;
-        };
-        if normalized_cwd.starts_with(path) {
-            roots.extend(
-                project
-                    .roots
-                    .iter()
-                    .cloned()
-                    .map(|root| (root, "project".to_owned())),
-            );
+/// Return the roots applicable to the current lookup context.
+pub fn roots(report: &discovery::Report) -> Vec<(PathBuf, String)> {
+    let mut roots = Vec::new();
+    for source in &report.sources {
+        let root = PathBuf::from(&source.root);
+        if !roots
+            .iter()
+            .any(|(existing, scope)| existing == &root && scope == &source.scope)
+        {
+            roots.push((root, source.scope.clone()));
         }
     }
-    let mut seen = HashSet::new();
     roots
-        .into_iter()
-        .filter(|(path, _)| {
-            let identity = fs::canonicalize(path).unwrap_or_else(|_| path.clone());
-            seen.insert(identity)
-        })
-        .collect()
 }
 
-pub fn root_keys(
-    cwd: &Path,
-    shared: &[PathBuf],
-    projects: &[crate::config::Project],
-) -> Vec<String> {
-    roots(cwd, shared, projects)
+/// Return canonical root keys used by scoped index queries.
+pub fn root_keys(report: &discovery::Report) -> Vec<String> {
+    let mut keys = roots(report)
         .into_iter()
-        .map(|(root, _)| {
-            fs::canonicalize(&root)
-                .unwrap_or(root)
-                .to_string_lossy()
-                .into_owned()
-        })
-        .collect()
-}
-
-pub fn configured_roots(
-    shared: &[PathBuf],
-    projects: &[crate::config::Project],
-) -> Vec<(String, String)> {
-    let mut configured = shared
-        .iter()
-        .map(|root| ("shared".to_owned(), canonical_key(root)))
+        .filter_map(|(root, _)| root.to_str().map(str::to_owned))
         .collect::<Vec<_>>();
-    for project in projects {
-        let project_key = canonical_key(&project.path);
-        configured.extend(
-            project
-                .roots
-                .iter()
-                .map(|root| (format!("project:{project_key}"), canonical_key(root))),
-        );
-    }
-    configured.sort();
-    configured.dedup();
-    configured
+    keys.sort();
+    keys.dedup();
+    keys
 }
 
-fn canonical_key(path: &Path) -> String {
-    fs::canonicalize(path)
-        .unwrap_or_else(|_| path.to_path_buf())
-        .to_string_lossy()
-        .into_owned()
-}
-
-pub fn scan(cwd: &Path, shared: &[PathBuf], projects: &[crate::config::Project]) -> ScanReport {
-    let configured_targets: Vec<_> = roots(cwd, shared, projects)
+/// Scan only source roots resolved by `discovery`.
+///
+/// `SourceSpec` values are already scoped to the requested workspace. This
+/// scanner deliberately receives those resolved values instead of deriving
+/// paths from `Config`, so a filesystem walk cannot broaden the source
+/// boundary by accident.
+pub fn scan(_cwd: &Path, report: &discovery::Report) -> ScanReport {
+    let source_roots = roots(report);
+    let configured_targets = source_roots
         .iter()
         .filter_map(|(root, _)| fs::canonicalize(root).ok())
-        .collect();
+        .collect::<Vec<_>>();
     let mut seen: HashMap<PathBuf, usize> = HashMap::new();
     let mut skills: Vec<Skill> = Vec::new();
     let mut diagnostics = Vec::new();
     let mut complete = true;
-    for (root, scope) in roots(cwd, shared, projects) {
-        if !root.exists() {
-            diagnostics.push(format!(
-                "configured root does not exist: {}",
-                root.display()
-            ));
+    let home = fs::canonicalize(crate::config::home()).ok();
+
+    for source in &report.sources {
+        let root = PathBuf::from(&source.root);
+        if root.to_str().is_none() {
+            diagnostics.push("source root is not UTF-8".to_owned());
             complete = false;
             continue;
         }
@@ -137,7 +90,13 @@ pub fn scan(cwd: &Path, shared: &[PathBuf], projects: &[crate::config::Project])
             complete = false;
             continue;
         }
-        let mut stack = vec![root.clone()];
+        if authorized_root.to_str().is_none() {
+            diagnostics.push(format!("source root is not UTF-8: {}", root.display()));
+            complete = false;
+            continue;
+        }
+
+        let mut stack = vec![authorized_root.clone()];
         let mut visited = HashSet::new();
         while let Some(directory) = stack.pop() {
             let canonical_directory = match fs::canonicalize(&directory) {
@@ -148,11 +107,13 @@ pub fn scan(cwd: &Path, shared: &[PathBuf], projects: &[crate::config::Project])
                     continue;
                 }
             };
-            if !canonical_directory.starts_with(&authorized_root)
-                && !configured_targets
-                    .iter()
-                    .any(|target| canonical_directory.starts_with(target))
-            {
+            if !within_any(
+                &canonical_directory,
+                &authorized_root,
+                &configured_targets,
+                allows_home_symlinks(&source.provider),
+                home.as_deref(),
+            ) {
                 diagnostics.push(format!("symlink escape: {}", directory.display()));
                 complete = false;
                 continue;
@@ -186,7 +147,7 @@ pub fn scan(cwd: &Path, shared: &[PathBuf], projects: &[crate::config::Project])
                         continue;
                     }
                 };
-                if file_type.is_dir() || file_type.is_symlink() && path.is_dir() {
+                if file_type.is_dir() || (file_type.is_symlink() && path.is_dir()) {
                     stack.push(path);
                     continue;
                 }
@@ -201,52 +162,65 @@ pub fn scan(cwd: &Path, shared: &[PathBuf], projects: &[crate::config::Project])
                         continue;
                     }
                 };
-                if !canonical.starts_with(&authorized_root)
-                    && !configured_targets
-                        .iter()
-                        .any(|target| canonical.starts_with(target))
-                {
+                if !within_any(
+                    &canonical,
+                    &authorized_root,
+                    &configured_targets,
+                    allows_home_symlinks(&source.provider),
+                    home.as_deref(),
+                ) {
                     diagnostics.push(format!("symlink escape: {}", path.display()));
                     complete = false;
                     continue;
                 }
-                match metadata::parse(&canonical) {
-                    Ok(metadata) => {
-                        if let Some(diagnostic) = &metadata.policy_diagnostic {
-                            diagnostics.push(format!("{}: {diagnostic}", path.display()));
-                        }
-                        let source_fingerprint =
-                            metadata::source_fingerprint(&canonical).map_err(|error| {
-                                diagnostics.push(format!("{}: {error}", path.display()));
-                                complete = false;
-                            });
-                        let Ok(source_fingerprint) = source_fingerprint else {
+                if path.to_str().is_none()
+                    || canonical.to_str().is_none()
+                    || path.parent().and_then(Path::to_str).is_none()
+                {
+                    diagnostics.push(format!("skill path is not UTF-8: {}", path.display()));
+                    complete = false;
+                    continue;
+                }
+                let (mut parsed, source_fingerprint) =
+                    match metadata::parse_with_fingerprint(&canonical) {
+                        Ok(parsed) => parsed,
+                        Err(error) => {
+                            diagnostics.push(format!("{}: {error}", path.display()));
+                            complete = false;
                             continue;
-                        };
-                        let association = (authorized_root.clone(), scope.clone());
-                        if let Some(index) = seen.get(&canonical).copied() {
-                            skills[index].roots.push(association);
-                        } else {
-                            seen.insert(canonical.clone(), skills.len());
-                            skills.push(Skill {
-                                base: path.parent().unwrap_or(&root).to_path_buf(),
-                                path,
-                                canonical,
-                                scope: scope.clone(),
-                                source: root.display().to_string(),
-                                source_kind: "filesystem".into(),
-                                enabled: true,
-                                plugin_id: None,
-                                source_fingerprint,
-                                roots: vec![association],
-                                metadata,
-                            });
                         }
+                    };
+                if let Some(diagnostic) = &parsed.policy_diagnostic {
+                    diagnostics.push(format!("{}: {diagnostic}", path.display()));
+                }
+                namespace_plugin_name(&mut parsed, source.plugin_id.as_deref());
+                let association = (authorized_root.clone(), source.scope.clone());
+                if let Some(index) = seen.get(&canonical).copied() {
+                    if !skills[index].roots.contains(&association) {
+                        skills[index].roots.push(association);
                     }
-                    Err(error) => {
-                        diagnostics.push(format!("{}: {error}", path.display()));
+                } else {
+                    seen.insert(canonical.clone(), skills.len());
+                    let base = path.parent().unwrap_or(&authorized_root).to_path_buf();
+                    if base.to_str().is_none() {
+                        diagnostics
+                            .push(format!("skill base path is not UTF-8: {}", base.display()));
                         complete = false;
+                        continue;
                     }
+                    skills.push(Skill {
+                        base,
+                        path,
+                        canonical,
+                        scope: source.scope.clone(),
+                        source: source.root.clone(),
+                        source_kind: "filesystem".into(),
+                        enabled: true,
+                        plugin_id: source.plugin_id.clone(),
+                        source_fingerprint,
+                        roots: vec![association],
+                        metadata: parsed,
+                    });
                 }
             }
         }
@@ -257,6 +231,7 @@ pub fn scan(cwd: &Path, shared: &[PathBuf], projects: &[crate::config::Project])
             .to_lowercase()
             .cmp(&right.metadata.name.to_lowercase())
             .then(left.canonical.cmp(&right.canonical))
+            .then(left.plugin_id.cmp(&right.plugin_id))
     });
     ScanReport {
         skills,
@@ -265,11 +240,78 @@ pub fn scan(cwd: &Path, shared: &[PathBuf], projects: &[crate::config::Project])
     }
 }
 
+fn within_any(
+    candidate: &Path,
+    authorized: &Path,
+    configured: &[PathBuf],
+    allow_home_symlink: bool,
+    home: Option<&Path>,
+) -> bool {
+    candidate.starts_with(authorized)
+        || configured
+            .iter()
+            .any(|target| candidate.starts_with(target))
+        || (allow_home_symlink && home.is_some_and(|home| candidate.starts_with(home)))
+}
+
+fn allows_home_symlinks(provider: &str) -> bool {
+    matches!(provider, "agents" | "codex" | "claude")
+}
+
+/// Namespace plugin skill names using the provider's stable plugin name.
+///
+/// Claude and Codex expose plugin identity as `name@marketplace`, while their
+/// instruction frontmatter commonly contains only the local skill name. The
+/// host-facing exact-name contract uses `name:skill`; avoid adding a second
+/// prefix when a package has already supplied that qualified name.
+fn namespace_plugin_name(parsed: &mut metadata::Metadata, plugin_id: Option<&str>) {
+    let Some(plugin_id) = plugin_id else {
+        return;
+    };
+    let namespace = plugin_id
+        .split_once('@')
+        .map(|(name, _)| name)
+        .unwrap_or(plugin_id);
+    if namespace.is_empty()
+        || parsed.name == namespace
+        || parsed.name.starts_with(&format!("{namespace}:"))
+    {
+        if parsed.name == namespace {
+            parsed.name = format!("{namespace}:{namespace}");
+        }
+        return;
+    }
+    parsed.name = format!("{namespace}:{}", parsed.name);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::discovery::SourceSpec;
+
+    fn report(root: &Path, plugin_id: Option<&str>) -> discovery::Report {
+        discovery::Report {
+            sources: vec![SourceSpec {
+                provider: if plugin_id.is_some() {
+                    "claude-plugin".into()
+                } else {
+                    "custom".into()
+                },
+                scope: "global".into(),
+                root: root.to_str().unwrap().into(),
+                plugin_id: plugin_id.map(str::to_owned),
+                version: plugin_id.map(|_| "1".into()),
+                provenance: "fixture".into(),
+            }],
+            configured_sources: Vec::new(),
+            configured_roots: Vec::new(),
+            diagnostics: Vec::new(),
+            complete: true,
+        }
+    }
+
     #[test]
-    fn scopes_ancestors_without_leaking_sibling_projects() {
+    fn scans_only_resolved_roots_without_ancestor_leakage() {
         let temp = tempfile::tempdir().unwrap();
         let parent = temp.path();
         let project = parent.join("one/work");
@@ -286,19 +328,13 @@ mod tests {
             "---\nname: leak\ndescription: must not appear\n---\n",
         )
         .unwrap();
-        let report = scan(
-            &project,
-            &[],
-            &[crate::config::Project {
-                path: parent.join("one"),
-                roots: vec![project.join(".agents/skills")],
-            }],
-        );
-        assert!(report
+        let report = report(&project.join(".agents/skills"), None);
+        let scanned = scan(&project, &report);
+        assert!(scanned
             .skills
             .iter()
             .any(|skill| skill.metadata.name == "local"));
-        assert!(!report
+        assert!(!scanned
             .skills
             .iter()
             .any(|skill| skill.metadata.name == "leak"));
@@ -323,13 +359,14 @@ mod tests {
             "---\nname: home\ndescription: no\n---\n",
         )
         .unwrap();
-        let report = scan(&cwd, &[], &[]);
-        assert!(report.complete);
-        assert!(report.skills.is_empty());
+        let empty = discovery::Report::default();
+        let scanned = scan(&cwd, &empty);
+        assert!(scanned.complete);
+        assert!(scanned.skills.is_empty());
     }
 
     #[test]
-    fn project_roots_apply_to_descendants_only() {
+    fn project_roots_are_supplied_by_discovery() {
         let temp = tempfile::tempdir().unwrap();
         let project = temp.path().join("project");
         let child = project.join("nested/child");
@@ -343,12 +380,25 @@ mod tests {
             "---\nname: project\ndescription: project\n---\n",
         )
         .unwrap();
-        let configured = [crate::config::Project {
-            path: project,
-            roots: vec![project_root],
-        }];
-        assert_eq!(scan(&child, &[], &configured).skills.len(), 1);
-        assert!(scan(&sibling, &[], &configured).skills.is_empty());
+        let source = SourceSpec {
+            provider: "custom".into(),
+            scope: "project".into(),
+            root: project_root.to_str().unwrap().into(),
+            plugin_id: None,
+            version: None,
+            provenance: "fixture".into(),
+        };
+        let configured = discovery::Report {
+            sources: vec![source],
+            configured_sources: Vec::new(),
+            configured_roots: Vec::new(),
+            diagnostics: Vec::new(),
+            complete: true,
+        };
+        assert_eq!(scan(&child, &configured).skills.len(), 1);
+        // Applicability is established by discovery before this scanner runs.
+        let outside = discovery::Report::default();
+        assert!(scan(&sibling, &outside).skills.is_empty());
     }
 
     #[cfg(unix)]
@@ -367,13 +417,13 @@ mod tests {
         .unwrap();
         symlink(&outside, root.join("escape")).unwrap();
         symlink(&root, root.join("cycle")).unwrap();
-        let report = scan(temp.path(), &[root], &[]);
-        assert!(!report.complete);
-        assert!(!report
+        let scanned = scan(&root, &report(&root, None));
+        assert!(!scanned.complete);
+        assert!(!scanned
             .skills
             .iter()
             .any(|skill| skill.metadata.name == "escaped"));
-        assert!(report
+        assert!(scanned
             .diagnostics
             .iter()
             .any(|item| item.contains("symlink escape")));
@@ -398,13 +448,36 @@ mod tests {
             home.join(".agents/skills/reviewed"),
         )
         .unwrap();
-        let report = scan(&home, &[home.join(".agents/skills"), managed.clone()], &[]);
-        assert!(!report
+        let first = SourceSpec {
+            provider: "custom".into(),
+            scope: "global".into(),
+            root: home.join(".agents/skills").to_str().unwrap().into(),
+            plugin_id: None,
+            version: None,
+            provenance: "fixture".into(),
+        };
+        let second = SourceSpec {
+            provider: "custom".into(),
+            scope: "global".into(),
+            root: managed.to_str().unwrap().into(),
+            plugin_id: None,
+            version: None,
+            provenance: "fixture".into(),
+        };
+        let sources = discovery::Report {
+            sources: vec![first, second],
+            configured_sources: Vec::new(),
+            configured_roots: Vec::new(),
+            diagnostics: Vec::new(),
+            complete: true,
+        };
+        let scanned = scan(&home, &sources);
+        assert!(!scanned
             .diagnostics
             .iter()
             .any(|diagnostic| diagnostic.contains("reviewed")));
         assert_eq!(
-            report
+            scanned
                 .skills
                 .iter()
                 .filter(|skill| skill.metadata.name == "reviewed")
@@ -417,12 +490,27 @@ mod tests {
     fn missing_configured_root_makes_scan_incomplete() {
         let temp = tempfile::tempdir().unwrap();
         let missing = temp.path().join("missing");
-        let report = scan(temp.path(), std::slice::from_ref(&missing), &[]);
-        assert!(!report.complete);
-        assert!(report
+        let source = SourceSpec {
+            provider: "custom".into(),
+            scope: "global".into(),
+            root: missing.to_str().unwrap().into(),
+            plugin_id: None,
+            version: None,
+            provenance: "fixture".into(),
+        };
+        let report = discovery::Report {
+            sources: vec![source],
+            configured_sources: Vec::new(),
+            configured_roots: Vec::new(),
+            diagnostics: Vec::new(),
+            complete: true,
+        };
+        let scanned = scan(temp.path(), &report);
+        assert!(!scanned.complete);
+        assert!(scanned
             .diagnostics
             .iter()
-            .any(|item| item == &format!("configured root does not exist: {}", missing.display())));
+            .any(|item| item.contains("missing")));
     }
 
     #[test]
@@ -436,16 +524,51 @@ mod tests {
         )
         .unwrap();
 
-        let report = scan(temp.path(), &[temp.path().join(".agents/skills")], &[]);
-        let manual = report
+        let scanned = scan(
+            temp.path(),
+            &report(&temp.path().join(".agents/skills"), None),
+        );
+        let manual = scanned
             .skills
             .iter()
             .find(|skill| skill.metadata.name == "manual")
             .expect("manual skill missing");
         assert!(!manual.metadata.invocation_policy.model_discoverable());
-        assert!(report
+        assert!(scanned
             .diagnostics
             .iter()
             .any(|diagnostic| diagnostic.contains("invocation policy")));
+    }
+
+    #[test]
+    fn plugin_skill_names_use_provider_namespace() {
+        let temp = tempfile::tempdir().unwrap();
+        let skill = temp.path().join("skills/ponytail");
+        fs::create_dir_all(&skill).unwrap();
+        fs::write(
+            skill.join("SKILL.md"),
+            "---\nname: ponytail\ndescription: lazy mode\n---\n",
+        )
+        .unwrap();
+        let scanned = scan(
+            temp.path(),
+            &report(&temp.path().join("skills"), Some("ponytail@ponytail")),
+        );
+        assert_eq!(scanned.skills[0].metadata.name, "ponytail:ponytail");
+    }
+
+    #[test]
+    fn already_qualified_plugin_names_are_stable() {
+        let mut metadata = metadata::Metadata {
+            name: "ponytail:ponytail".into(),
+            description: "".into(),
+            keywords: "".into(),
+            degraded: false,
+            hash: "".into(),
+            invocation_policy: metadata::InvocationPolicy::Discoverable,
+            policy_diagnostic: None,
+        };
+        namespace_plugin_name(&mut metadata, Some("ponytail@ponytail"));
+        assert_eq!(metadata.name, "ponytail:ponytail");
     }
 }

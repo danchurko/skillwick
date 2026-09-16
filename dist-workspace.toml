@@ -15,7 +15,13 @@ github-build-setup = "../release-check.yml"
 installers = []
 # Release source archives are not distribution artifacts; source remains on GitHub.
 source-tarball = false
-# Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
+# Target platforms to build apps for (Rust target-triple syntax).
+# Keep these aligned with scripts/install.sh and scripts/verify-release.py.
+targets = [
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "aarch64-unknown-linux-musl",
+  "x86_64-unknown-linux-musl",
+]
 # Which actions to run on pull requests
 pr-run-mode = "plan"

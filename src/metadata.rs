@@ -76,6 +76,10 @@ pub struct Metadata {
 pub fn source_fingerprint(path: &Path) -> Result<String, String> {
     let canonical = fs::canonicalize(path).map_err(|error| error.to_string())?;
     let instruction = read_bounded(&canonical, MAX_FILE).map_err(|error| error.to_string())?;
+    fingerprint_bytes(&canonical, &instruction)
+}
+
+fn fingerprint_bytes(canonical: &Path, instruction: &[u8]) -> Result<String, String> {
     let policy_path = canonical
         .parent()
         .unwrap_or_else(|| Path::new("."))
@@ -85,9 +89,12 @@ pub fn source_fingerprint(path: &Path) -> Result<String, String> {
     fingerprint_part(
         &mut hasher,
         b"instruction-path",
-        canonical.to_string_lossy().as_bytes(),
+        canonical
+            .to_str()
+            .ok_or("skill path is not UTF-8")?
+            .as_bytes(),
     );
-    fingerprint_part(&mut hasher, b"instruction-content", &instruction);
+    fingerprint_part(&mut hasher, b"instruction-content", instruction);
     match fs::symlink_metadata(&policy_path) {
         Ok(_) => {
             fingerprint_part(&mut hasher, b"policy-presence", b"present");
@@ -144,6 +151,11 @@ pub(crate) fn read_bounded(path: &Path, limit: usize) -> Result<Vec<u8>, ReadErr
 }
 
 pub fn parse(path: &Path) -> Result<Metadata, String> {
+    parse_with_fingerprint(path).map(|(metadata, _)| metadata)
+}
+
+/// Parse and fingerprint the same instruction bytes, avoiding a second live read.
+pub fn parse_with_fingerprint(path: &Path) -> Result<(Metadata, String), String> {
     let bytes = read_bounded(path, MAX_FILE).map_err(|error| {
         if error.is_too_large() {
             "instruction file exceeds 1 MiB".to_owned()
@@ -151,8 +163,15 @@ pub fn parse(path: &Path) -> Result<Metadata, String> {
             error.to_string()
         }
     })?;
+    let canonical = fs::canonicalize(path).map_err(|error| error.to_string())?;
+    let fingerprint = fingerprint_bytes(&canonical, &bytes)?;
+    let metadata = parse_bytes(&canonical, &bytes)?;
+    Ok((metadata, fingerprint))
+}
+
+fn parse_bytes(path: &Path, bytes: &[u8]) -> Result<Metadata, String> {
     let raw =
-        std::str::from_utf8(&bytes).map_err(|_| "instruction file is not UTF-8".to_string())?;
+        std::str::from_utf8(bytes).map_err(|_| "instruction file is not UTF-8".to_string())?;
     let text = raw.strip_prefix('\u{feff}').unwrap_or(raw);
     let mut policy_diagnostic = None;
     let frontmatter_text = frontmatter(text)?;
@@ -255,7 +274,7 @@ pub fn parse(path: &Path) -> Result<Metadata, String> {
         description,
         keywords: parsed.keywords.unwrap_or_default().join(" "),
         degraded,
-        hash: format!("{:x}", Sha256::digest(&bytes)),
+        hash: format!("{:x}", Sha256::digest(bytes)),
         invocation_policy,
         policy_diagnostic,
     })

@@ -11,7 +11,9 @@ esac
   exit 2
 }
 
-temporary=$(mktemp -d /private/tmp/skillwick-trust.XXXXXX)
+tmp_parent=${TMPDIR:-/tmp}
+[ -d "$tmp_parent" ] || { echo "temporary directory does not exist: $tmp_parent" >&2; exit 1; }
+temporary=$(mktemp -d "${tmp_parent%/}/skillwick-trust.XXXXXX")
 trap 'rm -rf "$temporary"' EXIT HUP INT TERM
 
 home="$temporary/home"
@@ -40,8 +42,8 @@ write_skill() {
 }
 
 write_skill "$root" good "Valid trust-boundary fixture."
-run init --yes --agent none --root "$root" >/dev/null
-cache_file="$cache/skillwick/index-v3.sqlite"
+run init --yes --agent none --discovery explicit --root "$root" >/dev/null
+cache_file="$cache/skillwick/index-v4.sqlite"
 
 # A malformed configured root record fails the current operation and cannot
 # replace the last complete publication.
@@ -117,7 +119,7 @@ package_id=$(run list | sed -n 's/^\(package@[0-9a-f]*\).*/\1/p')
 [ -n "$package_id" ]
 package_json=$(run --json inspect "$package_id" --files)
 printf '%s\n' "$package_json" | jq -e \
-  '.version == 2 and .package.truncated == true and .package.counts_scope == "shown_subset" and (.package.entries | length) == 256' \
+  '.version == 3 and .package.truncated == true and .package.counts_scope == "shown_subset" and (.package.entries | length) == 256' \
   >/dev/null
 printf '%s\n' "$package_json" | jq -e '.package.entries[] | select(.path == "scripts/check.sh")' >/dev/null
 ! printf '%s\n' "$package_json" | jq -e '.package.entries[] | select(.path | startswith("references/escape/"))' >/dev/null

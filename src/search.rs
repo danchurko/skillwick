@@ -1,6 +1,6 @@
-use rusqlite::{params_from_iter, types::Value, Connection, OptionalExtension};
+use rusqlite::{params_from_iter, types::Value, Connection};
 use serde::Serialize;
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashMap, path::Path};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ResultRow {
@@ -17,6 +17,73 @@ pub struct ResultRow {
     pub plugin_id: Option<String>,
     pub degraded: bool,
     pub hash: String,
+    pub origins: Vec<Origin>,
+    pub grouping_diagnostic: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Origin {
+    pub id: String,
+    pub path: String,
+    pub canonical: String,
+    pub base: String,
+    pub source: String,
+    pub scope: String,
+    pub plugin_id: Option<String>,
+}
+
+impl Origin {
+    fn from_row(row: &ResultRow) -> Self {
+        Self {
+            id: row.id.clone(),
+            path: row.path.clone(),
+            canonical: row.canonical.clone(),
+            base: row.base.clone(),
+            source: row.source.clone(),
+            scope: row.scope.clone(),
+            plugin_id: row.plugin_id.clone(),
+        }
+    }
+}
+
+/// Group only complete verified copies, retaining rank order and every origin.
+fn group(rows: Vec<ResultRow>) -> Vec<ResultRow> {
+    let mut counts = HashMap::new();
+    for row in &rows {
+        *counts.entry(row.hash.clone()).or_insert(0usize) += 1;
+    }
+    let mut positions: HashMap<String, usize> = HashMap::new();
+    let mut result: Vec<ResultRow> = Vec::new();
+    for mut row in rows {
+        if row.origins.is_empty() {
+            row.origins.push(Origin::from_row(&row));
+        }
+        let key = if counts[&row.hash] > 1 {
+            match crate::package::fingerprint(Path::new(&row.base)) {
+                Ok(fingerprint) => format!("{}:{fingerprint}", row.hash),
+                Err(error) => {
+                    row.grouping_diagnostic = Some(error);
+                    row.id.clone()
+                }
+            }
+        } else {
+            row.id.clone()
+        };
+        if let Some(&position) = positions.get(&key) {
+            let previous = &mut result[position];
+            let mut origins = std::mem::take(&mut previous.origins);
+            origins.append(&mut row.origins);
+            origins.sort_by(|a, b| a.canonical.cmp(&b.canonical).then(a.source.cmp(&b.source)));
+            if row.canonical < previous.canonical {
+                *previous = row;
+            }
+            previous.origins = origins;
+        } else {
+            positions.insert(key, result.len());
+            result.push(row);
+        }
+    }
+    result
 }
 
 struct Candidate {
@@ -24,7 +91,6 @@ struct Candidate {
     score: f64,
     exact: bool,
     coverage: usize,
-    search_text: String,
 }
 
 pub fn tokens(query: &str) -> Vec<String> {
@@ -92,7 +158,6 @@ pub fn query(
             score,
             exact,
             coverage,
-            search_text,
         })
     })?;
     let minimum_coverage = if query_tokens.len() >= 3 { 2 } else { 1 };
@@ -121,14 +186,10 @@ pub fn query(
     });
     let mut rows = candidates
         .into_iter()
-        .take(limit)
-        .map(|candidate| {
-            let _ = candidate.search_text;
-            candidate.row
-        })
+        .map(|candidate| candidate.row)
         .collect::<Vec<_>>();
     contextualize(db, &mut rows, roots)?;
-    Ok(rows)
+    Ok(group(rows).into_iter().take(limit).collect())
 }
 
 pub fn all(
@@ -136,32 +197,24 @@ pub fn all(
     limit: Option<usize>,
     roots: Option<&[String]>,
 ) -> rusqlite::Result<Vec<ResultRow>> {
-    let limit_parameter = roots.map_or(1, |values| values.len() + 1);
     let mut sql = "SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash FROM skills s WHERE s.enabled=1 AND s.model_discoverable=1 AND s.source_kind='filesystem'".to_owned();
     sql.push_str(&root_filter("s", roots, 1));
     sql.push_str(" ORDER BY lower(s.name),s.id");
-    if limit.is_some() {
-        sql.push_str(&format!(" LIMIT ?{limit_parameter}"));
-    }
     let mut values = Vec::new();
     append_root_values(&mut values, roots);
-    if let Some(limit) = limit {
-        values.push(Value::Integer(limit as i64));
-    }
     let mut statement = db.prepare(&sql)?;
     let mut rows = statement
         .query_map(params_from_iter(values), row_from)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     contextualize(db, &mut rows, roots)?;
-    Ok(rows)
+    Ok(group(rows)
+        .into_iter()
+        .take(limit.unwrap_or(usize::MAX))
+        .collect())
 }
 
 pub fn count(db: &Connection, roots: Option<&[String]>) -> rusqlite::Result<usize> {
-    let mut sql = "SELECT count(*) FROM skills s WHERE s.enabled=1 AND s.model_discoverable=1 AND s.source_kind='filesystem'".to_owned();
-    sql.push_str(&root_filter("s", roots, 1));
-    let mut values = Vec::new();
-    append_root_values(&mut values, roots);
-    db.query_row(&sql, params_from_iter(values), |row| row.get(0))
+    Ok(all(db, None, roots)?.len())
 }
 
 pub fn find(
@@ -178,6 +231,13 @@ pub fn find(
     let mut result = rows.next()?.map(row_from).transpose()?;
     if let Some(row) = &mut result {
         contextualize(db, std::slice::from_mut(row), roots)?;
+        for group in find_name(db, &row.name, roots)? {
+            if group.origins.iter().any(|origin| origin.id == row.id) {
+                row.origins = group.origins;
+                row.grouping_diagnostic = group.grouping_diagnostic;
+                break;
+            }
+        }
     }
     Ok(result)
 }
@@ -197,7 +257,7 @@ pub fn find_name(
         .query_map(params_from_iter(values), row_from)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     contextualize(db, &mut rows, roots)?;
-    Ok(rows)
+    Ok(group(rows))
 }
 
 fn contextualize(
@@ -205,28 +265,35 @@ fn contextualize(
     rows: &mut [ResultRow],
     roots: Option<&[String]>,
 ) -> rusqlite::Result<()> {
-    let Some(roots) = roots.filter(|roots| !roots.is_empty()) else {
-        return Ok(());
-    };
-    let placeholders = (0..roots.len())
-        .map(|offset| format!("?{}", offset + 2))
-        .collect::<Vec<_>>()
-        .join(",");
-    let sql = format!(
-        "SELECT scope,root FROM skill_roots WHERE skill_id=?1 AND root IN ({placeholders}) ORDER BY CASE scope WHEN 'global' THEN 0 ELSE 1 END,root LIMIT 1"
-    );
-    let mut statement = db.prepare(&sql)?;
     for row in rows {
+        let mut sql = "SELECT scope,root FROM skill_roots WHERE skill_id=?1".to_owned();
         let mut values = vec![Value::Text(row.id.clone())];
-        values.extend(roots.iter().cloned().map(Value::Text));
-        if let Some((scope, root)) = statement
-            .query_row(params_from_iter(values), |record| {
+        if let Some(roots) = roots {
+            let placeholders = (0..roots.len())
+                .map(|i| format!("?{}", i + 2))
+                .collect::<Vec<_>>()
+                .join(",");
+            sql.push_str(&format!(" AND root IN ({placeholders})"));
+            values.extend(roots.iter().cloned().map(Value::Text));
+        }
+        sql.push_str(" ORDER BY CASE scope WHEN 'global' THEN 0 ELSE 1 END,root");
+        let mut statement = db.prepare(&sql)?;
+        let associations = statement
+            .query_map(params_from_iter(values), |record| {
                 Ok((record.get::<_, String>(0)?, record.get::<_, String>(1)?))
-            })
-            .optional()?
-        {
-            row.scope = scope;
-            row.source = root;
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        for (scope, root) in associations {
+            let mut origin = Origin::from_row(row);
+            origin.scope = scope;
+            origin.source = root;
+            row.origins.push(origin);
+        }
+        if let Some(origin) = row.origins.first() {
+            row.scope = origin.scope.clone();
+            row.source = origin.source.clone();
+        } else {
+            row.origins.push(Origin::from_row(row));
         }
     }
     Ok(())
@@ -269,6 +336,8 @@ fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<ResultRow> {
         plugin_id: row.get(10)?,
         degraded: row.get::<_, i32>(11)? != 0,
         hash: row.get(12)?,
+        origins: Vec::new(),
+        grouping_diagnostic: None,
     })
 }
 
@@ -294,6 +363,62 @@ mod tests {
     use super::*;
     use crate::{index, metadata::Metadata, sources::Skill};
     use std::path::{Path, PathBuf};
+
+    #[test]
+    fn copies_group_only_when_complete_packages_match() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path();
+        for name in ["a", "b", "c"] {
+            let package = root.join(name);
+            std::fs::create_dir(&package).unwrap();
+            std::fs::write(
+                package.join("SKILL.md"),
+                "---\nname: copied\ndescription: deploy cobalt runtime\n---\nRead helper.txt.\n",
+            )
+            .unwrap();
+            std::fs::write(
+                package.join("helper.txt"),
+                if name == "c" { "different" } else { "same" },
+            )
+            .unwrap();
+        }
+        let scan = crate::sources::scan(
+            root,
+            &crate::discovery::Report {
+                sources: vec![crate::discovery::SourceSpec {
+                    provider: "custom".into(),
+                    scope: "global".into(),
+                    root: root.to_str().unwrap().into(),
+                    plugin_id: None,
+                    version: None,
+                    provenance: "fixture".into(),
+                }],
+                configured_sources: Vec::new(),
+                configured_roots: Vec::new(),
+                diagnostics: Vec::new(),
+                complete: true,
+            },
+        );
+        assert!(scan.complete);
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(&mut db, "filesystem", &scan.skills, true).unwrap();
+        let rows = query(&db, "deploy cobalt", 2, None).unwrap();
+        assert_eq!(rows.len(), 2);
+        let copies = rows.iter().find(|row| row.origins.len() == 2).unwrap();
+        assert!(copies.canonical.ends_with("a/SKILL.md"));
+        for origin in &copies.origins {
+            assert_eq!(
+                find(&db, &origin.id, None).unwrap().unwrap().canonical,
+                origin.canonical
+            );
+        }
+        assert_eq!(find_name(&db, "copied", None).unwrap().len(), 2);
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink("helper.txt", root.join("b/link")).unwrap();
+            assert_eq!(find_name(&db, "copied", None).unwrap().len(), 3);
+        }
+    }
 
     fn fixture_skill(name: &str, description: &str) -> Skill {
         Skill {

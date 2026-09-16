@@ -4,7 +4,7 @@ use std::io::{self, Write};
 
 const MAX_RECORD_BYTES: usize = 2_000;
 const TRUNCATION_MARKER: &str = " [truncated]";
-pub const JSON_VERSION: u8 = 2;
+pub const JSON_VERSION: u8 = 3;
 
 pub fn text(rows: &[ResultRow]) -> io::Result<()> {
     let stdout = io::stdout();
@@ -72,7 +72,6 @@ fn truncate_utf8(value: &str, max_bytes: usize) -> &str {
 }
 
 pub fn json(rows: &[ResultRow]) -> io::Result<()> {
-    let rows: Vec<_> = rows.iter().cloned().map(clean_row).collect();
     #[derive(Serialize)]
     struct Envelope<'a> {
         version: u8,
@@ -84,7 +83,7 @@ pub fn json(rows: &[ResultRow]) -> io::Result<()> {
         "{}",
         serde_json::to_string(&Envelope {
             version: JSON_VERSION,
-            results: &rows
+            results: rows
         })
         .expect("serializable output")
     )
@@ -118,7 +117,6 @@ fn list_line(row: &ResultRow) -> String {
 }
 
 pub fn list_json(rows: &[ResultRow], total: usize) -> io::Result<()> {
-    let rows: Vec<_> = rows.iter().cloned().map(clean_row).collect();
     #[derive(Serialize)]
     struct Envelope<'a> {
         version: u8,
@@ -131,45 +129,24 @@ pub fn list_json(rows: &[ResultRow], total: usize) -> io::Result<()> {
         serde_json::to_string(&Envelope {
             version: JSON_VERSION,
             total,
-            results: &rows,
+            results: rows,
         })
         .expect("serializable output")
     )
 }
 
-pub(crate) fn clean_row(mut row: ResultRow) -> ResultRow {
-    row.id = clean(&row.id);
-    row.name = clean(&row.name);
-    row.description = clean(&row.description);
-    row.scope = clean(&row.scope);
-    row.path = clean(&row.path);
-    row.canonical = clean(&row.canonical);
-    row.base = clean(&row.base);
-    row.source = clean(&row.source);
-    row.source_kind = clean(&row.source_kind);
-    row.plugin_id = row.plugin_id.map(|value| clean(&value));
-    row.hash = clean(&row.hash);
-    row
-}
-
+/// Human output escapes controls; JSON serialization preserves the original value.
 pub fn clean(value: &str) -> String {
-    let mut result = String::with_capacity(value.len());
-    let mut chars = value.chars().peekable();
-    while let Some(character) = chars.next() {
-        if character == '\u{1b}' && chars.peek() == Some(&'[') {
-            chars.next();
-            for next in chars.by_ref() {
-                if ('@'..='~').contains(&next) {
-                    break;
-                }
+    value
+        .chars()
+        .flat_map(|ch| {
+            if ch.is_control() {
+                ch.escape_default().collect::<Vec<_>>()
+            } else {
+                vec![ch]
             }
-            continue;
-        }
-        if !character.is_control() || character == '\t' {
-            result.push(character);
-        }
-    }
-    result
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -190,12 +167,14 @@ mod tests {
             plugin_id: None,
             degraded: false,
             hash: "hash".into(),
+            origins: Vec::new(),
+            grouping_diagnostic: None,
         }
     }
 
     #[test]
     fn strips_terminal_controls() {
-        assert_eq!(clean("safe\u{1b}[31m red\n"), "safe red");
+        assert!(!clean("safe\u{1b}[31m red\n").contains(['\u{1b}', '\n']));
     }
 
     #[test]
@@ -226,33 +205,16 @@ mod tests {
     }
 
     #[test]
-    fn uses_version_two_json_contract() {
-        assert_eq!(JSON_VERSION, 2);
+    fn uses_version_three_json_contract() {
+        assert_eq!(JSON_VERSION, 3);
     }
 
     #[test]
-    fn sanitizes_every_json_string_field() {
-        let unsafe_text = "safe\u{1b}[31m\n".to_string();
-        let cleaned = clean_row(ResultRow {
-            id: unsafe_text.clone(),
-            name: unsafe_text.clone(),
-            description: unsafe_text.clone(),
-            scope: unsafe_text.clone(),
-            path: unsafe_text.clone(),
-            canonical: unsafe_text.clone(),
-            base: unsafe_text.clone(),
-            source: unsafe_text.clone(),
-            source_kind: unsafe_text.clone(),
-            enabled: true,
-            plugin_id: Some(unsafe_text.clone()),
-            degraded: false,
-            hash: unsafe_text,
-        });
-        let serialized = serde_json::to_string(&cleaned).unwrap();
-        assert!(!serialized.contains("\\u001b"));
-        assert!(!serialized.contains("\\n"));
-        let mut disabled = cleaned;
-        disabled.enabled = false;
-        assert!(list_line(&disabled).ends_with(" (disabled)"));
+    fn json_round_trips_exact_paths() {
+        let mut value = row("description".into());
+        value.path = "/skills/line\nbreak/é/SKILL.md".into();
+        let encoded = serde_json::to_value(&value).unwrap();
+        assert_eq!(encoded["path"].as_str(), Some(value.path.as_str()));
+        assert!(!clean(&value.path).contains('\n'));
     }
 }

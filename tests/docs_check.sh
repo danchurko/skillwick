@@ -165,8 +165,8 @@ version = re.search(r'^version\s*=\s*"([^"]+)"', package.group(1), re.M) if pack
 changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
 releases = list(
     re.finditer(
-        r"(?m)^##\s+([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"
-        r"(?:\s+-\s+[0-9]{4}-[0-9]{2}-[0-9]{2})?\s*$",
+        r"(?m)^##\s+\[?([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)\]?"
+        r"(?:\s+-\s+(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|Unreleased))?\s*$",
         changelog,
     )
 )
@@ -255,7 +255,8 @@ with tempfile.TemporaryDirectory(prefix="skillwick-docs-") as directory:
         )
 
     initialized = clean_run(
-        "init", "--yes", "--agent", "none", "--root", str(work / ".agents/skills")
+        "init", "--yes", "--agent", "none", "--discovery", "explicit",
+        "--root", str(work / ".agents/skills")
     )
     if initialized.returncode:
         errors.append(f"clean filesystem setup failed: {initialized.stderr.strip()}")
@@ -266,7 +267,10 @@ with tempfile.TemporaryDirectory(prefix="skillwick-docs-") as directory:
         try:
             import json
 
-            results = json.loads(listed.stdout)["results"]
+            listed_value = json.loads(listed.stdout)
+            if listed_value.get("version") != 3:
+                errors.append("clean filesystem list did not use JSON version 3")
+            results = listed_value["results"]
             ids = [item["id"] for item in results if item["name"] == "clean-fixture"]
             if len(ids) != 1:
                 errors.append("clean filesystem setup did not expose exactly one fixture")

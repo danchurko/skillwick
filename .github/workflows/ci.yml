@@ -10,21 +10,52 @@ permissions:
 
 jobs:
   check:
-    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Linux build tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools jq xz-utils
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy,rustfmt
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
       - run: make check
+      - name: Verify installed target binary
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            export CC=musl-gcc
+            export RUSTFLAGS='-Clinker=musl-gcc'
+          fi
+          cargo install --locked --path . --target '${{ matrix.target }}' --root "$RUNNER_TEMP/skillwick-candidate"
+          sh scripts/verify-source-install.sh --binary "$RUNNER_TEMP/skillwick-candidate/bin/skillwick" --skip-build
       - name: Install dependency assurance tools
+        if: matrix.target == 'aarch64-apple-darwin'
         run: |
           cargo install --locked --version 0.20.2 cargo-deny
           cargo install --locked --version 0.19.0 cargo-outdated
       - name: Check dependency assurance
+        if: matrix.target == 'aarch64-apple-darwin'
         run: make dependency-assurance
       - name: Verify current published formula
+        if: matrix.target == 'aarch64-apple-darwin'
         run: |
           package_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
           formula_version=$(sed -n 's/^  version "\([^"]*\)"/\1/p' Formula/skillwick.rb)

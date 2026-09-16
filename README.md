@@ -5,89 +5,71 @@
 
 **Find the skill. Load only what matters.**
 
-Skillwick helps coding agents find relevant installed skills without loading an
-entire catalogue. Configure the folders that contain your skills, search
-deliberately, choose a candidate, and read its instructions.
+Skillwick finds installed skills and reads selected instructions. It discovers
+shared, Codex, and Claude skill sources, groups verified package copies, and
+keeps project skills within registered workspace boundaries. Existing installers
+retain package ownership. No daemon, prompt hook, telemetry, or package execution.
 
-It runs locally as one Rust binary, uses SQLite FTS5 for its derived index, and
-leaves skill packages with their existing installers. No daemon, registry,
-telemetry, agent server, or package execution.
+This tree prepares **0.4.0**. Build unreleased changes from source:
 
-Search is an explicit command. A bare query is not interpreted as a search;
-this keeps normal shell composition and command errors predictable.
+```sh
+cargo install --locked --path . --root "$HOME/.local"
+"$HOME/.local/bin/skillwick" --version
+```
 
-## Install
-
-With Homebrew:
+Published macOS releases are also available through Homebrew:
 
 ```sh
 brew tap danchurko/skillwick https://github.com/danchurko/skillwick.git
 brew install skillwick
 ```
 
-Or install a specific version with a verified checksum:
+The release shell installer supports macOS and Linux, defaults to its packaged
+release version, and accepts an explicit version and prefix. It verifies
+checksums and executable version. Release artifacts are unsigned; see
+[compatibility](docs/COMPATIBILITY.md) for tested boundaries.
 
-```sh
-curl -fsSLO https://raw.githubusercontent.com/danchurko/skillwick/v0.3.0/scripts/install.sh
-sh install.sh --version 0.3.0 --prefix "$HOME/.local"
-```
-
-The installer installs only the executable. Release binaries are unsigned and
-not notarized. To try unreleased changes, [build from source](CONTRIBUTING.md).
-
-## Configure roots
-
-Register shared skill roots explicitly. They apply in every project:
-
-```sh
-skillwick init --yes --root "$HOME/.agents/skills"
-```
-
-Register a project root with the working directory used for that project. It
-applies in that directory and its descendants:
-
-```sh
-skillwick --cwd "$PWD" init --yes --root "$HOME/.agents/skills" \
-  --project-root "$PWD/.agents/skills"
-```
-
-Unregistered home and ancestor directories are not searched. Installing a
-package inside a registered root does not require registering that package.
-
-## Search and read
+## Use
 
 ```sh
 skillwick search "deploy an AgentCore MCP server with TypeScript"
 skillwick read ID
-skillwick read astra-orchestrator
+skillwick read astra-orchestrator codebase-memory caveman
+skillwick --json list
+skillwick read --raw caveman
 ```
 
-Each lookup reconciles the applicable roots automatically. Additions, edits,
-removals, renames, policy changes, and root-configuration changes appear on the
-next command. An unchanged inventory reuses SQLite. `refresh` remains available
-as an explicit maintenance operation.
+Search returns up to five distinct groups by default (`--limit 1` through `20`).
+No match is successful. Exact reads fail on missing or ambiguous names; batch
+reads validate every target before printing any instructions. Shell chaining,
+pipes, and redirection retain ordinary exit semantics. JSON version 3 preserves
+exact values and paths, including read content and all grouped origins.
 
-Search returns five candidates by default and accepts `--limit` values from 1
-through 20. Text output bounds each record and marks long descriptions with
-`[truncated]`; `--json` emits complete version-2 result envelopes.
+Every lookup reconciles applicable sources. Codex plugin discovery uses its
+bounded installed-plugin CLI listing; shared and explicit roots work without a
+host executable. Invalid required sources fail and retain the prior cache without
+silently returning stale results. Production retrieval remains local SQLite FTS5.
 
-`read` accepts exact IDs and unambiguous exact names. It validates the selected
-live file and prints its package base so supporting references can be resolved.
-`inspect ID --files` lists package references, scripts, and assets without
-loading their contents. Neither command executes package files.
+## Setup
 
-Use [usage and configuration](docs/USAGE.md) for workflows, [operations](docs/OPERATIONS.md)
-for recovery and ownership, and the [command reference](docs/REFERENCE.md) for
-stable scripting details. The [compatibility page](docs/COMPATIBILITY.md) lists
-tested release boundaries.
+```sh
+skillwick init --dry-run --yes --agent codex --agent claude
+skillwick init --yes --agent codex --agent claude
+skillwick --cwd "$PWD" init --yes --agent none --project
+skillwick doctor --strict --require codebase-memory
+```
 
-Comparative retrieval quality, context savings, and task-success benefits have
-not been established for the supported product and workflow.
+Supported global directories are discovered automatically. `--project` registers
+standard project folders for that workspace and descendants. `--root PATH` adds a
+custom shared source; `--discovery explicit` restricts discovery to configured roots.
+Managed owners consume `skillwick instructions` and use `--agent none`.
 
-## Contribute
+See [getting started](docs/GETTING_STARTED.md), [command reference](docs/REFERENCE.md),
+[operations](docs/OPERATIONS.md), and [architecture](docs/ARCHITECTURE.md).
+Historical semantic measurements are [research evidence](docs/RESEARCH.md), not
+proof of current-release quality or task success.
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md). See the [changelog](CHANGELOG.md)
-for released changes; the [documentation map](docs/README.md) links user guides,
-architecture, compatibility, and implementation history.
+Start contributing with [CONTRIBUTING.md](CONTRIBUTING.md). See the
+[changelog](CHANGELOG.md) and [documentation map](docs/README.md).
 
 Licensed under either Apache License 2.0 or MIT, at your option.

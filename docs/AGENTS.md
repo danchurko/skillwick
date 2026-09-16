@@ -24,9 +24,8 @@ Skillwick does not require a search on every turn or a subagent for every task.
 Stable managed instructions may read one known skill by exact, case-sensitive
 name. Use an ID when the name is duplicated.
 
-Configure shared and project roots explicitly. Every lookup reconciles the
-applicable roots before querying SQLite; no separate refresh is needed after
-installing or changing a package. Use `skillwick refresh` only when you want to
-force maintenance reconciliation. A failed or incomplete source update is not
-an empty complete inventory: the affected lookup fails and the last published
-database remains intact.
+Supported shared and host sources are discovered automatically. Register project
+boundaries explicitly; custom roots remain supported. A managed owner consumes
+`skillwick instructions` and uses `--agent none`. Every lookup reconciles eligible
+sources, so ordinary package changes do not require manual refresh. Failed source
+checks fail the command and preserve the previous publication.

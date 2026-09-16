@@ -2,62 +2,47 @@
 status: accepted
 ---
 
-# Agents maintain inventory freshness
+# Sources establish eligibility; files establish content and freshness
 
-Configured skill roots are authoritative for discovery. Skillwick discovers
-instructions independently of Codex or another agent's enablement settings;
-it does not query an agent server to establish which skills are available.
-Installed packages remain owned by their existing installers.
+Skillwick 0.4 resolves supported installed sources automatically. Shared skill
+folders and explicitly configured roots are filesystem sources. Codex and Claude
+installation metadata establishes which plugin versions and skill directories
+are eligible; their installed files remain authoritative for content.
 
-Every successful lookup must establish inventory freshness under the applicable
-roots, including changes made during the session. Skillwick and the
-calling agent own synchronization and recovery through supported permission
-mechanisms; routine refresh is not delegated to the human.
+Codex does not expose an authoritative active-version path in its local settings.
+Its plugin adapter therefore uses a bounded `codex plugin list --json` query and
+validates the corresponding local manifest. It never guesses the newest cache
+version. Explicit-root discovery needs no host executable. Claude uses its
+installed-plugin registry and effective enablement settings.
 
-If recovery fails, preserve the last successfully published snapshot and stop
-affected discovery. Do not present stale or incomplete inventory as current.
-This chooses verified filesystem inventory over continuing discovery from a
-potentially outdated snapshot. Skill metadata still controls invocation policy;
-discovering or reading instructions does not authorize their execution.
+This supersedes the 0.3 requirement that every source be manually registered. It
+does not restore the old agent-server inventory or make that server a dependency.
+There is one source-resolution pipeline followed by one filesystem scanner.
 
-## Scope and storage
+## Scope and publication
 
-Shared roots apply everywhere. Project roots apply only within their associated
-project. Roots are explicit configuration; installing a new skill inside a root
-does not require registering the skill individually. Query results are limited
-to the roots applicable to the current working directory, even when projects
-share a database.
+Automatic shared sources apply globally. Automatic project folders apply only
+inside explicitly registered projects and their descendants. Custom roots retain
+their declared scope. Neither arbitrary ancestors nor sibling projects are scanned.
 
-SQLite remains the derived local index. It stores skill metadata, source paths,
-scope associations, fingerprints, and the FTS5 search index. Transactions and the
-existing atomic publication mechanism protect updates. Root configuration and
-installed files remain authoritative; the database is rebuildable.
+Every successful lookup verifies current relevant source identities, instructions,
+policy, and source eligibility. Missing required sources, unknown provider formats,
+permissions failures, or ambiguous active installations fail the affected operation.
+The previous complete SQLite publication remains intact and is never silently used
+as a stale answer. A valid no-match search succeeds.
 
-Filesystem reads discover changes and load selected instructions. SQLite serves
-metadata queries, counts, filtering, and ranked search; it does not watch folders
-or replace the installed instruction files.
+SQLite stores derived metadata, fingerprints, and root associations. Locks and
+atomic replacement preserve concurrent project snapshots. Unchanged complete scans
+skip unnecessary index updates. There is no daemon or background event stream.
 
-## Lookup flow
+## Selection and ownership
 
-1. Resolve the configured shared and project roots for the working directory.
-2. Enumerate relevant files and compute content fingerprints, including
-   `SKILL.md` and adjacent invocation-policy metadata. Additions, removals,
-   renames, and changes to the applicable root set invalidate the prior inventory.
-3. If the complete inventory is unchanged, reuse the SQLite index. Otherwise,
-   update and publish the index atomically before answering the lookup.
-4. Query SQLite for the requested results. For `read`, revalidate the selected
-   live file before returning its instructions.
+Canonical references deduplicate. Separate copies group only when complete bounded
+package fingerprints agree. Preserve member IDs and every applicable origin;
+uncertain packages remain separate. Different same-name packages require an ID.
+Batch reads validate every selected instruction before producing output.
 
-No background service or agent event stream is required. Explicit `refresh`
-remains a maintenance operation rather than a prerequisite for normal discovery.
-When permissions block an operation, the calling agent retries through supported
-permission escalation when authorized. Only unsuccessful or unavailable recovery
-requires human intervention; retries must be bounded.
-
-## Implementation
-
-The runtime, setup, diagnostics, tests, and agent instructions use this
-filesystem authority and no longer retain a native inventory path. Managed
-installations register their intended package directories explicitly through
-their existing owner. File validation, atomic updates, and protection of the
-previous snapshot and unrelated user state remain required invariants.
+Existing installers own package content and updates. Skillwick owns only its
+configuration, cache, and explicitly installed context references. The environment
+owner installs canonical instructions with `skillwick instructions` when it owns
+agent configuration. Reading a skill never authorizes executing its scripts.

@@ -9,14 +9,61 @@ The query labels predate these retrieval runs. They were taken from the
 reviewed held-out split in `c0ea8d9^:benchmarks/local-skills-v2.json`; only
 path-derived ID suffixes were replaced by the corresponding unique skill name.
 
-## Reproduce
+## Current task evaluation
+
+`profile-v2.json` is a separate frozen 12-record, 20-case corpus. One query is a
+sanitized task from the current user request; the rest are labelled synthetic.
+It includes four negatives, multiple relevant skills, vocabulary mismatches,
+and two distinct packages called `deploy`. Stable fixture IDs preserve those
+names without conflating labels. No session archives were read.
+
+V2 reports positive Recall@5 and @20, MRR@5, standard nDCG@5 (ideal ranking uses
+`min(5, relevant_count)`), and negative false-positive rate separately. It is a
+small engineering regression corpus, not representative user traffic. Labels
+and corpus identities are frozen before running both binaries. Historical v1
+results retain their original metric definition and files.
+
+```sh
+python3 scripts/benchmark-lexical.py run --binary /path/to/installed/skillwick \
+  --profile benchmarks/profile-v2.json --samples 3 --output /tmp/candidate.json
+python3 scripts/benchmark-lexical.py validate --profile benchmarks/profile-v2.json \
+  --result /tmp/candidate.json
+```
+
+No pre-commit gate performs model inference or downloads model artifacts.
+Optional-model adoption still requires independent task outcomes and supported
+machine budgets; improving a ranking score alone is insufficient.
+
+## 0.3 versus 0.4 installed candidates
+
+The recorded 2026-09-16 runs use the same profiles and three timed samples per
+query. The 0.4 executable was installed into a temporary prefix from this source;
+0.3 was the existing release installation. Result files record executable hashes.
+
+| Profile | Metric | 0.3.0 | 0.4.0 |
+|---|---|---:|---:|
+| V1: 35 cases, 105 perspectives | Recall@5 | 0.8857 | 0.8857 |
+| V1 | MRR@5 / historical nDCG@5 | 0.8373 / 0.8497 | 0.8373 / 0.8497 |
+| V2: 16 positive cases | Recall@5 and @20 | 0.8125 | 0.8125 |
+| V2 | MRR@5 / nDCG@5 | 0.8750 / 0.8281 | 0.8750 / 0.8281 |
+| V2: 4 negative cases | False-positive rate | 0 | 0 |
+
+Ranking quality is unchanged on both fixtures. This is regression evidence for
+the discovery and interface changes, not evidence of improved semantic retrieval
+or task success. Latency and memory are recorded in the JSON but single-machine
+runs with concurrent development activity do not establish a performance claim.
+
+- [0.3 V1](results/lexical-0.3.0-profile-v1.json) and [0.4 V1](results/lexical-0.4.0-profile-v1.json)
+- [0.3 V2](results/lexical-0.3.0-profile-v2.json) and [0.4 V2](results/lexical-0.4.0-profile-v2.json)
+
+## Reproduce historical experiments
 
 ```sh
 cargo build --release --locked
 python3 scripts/benchmark-lexical.py run \
   --binary target/release/skillwick \
   --profile benchmarks/profile-v1.json \
-  --output benchmarks/results/lexical-baseline-2026-09-13.json
+  --output /tmp/lexical-current.json
 
 UV_CACHE_DIR=/private/tmp/skillwick-uv-cache \
 uv run --with fastembed==0.8.0 python scripts/benchmark-semantic.py embedding \

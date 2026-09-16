@@ -1,4 +1,4 @@
-use crate::{config::Config, index, sources};
+use crate::{config::Config, discovery, index, sources};
 use rusqlite::{backup::Backup, Connection};
 use std::{fmt, path::Path, time::Duration};
 
@@ -23,11 +23,24 @@ impl From<rusqlite::Error> for Error {
     }
 }
 
+/// A complete, disposable snapshot used by one CLI operation.
+///
+/// The connection is kept in memory while the durable cache is published only
+/// after source discovery and scanning have completed successfully.  `roots`
+/// contains the canonical roots applicable to the requested workspace and is
+/// used to scope lookups to that workspace.
+pub struct Snapshot {
+    pub db: Connection,
+    pub roots: Vec<String>,
+    pub sources: Vec<discovery::SourceSpec>,
+    pub diagnostics: Vec<String>,
+}
+
 /// Reconcile the configured filesystem roots under the cache lock.
 ///
 /// The returned connection is the same complete snapshot used by the caller,
 /// while the durable cache is replaced only when the derived records changed.
-pub fn reconcile(settings: &Config, cwd: &Path, operation: &str) -> Result<Connection, Error> {
+pub fn reconcile(settings: &Config, cwd: &Path, operation: &str) -> Result<Snapshot, Error> {
     let cache = crate::config::cache_path();
     let _lock = index::acquire_cache_lock(&cache).map_err(|error| {
         let detail = format!("cache lock failed: {error}");
@@ -38,7 +51,17 @@ pub fn reconcile(settings: &Config, cwd: &Path, operation: &str) -> Result<Conne
     });
     let normalized_cwd = crate::config::normalize_cwd(cwd)
         .map_err(|error| Error::Filesystem(failure_message(operation, &error)))?;
-    let scan = sources::scan(&normalized_cwd, &settings.roots, &settings.projects);
+    let discovered = discovery::discover(settings, &normalized_cwd);
+    for diagnostic in &discovered.diagnostics {
+        eprintln!("warning: {diagnostic}");
+    }
+    if !discovered.complete {
+        return Err(Error::Filesystem(failure_message(
+            operation,
+            &discovered.diagnostics.join("; "),
+        )));
+    }
+    let scan = sources::scan(&normalized_cwd, &discovered);
     for diagnostic in &scan.diagnostics {
         eprintln!("warning: {diagnostic}");
     }
@@ -49,17 +72,23 @@ pub fn reconcile(settings: &Config, cwd: &Path, operation: &str) -> Result<Conne
         )));
     }
     let before = index::digest(&db)?;
-    index::replace_root_configuration(
-        &mut db,
-        &sources::configured_roots(&settings.roots, &settings.projects),
-    )?;
-    let applicable_roots = sources::roots(&normalized_cwd, &settings.roots, &settings.projects);
+    index::replace_root_configuration(&mut db, &discovered.configured_roots)?;
+    let applicable_roots = discovered.roots();
     index::refresh_filesystem_scope(&mut db, &scan.skills, &applicable_roots, true)?;
     let changed = before != index::digest(&db)?;
     if changed {
         index::publish(&db, &cache)?;
     }
-    Ok(db)
+    Ok(Snapshot {
+        db,
+        roots: sources::root_keys(&discovered),
+        sources: discovered.sources,
+        diagnostics: discovered
+            .diagnostics
+            .into_iter()
+            .chain(scan.diagnostics)
+            .collect(),
+    })
 }
 
 fn failure_message(operation: &str, detail: &str) -> String {

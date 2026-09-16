@@ -1,3 +1,10 @@
+- name: Install verification Python
+  uses: actions/setup-python@v5
+  with:
+    python-version: '3.12'
+- name: Install Linux verification tools
+  if: runner.os == 'Linux'
+  run: sudo apt-get update && sudo apt-get install -y jq xz-utils
 - name: Install verification toolchain
   uses: dtolnay/rust-toolchain@stable
   with:

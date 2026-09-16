@@ -3,7 +3,9 @@ set -eu
 
 binary=${1:-target/debug/skillwick}
 case "$binary" in /*) ;; *) binary="$(pwd)/$binary" ;; esac
-temporary=$(mktemp -d /private/tmp/skillwick-filesystem.XXXXXX)
+tmp_parent=${TMPDIR:-/tmp}
+[ -d "$tmp_parent" ] || { echo "temporary directory does not exist: $tmp_parent" >&2; exit 1; }
+temporary=$(mktemp -d "${tmp_parent%/}/skillwick-filesystem.XXXXXX")
 trap 'rm -rf "$temporary"' EXIT HUP INT TERM
 
 home="$temporary/home"
@@ -15,6 +17,14 @@ cache="$temporary/cache"
 state="$temporary/state"
 no_codex="$temporary/no-codex"
 mkdir -p "$home" "$shared" "$child" "$config" "$cache" "$state" "$no_codex"
+
+sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
 
 write_skill() {
   directory=$1
@@ -41,16 +51,16 @@ run_child() {
 # The old Codex-specific integration fixture is deliberately gone. This
 # end-to-end binary check proves that no executable, CODEX_HOME, or provider
 # state is needed for filesystem inventory.
-run init --yes --agent none --root "$shared" --project-root "$project"
+run init --yes --agent none --discovery explicit --root "$shared" --project-root "$project"
 run list | grep -q '^2 skills in the current inventory\.$'
 run search 'Project filesystem source' | grep -q '^project@'
 run_child list | grep -q '^project@'
 run doctor --strict >/dev/null
 
-cache_file="$cache/skillwick/index-v3.sqlite"
-before_hash=$(shasum -a 256 "$cache_file" | awk '{print $1}')
+cache_file="$cache/skillwick/index-v4.sqlite"
+before_hash=$(sha256 "$cache_file")
 run_child list >/dev/null
-test "$(shasum -a 256 "$cache_file" | awk '{print $1}')" = "$before_hash"
+test "$(sha256 "$cache_file")" = "$before_hash"
 
 # Concurrent ordinary refreshes remain serialized and publish a valid merged
 # snapshot without cross-project leakage.
@@ -61,7 +71,7 @@ run_b() {
     XDG_CONFIG_HOME="$config" XDG_CACHE_HOME="$cache" XDG_STATE_HOME="$state" \
     "$binary" --cwd "$project_b" "$@"
 }
-run_b init --yes --agent none --root "$shared" --project-root "$project_b" >/dev/null
+run_b init --yes --agent none --discovery explicit --root "$shared" --project-root "$project_b" >/dev/null
 run refresh >/dev/null & first=$!
 run_b refresh >/dev/null & second=$!
 wait "$first"

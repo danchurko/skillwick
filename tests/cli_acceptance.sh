@@ -3,7 +3,10 @@ set -eu
 
 binary=${1:-target/debug/skillwick}
 case "$binary" in /*) ;; *) binary="$(pwd)/$binary" ;; esac
-temporary=$(mktemp -d /private/tmp/skillwick-cli.XXXXXX)
+tmp_parent=${TMPDIR:-/tmp}
+[ -d "$tmp_parent" ] || { echo "temporary directory does not exist: $tmp_parent" >&2; exit 1; }
+temporary=$(mktemp -d "${tmp_parent%/}/skillwick-cli.XXXXXX")
+temporary=$(CDPATH= cd -- "$temporary" && pwd -P)
 trap 'rm -rf "$temporary"' EXIT HUP INT TERM
 
 home="$temporary/home"
@@ -16,6 +19,21 @@ cache_home="$temporary/cache"
 state_home="$temporary/state"
 mkdir -p "$home" "$shared" "$project_a_child" "$project_b" "$config_home" \
   "$cache_home" "$state_home" "$temporary/no-codex"
+
+sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
+mtime() {
+  value=$(stat -f '%m' "$1" 2>/dev/null || true)
+  case "$value" in
+    ''|*[!0-9]*) stat -c '%Y' "$1" ;;
+    *) printf '%s\n' "$value" ;;
+  esac
+}
 
 write_skill() {
   directory=$1
@@ -48,9 +66,19 @@ run_b() {
 
 # Shared roots are visible everywhere; project roots apply to their project and
 # descendants only. No implicit HOME or ancestor discovery is permitted.
-run_a init --yes --agent none --root "$shared" --project-root "$project_a"
-run_b init --yes --agent none --root "$shared" --project-root "$project_b"
+run_a init --yes --agent none --discovery explicit --root "$shared" --project-root "$project_a"
+run_b init --yes --agent none --discovery explicit --root "$shared" --project-root "$project_b"
 grep -Fq '[[projects]]' "$config_home/skillwick/config.toml"
+grep -Fq 'version = 1' "$config_home/skillwick/config.toml"
+grep -Fq 'discovery = "explicit"' "$config_home/skillwick/config.toml"
+python3 - "$config_home/skillwick/config.toml" <<'PY'
+import sys
+import tomllib
+
+with open(sys.argv[1], "rb") as stream:
+    config = tomllib.load(stream)
+assert config["agents"] in ([], ["none"])
+PY
 grep -Fq "path = \"$project_a\"" "$config_home/skillwick/config.toml"
 grep -Fq "path = \"$project_b\"" "$config_home/skillwick/config.toml"
 
@@ -59,6 +87,11 @@ grep -q '^2 skills in the current inventory\.$' "$temporary/list-a"
 grep -q '^shared@' "$temporary/list-a"
 grep -q '^project-a@' "$temporary/list-a"
 ! grep -q '^project-b@' "$temporary/list-a"
+project_a_id=$(sed -n 's/^\(project-a@[0-9a-f]*\).*/\1/p' "$temporary/list-a")
+[ -n "$project_a_id" ]
+run_a read --raw "$project_a_id" | grep -q '^---$'
+run_a --json read project-a | python3 -c 'import json,sys; value=json.load(sys.stdin); assert value["version"] == 3; assert value["results"][0]["name"] == "project-a"'
+run_a doctor --strict --require shared --require project-a >/dev/null
 run_a_child list >"$temporary/list-a-child"
 grep -q '^project-a@' "$temporary/list-a-child"
 ! grep -q '^project-b@' "$temporary/list-a-child"
@@ -67,17 +100,22 @@ grep -q '^2 skills in the current inventory\.$' "$temporary/list-b"
 grep -q '^shared@' "$temporary/list-b"
 grep -q '^project-b@' "$temporary/list-b"
 ! grep -q '^project-a@' "$temporary/list-b"
+if run_a doctor --require missing >/dev/null 2>&1; then
+  exit 1
+else
+  test "$?" -eq 3
+fi
 
 # Ordinary lookup reconciles current files, but an unchanged inventory does
 # not replace the durable snapshot.
-cache="$cache_home/skillwick/index-v3.sqlite"
+cache="$cache_home/skillwick/index-v4.sqlite"
 run_a list >/dev/null
-before_hash=$(shasum -a 256 "$cache" | awk '{print $1}')
-before_mtime=$(stat -f '%m' "$cache")
+before_hash=$(sha256 "$cache")
+before_mtime=$(mtime "$cache")
 sleep 1
 run_a list >/dev/null
-test "$(shasum -a 256 "$cache" | awk '{print $1}')" = "$before_hash"
-test "$(stat -f '%m' "$cache")" = "$before_mtime"
+test "$(sha256 "$cache")" = "$before_hash"
+test "$(mtime "$cache")" = "$before_mtime"
 
 # Policy file presence and content are freshness inputs even when the effective
 # policy remains discoverable.
@@ -85,7 +123,7 @@ mkdir -p "$shared/shared/agents"
 printf '%s\n' 'policy:' '  allow_implicit_invocation: true' \
   >"$shared/shared/agents/openai.yaml"
 run_a list >/dev/null
-test "$(shasum -a 256 "$cache" | awk '{print $1}')" != "$before_hash"
+test "$(sha256 "$cache")" != "$before_hash"
 rm "$shared/shared/agents/openai.yaml"
 run_a list >/dev/null
 
@@ -121,7 +159,8 @@ if run_a inspect project-b >/dev/null 2>&1; then exit 1; else test "$?" -eq 3; f
 # obsolete association readable from the former project.
 reassigned_config="$temporary/reassigned.toml"
 printf '%s\n' \
-  "roots = [\"$shared\"]" 'agent = "none"' \
+  'version = 1' 'discovery = "explicit"' 'agents = []' \
+  "roots = [\"$shared\"]" \
   '[[projects]]' "path = \"$project_a\"" "roots = [\"$project_b\"]" \
   '[[projects]]' "path = \"$project_b\"" 'roots = []' >"$reassigned_config"
 run_a --config "$reassigned_config" list | grep -q '^project-b@'
@@ -138,7 +177,8 @@ fi
 # last published snapshot. Making it valid lets the next operation recover.
 missing="$temporary/missing-root"
 missing_config="$temporary/missing.toml"
-printf '%s\n' "roots = [\"$shared\", \"$missing\"]" 'agent = "none"' \
+printf '%s\n' 'version = 1' 'discovery = "explicit"' 'agents = []' \
+  "roots = [\"$shared\", \"$missing\"]" \
   >"$missing_config"
 cp "$cache" "$temporary/cache-before-missing"
 if missing_output=$(run_a --config "$missing_config" list 2>&1); then
@@ -149,14 +189,15 @@ else
 fi
 test "$missing_status" -eq 3
 printf '%s\n' "$missing_output" | grep -q 'list'
-printf '%s\n' "$missing_output" | grep -q 'configured root does not exist'
+printf '%s\n' "$missing_output" | grep -Fq "$missing"
+printf '%s\n' "$missing_output" | grep -Eq 'configured root does not exist|No such file or directory'
 cmp -s "$temporary/cache-before-missing" "$cache"
 write_skill "$missing" recovered "Recovered configured root."
 run_a --config "$missing_config" list | grep -q '^recovered@'
 
 # An explicitly valid empty root set is a successful empty inventory.
 empty_config="$temporary/empty.toml"
-printf '%s\n' 'roots = []' 'agent = "none"' >"$empty_config"
+printf '%s\n' 'version = 1' 'discovery = "explicit"' 'agents = []' 'roots = []' >"$empty_config"
 run_a --config "$empty_config" list | grep -q '^0 skills in the current inventory\.$'
 
 # Native inventory modes and provider-specific options are gone, with no
@@ -167,6 +208,10 @@ for obsolete in \
 done
 
 run_a init --help | grep -q -- '--project-root'
+run_a init --help | grep -q -- '--discovery'
 ! run_a init --help | grep -q -- '--catalog'
 ! run_a init --help | grep -q -- '--codex-bin'
+for shell in bash zsh fish; do
+  test -n "$(run_a completions "$shell")"
+done
 echo "CLI acceptance passed"

@@ -1,60 +1,51 @@
 # Architecture
 
-Skillwick is one local Rust binary with one rebuildable SQLite database.
+Skillwick is one Rust CLI with a disposable SQLite FTS5 index. Package installers
+own skills; host metadata determines plugin eligibility; installed files own
+instruction content; calling agents decide what guidance to use.
 
 ```text
-explicit shared/project roots + --cwd
+configuration + cwd + bounded host metadata
                  │
                  ▼
-      resolve applicable roots
+          applicable source roots
                  │
                  ▼
-      bounded scan, parse, validate
+        scan, parse, fingerprint
                  │
                  ▼
-      complete atomic SQLite/FTS5 reconcile
+      complete scoped SQLite snapshot
                  │
                  ▼
-      lexical search, counts, inspection
+     exact lookup or lexical retrieval
                  │
                  ▼
-      selected live-file read
+    verified-copy grouping / live read
+                 │
+                 ▼
+       human, raw, or JSON output
 ```
 
 ## Ownership
 
-- Existing installers own skill packages and package updates.
-- Skillwick owns its configuration, derived index, canonical context file,
-  agent reference, and integration journal.
-- Configured roots and installed files are discovery authority. The SQLite
-  database is rebuildable derived state.
-- Agents decide which returned instructions to select and follow.
+- `config` owns strict configuration, environment paths, and project associations.
+- `discovery` resolves eligible shared, Codex, and Claude sources. Its bounded
+  Codex subprocess lists installed plugin metadata; it never starts an agent
+  server or installs, updates, authenticates, or executes a package.
+- `sources` scans only resolved roots, rejects unauthorized escapes and unsupported
+  path encodings, and parses bounded instructions and invocation policy.
+- `metadata` parses and fingerprints the same instruction bytes.
+- `inventory` coordinates complete reconciliation and cache locking. Failures
+  retain the previous publication; stale inventory is not a successful result.
+- `index` owns scoped SQLite records and atomic publication.
+- `search` owns deterministic FTS5 ranking, exact resolution, and grouping after
+  applicability/policy filtering and before result limits.
+- `package` owns bounded inspection and complete package fingerprints. Incomplete
+  fingerprints never establish that copies are identical.
+- `integration` owns setup plans, locks, ownership receipts, and recovery.
+- `cli`, `doctor`, and `output` own invocation, diagnostics, and rendering.
 
-## Modules
-
-- `config` resolves XDG paths, explicit roots, project associations, and the
-  normalized working directory.
-- `sources` resolves applicable roots, scans bounded package trees, validates
-  canonical paths, and rejects unauthorized symlink escapes.
-- `metadata` parses bounded `SKILL.md` frontmatter and invocation policy.
-- `package` lists bounded live package entries without following symlinks.
-- `index` owns SQLite schema, root/scope associations, locking, and atomic
-  publication.
-- `inventory` reconciles complete source scans before a lookup and keeps the
-  explicit maintenance refresh command on the same path.
-- `search` owns scope-filtered SQLite queries, token normalization, and
-  deterministic lexical ranking.
-- `integration` owns reversible context/reference edits and managed setup.
-- `doctor` reports source, scope, cache, and integration health.
-- `cli` maps commands to those owning modules.
-
-Every inventory-backed lookup reconciles its applicable roots. An unchanged
-inventory reuses SQLite. A changed inventory is collected and validated fully
-before publication; failed updates preserve the previous database and fail the
-affected lookup. Selected instructions are read from their validated live file,
-not from a second copy stored in SQLite.
-
-The production path is local and lexical. It does not install packages, execute
-instruction files, start an agent server, require a daemon, or use a remote
-service. Search and inspection JSON uses version 2 envelopes. List adds a
-complete `total` count, and human search output bounds each result independently.
+Selected content is revalidated and read from the live file. SQLite never stores
+an authoritative copy of instructions. JSON preserves exact values; terminal
+rendering escapes control characters separately. Lexical search is the only
+production retrieval path. No model runtime, prompt hook, or watcher is required.

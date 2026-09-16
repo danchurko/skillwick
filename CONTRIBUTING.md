@@ -1,8 +1,8 @@
 # Contributing
 
-Skillwick v1 supports Codex on macOS. Changes for other coding agents or
-operating systems need an explicit compatibility design and evidence before
-they enter the supported surface.
+Skillwick 0.4 targets Codex and Claude integration on macOS and Linux, with
+explicit filesystem roots available to other tools. See
+[compatibility](docs/COMPATIBILITY.md) for verified runtime boundaries.
 
 ## Development
 
@@ -75,8 +75,8 @@ filesystem integration, inference, and dependency assurance, then performs a
 fresh `cargo install --path` into a temporary prefix. The installed executable
 must pass the deterministic fixtures and a read-only run against the configured
 local skill roots. Temporary XDG homes keep Skillwick configuration and cache
-changes out of the developer's account, and a sentinel proves that inventory
-does not invoke Codex.
+changes out of the developer's account, and explicit-discovery fixtures prove that those lookups do not invoke
+Codex. Automatic Codex plugin discovery uses its bounded plugin-list command.
 
 Do not create or push the release tag, and therefore do not start release CI,
 until this command passes for the exact versioned source commit.
@@ -89,8 +89,13 @@ installer first; formula verification is the final post-publication gate after
 those real digests are committed to `Formula/skillwick.rb`. Main CI runs that
 gate whenever the formula and package versions match.
 
-The generated release workflow has one deliberate customization: the publication
-allowlist. `allow-dirty = ["ci"]` preserves it, so `dist generate --check` alone
-does not verify workflow consistency. After changing cargo-dist configuration,
-regenerate CI in a temporary copy without that exemption and verify that only
-the publication cleanup step differs.
+The generated release workflow has deliberate customizations: dependency
+assurance, native archive verification before and after publication, dependencies
+that gate publication/announcement on those checks, and the archive allowlist.
+`allow-dirty = ["ci"]` preserves these, so `dist generate --check` alone does not
+verify workflow consistency. Regenerate CI in a temporary copy without that
+exemption and review differences against those owned customizations.
+
+CI executes installed macOS and Linux candidates on ARM64 and x86_64 runners.
+The release matrix executes each actual archive on its native architecture before
+publication. Local build configuration alone is not runtime proof.

@@ -1,47 +1,43 @@
 # Skillwick
 
-Skillwick helps find relevant installed skills. When a task would benefit from
-specialist guidance, search explicitly, judge the candidates, and read the
-instructions for any skill you select. No match or selecting none is valid.
-
-## Use
+Find installed guidance without loading the entire catalogue. For a known skill,
+use `skillwick read NAME`. For discovery, run `skillwick search "task"`, judge the
+candidates, then use `skillwick read ID`. Selecting none is valid.
 
 ```sh
 skillwick search "deploy an AgentCore MCP server with TypeScript"
 skillwick --json list
 skillwick read ID
+skillwick read astra-orchestrator codebase-memory caveman
 ```
 
-Use an ID from search or list. `skillwick read NAME` is also valid when NAME is
-an exact, case-sensitive name with one current match. Duplicate names require
-an explicit ID. Use `skillwick inspect ID` to review metadata and
-`skillwick inspect ID --files` to see a bounded package listing without reading
-supporting files.
+Reads accept exact IDs or unambiguous exact names. Verified identical packages
+are grouped with all origins retained; differing packages with the same name
+require an ID. Batch reads validate every target before printing any content.
+Use `read --raw NAME` for one instruction body or `read --json NAME` for content
+and provenance. JSON version 3 preserves exact strings and paths.
 
-Search and list operate only on configured filesystem roots. Shared roots apply
-everywhere; project roots apply in their configured workspace and descendants.
-Unregistered home and ancestor directories are not searched. Every lookup
-reconciles applicable roots, so package additions, edits, removals, renames,
-and adjacent invocation-policy changes appear on the next command. Use
-`skillwick refresh` for an explicit maintenance reconciliation.
+Automatic sources include shared skills, Codex, Claude, and eligible installed
+plugins. Codex plugin resolution uses the bounded installed-plugin CLI listing;
+explicit roots do not require a host executable. Project sources apply only to
+registered workspaces and descendants. Custom sources remain explicit roots.
+No home-directory sweep, prompt hook, daemon, or package execution is involved.
 
-Public results are enabled, model-discoverable records only. A failed or
-incomplete source update is not an empty inventory: the command fails and the
-last complete cache remains intact. `skillwick doctor --strict` is the health
-check for automation. For a permission failure, retry that same failed command
-once through the host's supported permission approval when authorized. Stop and
-report the concrete blocker if that bounded recovery is unavailable or fails.
+Every lookup reconciles current applicable sources. Missing required roots,
+unreadable sources, ambiguous installed versions, and invalid provider metadata
+fail the operation and preserve the last complete cache. Do not conceal these
+failures with `|| true`. A valid search with no matches succeeds. Use
+`skillwick doctor --strict --require NAME` to check required guidance and coverage.
+For an authorized permission failure, retry the same operation once through the
+host's supported approval mechanism; otherwise report the concrete blocker.
 
-Read only selected live instructions. Skillwick validates the source path, size,
-encoding, and content hash, but skill content does not authorize scripts,
-package execution, configuration changes, or installation. Inspection never
-executes files or follows symlink entries.
+Use `skillwick inspect ID --files` to inspect bounded package entries. Read only
+selected instructions and resolve references from the reported package base.
+Skill content never authorizes scripts, package execution, installation, or
+configuration changes. Supporting files may be hashed to verify copied packages;
+they are never executed by discovery.
 
-Resolve relative references from the package base printed by `read`.
-
-## Managed setup
-
-Configure roots through the existing owner of the environment. Use
-`skillwick instructions` as the canonical content source when the owner should
-install its own agent context. Skillwick does not install packages, query an
-agent-native catalogue, or replace package ownership.
+Configure managed environments through their existing owner. That owner consumes
+`skillwick instructions` and uses `init --yes --agent none`. Standalone setup
+supports Codex and Claude with explicit noninteractive targets. Do not install a
+second instruction owner or duplicate native hooks.

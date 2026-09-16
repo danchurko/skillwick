@@ -3,6 +3,20 @@
 User-visible changes are recorded here. Release artifacts and verification
 evidence live in [implementation history](docs/IMPLEMENTATION.md).
 
+## [0.4.0] - Unreleased
+
+- Discover supported shared, Codex, and Claude sources automatically, with explicit
+  project registration and custom roots. Resolve active plugin versions without
+  scanning stale marketplace/cache contents.
+- Group verified package copies while preserving provenance and member IDs.
+- Add atomic batch reads, raw reads, lossless JSON v3 reads, required-skill health
+  checks, and Bash/Fish completions. Correct noninteractive setup exit codes.
+- Replace obsolete configuration/integration flows with schema-1 setup and owned,
+  recoverable Codex/Claude context references.
+- Add portable installation and candidate-binary verification gates for macOS and
+  Linux. Keep semantic models outside the production runtime.
+
+
 ## 0.3.0 - 2026-09-15
 
 - Make explicitly configured shared and project skill roots the sole discovery

@@ -5,12 +5,13 @@ use rusqlite::{
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
+    collections::BTreeSet,
     fs,
     path::{Path, PathBuf},
     time::Duration,
 };
 
-const SCHEMA_VERSION: i64 = 6;
+const SCHEMA_VERSION: i64 = 7;
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
     if path != Path::new(":memory:") {
@@ -61,7 +62,7 @@ fn schema_exists(db: &Connection) -> rusqlite::Result<bool> {
 }
 
 fn create_schema(db: &Connection) -> rusqlite::Result<()> {
-    db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE skills (id TEXT PRIMARY KEY, identity TEXT NOT NULL UNIQUE, name TEXT NOT NULL, description TEXT NOT NULL, keywords TEXT NOT NULL, degraded INTEGER NOT NULL, path TEXT NOT NULL, canonical TEXT NOT NULL, base TEXT NOT NULL, scope TEXT NOT NULL, source TEXT NOT NULL, source_kind TEXT NOT NULL, enabled INTEGER NOT NULL, model_discoverable INTEGER NOT NULL, policy_diagnostic TEXT, plugin_id TEXT, hash TEXT NOT NULL, source_fingerprint TEXT NOT NULL); CREATE INDEX skills_kind_canonical ON skills(source_kind, canonical); CREATE TABLE skill_roots (skill_id TEXT NOT NULL, root TEXT NOT NULL, scope TEXT NOT NULL, PRIMARY KEY(skill_id, root, scope)); CREATE INDEX skill_roots_root_scope ON skill_roots(root, scope); CREATE TABLE configured_roots (scope_key TEXT NOT NULL, root TEXT NOT NULL, PRIMARY KEY(scope_key, root)); CREATE VIRTUAL TABLE skills_fts USING fts5(id UNINDEXED, name, description, keywords); PRAGMA user_version=6;")
+    db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE skills (id TEXT PRIMARY KEY, identity TEXT NOT NULL UNIQUE, name TEXT NOT NULL, description TEXT NOT NULL, keywords TEXT NOT NULL, degraded INTEGER NOT NULL, path TEXT NOT NULL, canonical TEXT NOT NULL, base TEXT NOT NULL, scope TEXT NOT NULL, source TEXT NOT NULL, source_kind TEXT NOT NULL, enabled INTEGER NOT NULL, model_discoverable INTEGER NOT NULL, policy_diagnostic TEXT, plugin_id TEXT, hash TEXT NOT NULL, source_fingerprint TEXT NOT NULL); CREATE INDEX skills_kind_canonical ON skills(source_kind, canonical); CREATE TABLE skill_roots (skill_id TEXT NOT NULL, root TEXT NOT NULL, scope TEXT NOT NULL, PRIMARY KEY(skill_id, root, scope)); CREATE INDEX skill_roots_root_scope ON skill_roots(root, scope); CREATE TABLE configured_roots (scope_key TEXT NOT NULL, root TEXT NOT NULL, PRIMARY KEY(scope_key, root)); CREATE VIRTUAL TABLE skills_fts USING fts5(id UNINDEXED, name, description, keywords); PRAGMA user_version=7;")
 }
 
 fn validate_schema(db: &Connection) -> rusqlite::Result<()> {
@@ -131,6 +132,9 @@ pub fn refresh_filesystem_scope(
     roots: &[(PathBuf, String)],
     complete: bool,
 ) -> rusqlite::Result<()> {
+    if complete && scope_matches(db, skills, roots)? {
+        return Ok(());
+    }
     let transaction = db.transaction()?;
     if complete {
         for (root, scope) in roots {
@@ -155,10 +159,58 @@ pub fn refresh_filesystem_scope(
     transaction.commit()
 }
 
+// Compare the complete applicable scan before touching FTS or root associations.
+fn scope_matches(
+    db: &Connection,
+    skills: &[Skill],
+    roots: &[(PathBuf, String)],
+) -> rusqlite::Result<bool> {
+    let mut actual = BTreeSet::new();
+    let mut statement = db.prepare("SELECT s.identity,r.root,r.scope FROM skill_roots r JOIN skills s ON s.id=r.skill_id WHERE r.root=?1 AND r.scope=?2")?;
+    for (root, scope) in roots {
+        let rows = statement.query_map(params![canonical_root(root), scope], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })?;
+        actual.extend(rows.collect::<rusqlite::Result<Vec<_>>>()?);
+    }
+    let mut expected = BTreeSet::new();
+    for skill in skills {
+        let identity = format!("{}:{}", skill.source_kind, skill.canonical.display());
+        for (root, scope) in &skill.roots {
+            expected.insert((identity.clone(), canonical_root(root), scope.clone()));
+        }
+        let keywords = format!(
+            "{}{}{}",
+            skill.metadata.keywords,
+            search::alias_terms(&skill.metadata.name),
+            search::alias_terms(&skill.metadata.description)
+        );
+        let matches: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM skills WHERE identity=?1 AND name=?2 AND description=?3 AND keywords=?4 AND degraded=?5 AND path=?6 AND canonical=?7 AND base=?8 AND scope=?9 AND source=?10 AND source_kind=?11 AND enabled=?12 AND model_discoverable=?13 AND policy_diagnostic IS ?14 AND plugin_id IS ?15 AND hash=?16 AND source_fingerprint=?17)", params![identity,skill.metadata.name,skill.metadata.description,keywords,skill.metadata.degraded as i32,skill.path.to_string_lossy(),skill.canonical.to_string_lossy(),skill.base.to_string_lossy(),skill.scope,skill.source,skill.source_kind,skill.enabled as i32,skill.metadata.invocation_policy.model_discoverable() as i32,skill.metadata.policy_diagnostic,skill.plugin_id,skill.metadata.hash,skill.source_fingerprint], |row| row.get(0))?;
+        if !matches {
+            return Ok(false);
+        }
+    }
+    Ok(actual == expected)
+}
+
 pub fn replace_root_configuration(
     db: &mut Connection,
     configured: &[(String, String)],
 ) -> rusqlite::Result<()> {
+    let mut statement = db.prepare("SELECT scope_key,root FROM configured_roots")?;
+    let previous = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?
+        .collect::<rusqlite::Result<BTreeSet<_>>>()?;
+    if previous == configured.iter().cloned().collect() {
+        return Ok(());
+    }
+    drop(statement);
     let transaction = db.transaction()?;
     transaction.execute("DELETE FROM configured_roots", [])?;
     for (scope_key, root) in configured {
@@ -334,6 +386,8 @@ pub struct Counts {
     pub raw: usize,
     pub duplicates: usize,
     pub model_discoverable: usize,
+    pub groups: usize,
+    pub verified_copies: usize,
 }
 
 pub fn counts(db: &Connection, roots: Option<&[String]>) -> rusqlite::Result<Counts> {
@@ -361,11 +415,19 @@ pub fn counts(db: &Connection, roots: Option<&[String]>) -> rusqlite::Result<Cou
         }
         None => filesystem,
     };
+    let groups = search::all(db, None, roots)?;
+    let model_discoverable = groups
+        .iter()
+        .flat_map(|row| row.origins.iter().map(|origin| &origin.id))
+        .collect::<std::collections::HashSet<_>>()
+        .len();
     Ok(Counts {
         filesystem,
         raw,
         duplicates: raw.saturating_sub(filesystem),
-        model_discoverable: search::count(db, roots)?,
+        model_discoverable,
+        groups: groups.len(),
+        verified_copies: model_discoverable.saturating_sub(groups.len()),
     })
 }
 
@@ -450,6 +512,28 @@ mod tests {
                 policy_diagnostic: None,
             },
         }
+    }
+
+    #[test]
+    fn unchanged_scope_does_not_write_database_or_fts() {
+        let mut db = open(Path::new(":memory:")).unwrap();
+        let root = PathBuf::from("/skills");
+        let roots = vec![(root.clone(), "global".to_owned())];
+        let configured = vec![("shared".to_owned(), "/skills".to_owned())];
+        let mut item = skill("/skills/a/SKILL.md", "alpha");
+        item.roots = roots.clone();
+        replace_root_configuration(&mut db, &configured).unwrap();
+        refresh_filesystem_scope(&mut db, &[item.clone()], &roots, true).unwrap();
+        let changes = db.total_changes();
+        replace_root_configuration(&mut db, &configured).unwrap();
+        refresh_filesystem_scope(&mut db, &[item.clone()], &roots, true).unwrap();
+        assert_eq!(db.total_changes(), changes);
+        item.metadata.description = "updated".into();
+        refresh_filesystem_scope(&mut db, &[item], &roots, true).unwrap();
+        assert!(db.total_changes() > changes);
+        assert_eq!(search::query(&db, "updated", 5, None).unwrap().len(), 1);
+        refresh_filesystem_scope(&mut db, &[], &roots, true).unwrap();
+        assert!(search::all(&db, None, None).unwrap().is_empty());
     }
 
     #[test]

@@ -7,9 +7,10 @@ configured filesystem discovery plus local SQLite FTS5.
 
 ## Filesystem authority review
 
-The current product treats explicitly configured roots as its sole discovery
-authority. Shared roots apply in every workspace; project roots apply in their
-configured workspace and descendants. The cache is rebuildable derived state.
+The current product resolves automatic and explicit roots, then reads installed
+files as content authority. Provider metadata selects eligible active plugins.
+Project roots apply only in their configured workspace and descendants.
+The cache is rebuildable derived state.
 
 The implementation review established these boundaries:
 
@@ -32,8 +33,8 @@ Existing installers and users continue to own skill directories and updates.
 Earlier releases evaluated a Codex-native inventory contract. Codex CLI 0.154.0
 exposed `skills.include_instructions = false` and a newline-delimited
 `skills/list` app-server contract. That work is retained as historical release
-evidence only; the current product does not query, enable, suppress, or
-reconstruct an agent-native catalogue.
+evidence only; the current product does not use that app-server catalogue. Codex plugin
+eligibility instead uses a bounded `codex plugin list --json` call.
 
 The dated source review used these pinned references:
 
@@ -56,9 +57,9 @@ safety.
 
 | Path | Recall@5 | MRR@5 | nDCG@5 | Resource observation |
 | --- | ---: | ---: | ---: | --- |
-| [Lexical](../benchmarks/results/lexical-baseline-2026-09-13.json) | 0.886 | 0.837 | 0.850 | warm p95 93.8 ms; index 1.20 MB |
-| [Arctic XS](../benchmarks/results/embedding-arctic-xs-2026-09-13.json) | 0.743 | 0.630 | 0.659 | 90.4 MB artifact; peak RSS 821 MiB |
-| [TinyBERT over lexical](../benchmarks/results/reranker-tinybert-lexical-2026-09-13.json) | 0.952 | 0.929 | 0.935 | 4.52 MB artifact; warm p95 53.5 ms; peak RSS 206 MiB |
+| [Lexical](../benchmarks/results/lexical-baseline-2026-09-13.json) | 0.886 | 0.837 | 0.850 | warm p95 116.2 ms; index 1.20 MB |
+| [Arctic XS](../benchmarks/results/embedding-arctic-xs-2026-09-13.json) | 0.743 | 0.630 | 0.659 | 90.4 MB artifact; peak RSS 812 MiB |
+| [TinyBERT over lexical](../benchmarks/results/reranker-tinybert-lexical-2026-09-13.json) | 0.952 | 0.929 | 0.935 | 4.52 MB artifact; warm p95 136.6 ms; peak RSS 184 MiB |
 
 The embedding candidate was `Snowflake/snowflake-arctic-embed-xs`, revision
 `d8c86521100d3556476a063fc2342036d45c106f`, with the measured ONNX SHA-256

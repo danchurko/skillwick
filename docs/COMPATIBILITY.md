@@ -1,35 +1,31 @@
 # Compatibility
 
-Skillwick is a local filesystem tool. It does not require an agent server,
-agent-specific inventory, plugin registry, or writable agent state. This page
-records tested release boundaries; Rust source portability is not a release
-promise.
+Skillwick 0.4 targets macOS and Linux on ARM64 and x86_64. This is an unreleased
+source revision; published 0.3 artifacts do not acquire these capabilities.
+Windows is not a release target.
 
-## Calling workflows
+| Workflow | Contract |
+|---|---|
+| Shell, scripts and other agents | Explicit filesystem roots; no agent runtime required |
+| Codex automatic discovery | Native skills plus active plugins selected by bounded `codex plugin list --json` |
+| Claude automatic discovery | Native skills plus installed registry and effective enablement |
+| Codex and Claude setup | Reversible owned context/reference writes; no prompt hooks |
+| Workstation provisioning | Existing owner runs `instructions` and `init --agent none` |
 
-| Workflow | Status | Evidence |
+The Codex plugin JSON and Claude registry fixtures capture the host schemas
+observed on 2026-09-16. Unknown, incomplete or conflicting inputs fail visibly;
+cache directories alone never establish an active plugin version.
+
+| Platform | Release target | Runtime evidence |
 |---|---|---|
-| Local shell and scripted CLI use | Supported | CLI, SQLite, trust-boundary, and source-install checks |
-| Managed coding-agent integration | Supported where its owner can install the canonical context | Isolated integration checks and read-only local-corpus verification |
-| Other agent products | Not separately supported | No product-specific setup or release test is claimed |
+| macOS ARM64 | `aarch64-apple-darwin` | Installed candidate gates passed 2026-09-16 |
+| macOS x86_64 | `x86_64-apple-darwin` | Native CI configured; runtime not verified locally |
+| Linux ARM64 | `aarch64-unknown-linux-musl` | CI build and installed fixture gate required |
+| Linux x86_64 | `x86_64-unknown-linux-musl` | CI build and installed fixture gate required |
 
-Skillwick does not decide which skills an agent may invoke. Invocation-policy
-metadata controls model discoverability; reading a skill does not authorize
-executing its scripts or changing user configuration.
+CI configuration is a requirement, not evidence that a particular run passed.
+Older macOS releases, signing and notarization need separate release evidence.
 
-## Operating systems
-
-| Platform | Status | Evidence |
-|---|---|---|
-| macOS arm64 | Supported | Built and executed on the maintained local release host |
-| macOS x86_64 | Built; hardware unverified | Archive build only |
-| Linux | Not supported as a release artifact | No release target or runtime test |
-| Windows | Not supported as a release artifact | No release target or runtime test |
-
-Arm64 load commands target macOS 11.0. Intel load commands target macOS 10.12.
-Those older releases were not runtime-tested, so they are build metadata rather
-than a support claim.
-
-For current commands and failure semantics, see the [reference](REFERENCE.md).
-For installation, source ownership, and recovery, see [getting started](GETTING_STARTED.md)
-and [operations](OPERATIONS.md).
+Reading a skill does not authorize executing its scripts. Invocation policy
+controls discoverability. See [reference](REFERENCE.md) for CLI contracts and
+[operations](OPERATIONS.md) for ownership and recovery.

@@ -1,129 +1,98 @@
 # Operations
 
-Skillwick keeps a disposable SQLite/FTS5 index of installed skills. The
-configured filesystem roots and their files remain authoritative. This guide
-covers ownership, reconciliation, diagnosis, recovery, and removal; see the
-[command reference](REFERENCE.md) for exact syntax.
+Installed skill packages remain owned by their installers. Skillwick owns only
+its configuration, disposable cache, and explicitly installed context references.
+It never executes, updates, moves, or deletes skill packages.
 
-## Ownership and setup
+## Setup and state
 
-Existing package installers or users own skill directories and package updates.
-Skillwick owns its configuration, derived cache, optional context file, the
-reference it adds to an agent instructions file, and its integration journal.
-It does not install, update, move, or execute package files.
+Use `init --dry-run --yes --agent codex` to preview standalone integration.
+Repeat `--agent claude` to select both. Managed owners use `--agent none` and
+consume `skillwick instructions` themselves. No prompt or tool hooks are installed.
 
-Register shared roots explicitly:
-
-```sh
-skillwick init --yes --agent none --root "$HOME/.agents/skills"
-```
-
-Associate project roots with a workspace and its descendants:
-
-```sh
-skillwick --cwd "$PWD" init --yes --agent none \
-  --project-root "$PWD/.agents/skills"
-```
-
-Use `--dry-run --yes` to preview a plan. The default agent target is Codex and
-only adds Skillwick's context/reference integration; `--agent none` configures
-roots without writing integration files. A managed owner can consume
-`skillwick instructions` and retain ownership of its own destination.
-
-## Reconciliation and freshness
-
-Search, list, read, and inspect reconcile the roots applicable to their
-normalized `--cwd`. The scan is bounded and complete: it parses each
-`SKILL.md`, checks its adjacent `agents/openai.yaml` policy input, validates
-canonical paths, and rejects unauthorized symlink escapes. Overlapping roots
-share one canonical public record while raw root associations remain available
-for diagnostics and counts.
-
-An unchanged source and root configuration leave the durable cache untouched.
-When a source changes, Skillwick builds a complete scoped update and publishes
-it atomically. `refresh` requests that same reconciliation explicitly. A
-failure—such as a missing root, malformed metadata, unreadable file, or
-publication error—fails the affected command and retains the previous complete
-cache. It is not treated as an empty inventory.
-
-Concurrent reconciliations use the cache lock and preserve unrelated project
-associations. A lookup in one project cannot read a record associated only with
-another project, even when both use the same cache.
-
-## Diagnose state
-
-Use the regular report while investigating:
-
-```sh
-skillwick doctor
-```
-
-Use strict mode in automation:
-
-```sh
-skillwick doctor --strict
-```
-
-The report includes the normalized source count and current-scope counts for
-filesystem rows, raw root associations, canonical duplicates, and
-model-discoverable rows. Policy diagnostics remain visible even when a record
-is hidden from public search. `--json` returns the version-2 diagnostic object.
-
-The default state paths are:
+Default paths are:
 
 ```text
 $XDG_CONFIG_HOME/skillwick/config.toml
-$XDG_CACHE_HOME/skillwick/index-v3.sqlite
+$XDG_CACHE_HOME/skillwick/index-v4.sqlite
 $XDG_STATE_HOME/skillwick/integration.json
 ```
 
-`HOME`, `CODEX_HOME`, and the XDG variables can isolate a run for tests or
-recovery. The cache is derived state and may be rebuilt; it is not package
-ownership or a second instruction store.
+`HOME`, `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and XDG overrides support isolated
+operation. Configuration has strict `version = 1` and automatic or explicit
+source discovery. Unknown fields and obsolete configuration are errors.
 
-## Recover an incomplete source update
+## Re-setup after an upgrade
 
-If a lookup reports an incomplete or invalid source, correct the root or file
-and repeat the same command. An explicit refresh is also available:
+Preserve a copy of existing configuration before recreating it. Inspect custom
+roots and register them explicitly in the new setup; do not discard user-owned
+roots. Retire obsolete product-owned integration using its owning version before
+installing new integration. A changed context or unrecognized journal requires
+manual review; Skillwick never guesses ownership or overwrites it.
 
-```sh
-skillwick refresh
-skillwick search "your task"
-```
-
-The prior cache remains available to other successful contexts while the
-affected operation fails. After a refresh, select a newly returned ID rather
-than assuming an old ID is still current. `read` and `inspect` independently
-revalidate the selected live path, canonical identity, size, encoding, and
-content hash.
-
-## Inspect safely
-
-Inspect package shape before selecting a skill:
+For an obsolete configuration, move it aside rather than leaving an old schema
+at the active path. Review its roots before recreating them:
 
 ```sh
-skillwick inspect ID --files
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/skillwick"
+backup_dir="$(mktemp -d "$config_dir/backup.XXXXXX")"
+mv "$config_dir/config.toml" "$backup_dir/config.toml"
+# Standalone example; repeat --root for each reviewed custom root.
+skillwick init --yes --agent codex --discovery auto --root "$HOME/my-skills"
 ```
 
-The listing is bounded by entry count, depth, and relative-path size. It
-reports file types and classifications, does not read reference bodies, does
-not follow symlink entries, and never executes scripts. Read only the selected
-`SKILL.md`, then apply the calling workflow's own trust review.
+Retire product-owned integration with its owning binary before moving its journal;
+backing up a receipt alone does not remove the files it owns.
 
-## Remove integration
+On this managed workstation, mac-state remains the owner of persistent setup.
+Do not run a second standalone integration over its instruction files. Its
+`agents/apply.sh` uses auto discovery plus the selected agent's generated skill
+root. `agents/lib/skillwick.sh` owns `~/.codex/SKILLWICK.md` and
+`~/.claude/SKILLWICK.md` and their references. It checks required names after
+provisioning and refuses a competing product-owned integration. Prepare the
+configuration backup and reviewed custom roots before the separately authorized
+managed apply. This source change does not itself upgrade the installed binary.
 
-Uninstall removes only Skillwick-owned integration changes:
+## Coverage and failures
+
+```sh
+skillwick doctor --strict --require codebase-memory
+skillwick --json doctor
+```
+
+Health includes resolved sources, policy/eligibility diagnostics, grouped and raw
+counts, required names, and owned integration. Require the specific skills your
+workflow needs; a cache that works is not proof that a missing custom root was
+intended to be absent.
+
+Automatic optional directories can be absent. Missing explicit roots, unreadable
+present sources, unknown provider schemas, ambiguous active versions, or failed
+Codex plugin queries fail the affected operation. Explicit discovery avoids host
+executable dependencies. Correct the source and repeat the failed command.
+
+Complete scans publish atomically. Failures preserve the last complete publication
+but never use it as a stale successful answer. Concurrent project lookups remain
+scope-filtered. `refresh` uses the same reconciliation path; it is not a substitute
+for correcting source or configuration errors.
+
+## Identity and safe reads
+
+Canonical aliases deduplicate. Copies group only when complete bounded package
+fingerprints agree; every origin/member ID is retained. Symlinks, unreadable
+support files, special files, and exceeded fingerprint limits leave copies separate.
+Use an exact ID when a name resolves to different packages.
+
+`read` validates all selected files before printing bodies. `read --raw` emits one
+body. `--json` preserves exact strings and paths. `inspect ID --files` reports
+bounded package shape without executing files or outputting supporting bodies.
+
+## Removal
 
 ```sh
 skillwick uninstall
-```
-
-Add `--purge-cache` to remove the disposable local index as well:
-
-```sh
 skillwick uninstall --purge-cache
 ```
 
-Installed skills, unrelated instructions, unrelated agent settings, and
-unrelated hooks remain in place. If an owned file has drifted, uninstall
-reports the conflict instead of deleting another writer's changes.
+Removal is restricted to verified owned integration. Modified or unmanaged files,
+other tools' references/hooks, and all skill packages remain intact. Setup journals
+support recovery from partial writes and detect concurrent modifications.

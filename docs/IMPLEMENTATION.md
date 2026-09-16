@@ -8,7 +8,7 @@ current supported surface.
 
 ## Current filesystem-authority implementation
 
-The current implementation discovers only explicitly configured filesystem
+The 0.4 implementation resolves automatic provider roots and explicit filesystem
 roots. Shared roots apply globally; project roots apply to their configured
 workspace and descendants. Each lookup reconciles its applicable scope through
 the same bounded scan and atomic SQLite/FTS5 publication path used by
@@ -18,8 +18,8 @@ The current invariants are:
 
 - Installed package directories and updates remain owned by their existing
   installer or user; Skillwick stores derived metadata and integration state.
-- Canonical instruction paths are deduplicated for public results while raw
-  root associations remain available for scope and duplicate accounting.
+- Canonical instruction paths and byte-verified package copies are grouped for
+  public results while all origins and member IDs remain available.
 - Complete scans are required before publication. Missing roots, malformed
   metadata, unreadable files, and unauthorized symlink escapes fail closed and
   preserve the previous complete cache.
@@ -27,7 +27,7 @@ The current invariants are:
   content, and adjacent invocation-policy identity, presence, and content.
 - Reads validate the selected live path, size, encoding, and content hash.
 - Search, listing, reading, and package inspection never execute package
-  content or query a second agent-native inventory.
+  content. Automatic discovery consults bounded provider eligibility metadata.
 
 ## Shipped surface
 
@@ -40,7 +40,7 @@ The binary provides:
 - Transactional SQLite/FTS5 reconciliation, scoped cache locking, atomic
   publication, deterministic lexical ranking, and technical-token aliases.
 - `search`, `read`, `inspect`, `list`, `refresh`, `init`, `doctor`,
-  `uninstall`, versioned JSON output, and Zsh completions.
+  `uninstall`, lossless JSON v3 output, and Bash, Fish, and Zsh completions.
 - Bounded package inspection that reports shape without following symlink
   entries, reading support files, or executing scripts.
 - Reversible integration edits with atomic writes, restrictive permissions,
@@ -76,11 +76,33 @@ plan, a debug binary, a partial probe, or a test-only result as release
 evidence. Published artifact verification additionally checks archive layout,
 checksums, executable versions, installer behavior, and package metadata.
 
+## 0.4 source verification — 2026-09-16
+
+Verified locally on macOS ARM64, with an offline source-installed candidate in a
+temporary prefix. Executable SHA-256:
+`6fcc7aa023a02b929f7f983322166e30e35c970910d35bd0868b3b8cfeeb8ca7`.
+
+- Formatting, Clippy, 51 Rust tests, and CLI, setup, provider, invocation,
+  filesystem, distribution, documentation, benchmark and trust contracts passed.
+- The staged-tree pre-commit hook passed with deliberately invalid unstaged Rust;
+  staging that invalid Rust then repairing only the working file correctly failed.
+- Automatic local discovery verified 812 canonical records, 773 discoverable
+  packages and 543 groups. All five required managed skills resolved. Explicit
+  configured roots were checked separately; source/configuration hashes stayed
+  unchanged. These counts describe this host, not product expectations.
+- The installed three-skill read chain reached its following `sed` and `rg`
+  commands. No live agent instructions or installed binary were replaced.
+- Both frozen benchmark profiles retain 0.3 ranking quality. See the
+  [comparison](../benchmarks/README.md); this is not a semantic-quality gain.
+- Managed-owner source changes passed isolated mac-state provisioning checks.
+  Linux and Intel macOS runtime verification remains for the configured native CI
+  runners. No CI, publication, or live workstation-apply success is claimed here.
+
 ## Historical release evidence
 
 The following entries describe releases made before the filesystem-authority
 change. They remain useful provenance, but their native-inventory behavior is
-superseded by the current root-only contract.
+superseded by the current provider-resolution and filesystem-content contract.
 
 ### 0.2.2 exact-name reads - 2026-09-14
 
@@ -100,8 +122,9 @@ assurance, and a fresh source installation into a temporary prefix.
 
 ## Compatibility and limits
 
-- The maintained release target is macOS arm64. macOS x86_64 archives are
-  built, but hardware and older macOS runtime coverage remain limited.
+- Release targets are macOS and Linux on ARM64 and x86_64. Runtime evidence
+  is recorded separately in the compatibility page and CI; target configuration
+  alone does not prove platform execution.
 - Signing and notarization are not claimed unless a release verifies them.
 - Historical benchmark and model-research measurements are not production
   quality claims; current research boundaries are recorded in [research](RESEARCH.md).

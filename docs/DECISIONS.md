@@ -1,67 +1,45 @@
 # Product decisions
 
-This page records decisions that shape the shipped product. Proposed changes
-belong in GitHub issues until implemented.
+## Discovery and ownership
 
-## Deliberate local discovery
+Skillwick 0.4 discovers supported shared and host installations automatically.
+Custom roots and project associations remain explicit. Source eligibility comes
+from validated local installation metadata; Codex active plugin versions use its
+bounded installed-plugin CLI query. Installed files remain content authority.
+There is no whole-home sweep, agent-server inventory, daemon, or prompt hook.
+See [ADR-0001](adr/0001-agent-owned-inventory-freshness.md).
 
-Skillwick provides explicit lexical search over configured filesystem roots. A
-bare query is not a command. SQLite FTS5 remains the derived query index because
-it keeps ordinary operation local, deterministic, and independent of model
-artifacts.
+Existing installers retain package ownership. Setup changes only explicitly owned
+configuration and context references. Managed environments keep their current
+owner and use `skillwick instructions` with `--agent none` setup.
 
-## Filesystem authority and scope
+## Retrieval and grouping
 
-Configured roots are the only discovery authority. Shared roots apply in every
-project. A project association applies in its configured directory and all
-descendants. Unregistered home and ancestor directories are not searched.
-Installing a package inside a registered root does not require registering the
-package itself.
+Search remains explicit and local FTS5. Exact names and IDs resolve deterministically.
+Identical package copies group after scope/policy filtering; incomplete fingerprints
+never collapse uncertainty. Origins and member IDs remain available. Different
+same-name packages require explicit ID selection. Reading and inspection do not
+execute package content.
 
-The applicable root set is resolved from explicit configuration and the
-normalized `--cwd`. Results are filtered to that set even when projects share a
-SQLite database. Overlapping authorized references are canonically deduplicated;
-duplicate names remain explicit ambiguity errors.
+## Freshness and errors
 
-## Freshness and publication
+Lookups reconcile relevant sources before answering. A failed complete-source check
+preserves the prior cache and fails the affected command. Valid search no-match is
+success. All batch targets are validated before any instructions are printed.
+The derived cache may be rebuilt; source and configuration failures cannot be
+repaired by returning stale content.
 
-Every inventory-backed lookup reconciles the applicable roots. Fingerprints cover
-relevant file identities, instruction contents, adjacent invocation-policy
-metadata, its presence or absence, and the root set. Directory timestamps alone
-are not freshness proof.
+## Interfaces and upgrades
 
-An unchanged inventory reuses the published SQLite database. A changed inventory
-is collected and validated completely before atomic publication. Missing or
-unreadable required roots, invalid input, and publication failures preserve the
-previous database and fail the affected lookup rather than returning partial or
-stale results. `refresh` remains an explicit maintenance operation, not a normal
-workflow prerequisite.
+Configuration schema 1 rejects unknown fields and obsolete configuration. JSON
+version 3 preserves exact values and includes provenance and read content. Human
+output handles terminal safety separately. Raw reads emit one validated body.
+Old configuration requires explicit backup/re-setup; no legacy runtime or hidden
+command aliases remain. Native Windows support is outside the 0.4 scope.
 
-## Visibility and policy
+## Semantic retrieval
 
-Public inventory exposes only records under applicable roots that pass
-invocation-policy checks. Malformed policy fails closed for the affected skill
-and remains visible through diagnostics. Skillwick does not infer permission to
-execute a package from model discoverability or from a successful read.
-
-## Bounded and read-only discovery
-
-Metadata parsing, package inspection, and file reads have explicit bounds.
-Discovery and inspection never execute instruction or supporting files. Selected
-reads validate live path identity, file size, encoding, and content hash before
-returning content. Existing package owners retain package files and updates.
-
-## Integration ownership
-
-Setup is previewable and reversible. Managed environments register intended roots
-through their existing configuration owner and consume the canonical context
-from `skillwick instructions`. Setup preserves modified or unrelated files and
-settings; it does not copy, install, update, or remove skill packages.
-
-## Future semantic retrieval
-
-No embedding or reranker is part of the production path. Any future semantic
-work must remain optional and local, preserve lexical fallback, and pass a
-reviewable quality, latency, memory, artifact-size, and failure-behavior gate.
-The [research record](RESEARCH.md) contains candidates and historical evidence;
-it is not a production recommendation.
+No embedding or reranker ships in the runtime. Historical TinyBERT results justify
+further evaluation, not production adoption. New measurements separate independent
+case count, provenance, positive ranking, negative false positives, and complete
+CLI resource costs. See [research](RESEARCH.md).

@@ -1,6 +1,4 @@
-use crate::{
-    config, doctor, index, integration, inventory, metadata, output, package, search, sources,
-};
+use crate::{config, doctor, integration, inventory, metadata, output, package, search};
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use rusqlite::Connection;
 use sha2::{Digest, Sha256};
@@ -18,13 +16,13 @@ const SEARCH_MAX_LIMIT: usize = 20;
     name = "skillwick",
     version,
     about = "Find the skill. Load only what matters.",
-    long_about = "Find relevant installed skills without loading an entire catalogue. Search is explicit, bounded, local, and read-only until a setup or refresh command is requested."
+    long_about = "Find relevant installed skills without loading an entire catalogue. Search is explicit and bounded. Lookups reconcile installed sources into a disposable local cache."
 )]
 struct Args {
     #[arg(
         long,
         global = true,
-        help = "Emit version-2 JSON for search, list, inspect, or doctor"
+        help = "Emit version-3 JSON for search, list, inspect, read, or doctor"
     )]
     json: bool,
     #[arg(
@@ -66,7 +64,7 @@ enum Command {
         )]
         limit: Option<usize>,
     },
-    /// Read one selected instruction file after revalidating its source.
+    /// Read selected instructions after validating every requested target.
     ///
     /// This command prints text, does not execute package content, and returns
     /// exit code 3 when the target is missing, ambiguous, stale, or unavailable.
@@ -75,7 +73,11 @@ enum Command {
             value_name = "ID|NAME",
             help = "Exact ID returned by search or list, or exact case-sensitive name"
         )]
-        target: String,
+        #[arg(required = true, num_args = 1..)]
+        targets: Vec<String>,
+        /// Emit one validated instruction body without metadata.
+        #[arg(long, conflicts_with = "json")]
+        raw: bool,
     },
     /// Inspect selected metadata without reading package references.
     ///
@@ -93,7 +95,7 @@ enum Command {
     },
     /// Show every current-scope model-discoverable skill and its total count.
     ///
-    /// Output is exhaustive in text or version-2 JSON. The command reads the
+    /// Output is exhaustive in text or version-3 JSON. The command reads the
     /// local snapshot and returns an operational error if that snapshot fails.
     List,
     /// Rebuild the disposable local index from configured sources.
@@ -125,10 +127,15 @@ enum Command {
         #[arg(
             long,
             value_enum,
-            default_value = "codex",
-            help = "Agent integration target (default: codex; use none for no agent files)"
+            help = "Integration target; repeat codex/claude, or use none for no agent files"
         )]
-        agent: AgentArg,
+        agent: Vec<AgentArg>,
+        /// Choose supported automatic sources or explicit roots only.
+        #[arg(long, value_enum)]
+        discovery: Option<DiscoveryArg>,
+        /// Register automatic sources and integration for this workspace.
+        #[arg(long)]
+        project: bool,
         #[arg(
             long,
             value_name = "PATH",
@@ -155,6 +162,9 @@ enum Command {
     Doctor {
         #[arg(long, help = "Return exit code 3 when health is not valid")]
         strict: bool,
+        /// Require a uniquely resolvable skill; repeat for each required skill.
+        #[arg(long = "require", value_name = "NAME")]
+        required: Vec<String>,
     },
     /// Remove only Skillwick-owned integration and optionally its cache.
     Uninstall {
@@ -166,7 +176,7 @@ enum Command {
     },
     /// Generate zsh completion definitions to stdout.
     Completions {
-        #[arg(value_enum, help = "Shell to generate (currently: zsh)")]
+        #[arg(value_enum, help = "Shell to generate (bash, zsh, fish)")]
         shell: Shell,
     },
 }
@@ -174,11 +184,19 @@ enum Command {
 #[derive(Clone, Copy, ValueEnum)]
 enum AgentArg {
     Codex,
+    Claude,
     None,
 }
 #[derive(Clone, Copy, ValueEnum)]
 enum Shell {
     Zsh,
+    Bash,
+    Fish,
+}
+#[derive(Clone, Copy, ValueEnum)]
+enum DiscoveryArg {
+    Auto,
+    Explicit,
 }
 
 pub struct Failure(String, i32);
@@ -189,7 +207,7 @@ impl Failure {
 }
 impl std::fmt::Display for Failure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.0)
+        formatter.write_str(&output::clean(&self.0))
     }
 }
 impl From<rusqlite::Error> for Failure {
@@ -210,6 +228,15 @@ impl From<String> for Failure {
 
 pub fn run() -> Result<(), Failure> {
     let args = Args::parse();
+    match &args.command {
+        Some(Command::Search { limit, .. }) => {
+            search_limit(*limit)?;
+        }
+        Some(Command::Read { raw: true, targets }) if targets.len() != 1 => {
+            return Err(Failure("--raw requires exactly one target".into(), 2));
+        }
+        _ => {}
+    }
     if args.command.is_none() {
         write_text(&Args::command().render_help().to_string())?;
         return Ok(());
@@ -219,12 +246,13 @@ pub fn run() -> Result<(), Failure> {
             args.command.as_ref(),
             Some(Command::Search { .. })
                 | Some(Command::Inspect { .. })
+                | Some(Command::Read { .. })
                 | Some(Command::List)
                 | Some(Command::Doctor { .. })
         )
     {
         return Err(Failure(
-            "--json is supported only for search, list, inspect, and doctor".into(),
+            "--json is supported only for search, list, inspect, read, and doctor".into(),
             2,
         ));
     }
@@ -237,49 +265,69 @@ pub fn run() -> Result<(), Failure> {
             yes,
             dry_run,
             agent,
+            discovery,
+            project,
             root,
             project_root,
             instructions_file,
         }) => {
-            let agent = match agent {
-                AgentArg::Codex => config::Agent::Codex,
-                AgentArg::None => config::Agent::None,
-            };
-            let initialized = integration::init(
+            if agent.len() > 1 && agent.iter().any(|a| matches!(a, AgentArg::None)) {
+                return Err(Failure(
+                    "--agent none cannot be combined with other targets".into(),
+                    2,
+                ));
+            }
+            let agents = agent
+                .into_iter()
+                .map(|agent| match agent {
+                    AgentArg::Codex => config::Agent::Codex,
+                    AgentArg::Claude => config::Agent::Claude,
+                    AgentArg::None => config::Agent::None,
+                })
+                .collect();
+            integration::init(
                 &config_path,
                 integration::InitRequest {
                     cwd: cwd.clone(),
                     yes,
                     dry_run,
-                    agent,
+                    agents,
                     roots: root,
                     project_roots: project_root,
                     instructions_file,
+                    project,
+                    discovery: discovery.map(|value| match value {
+                        DiscoveryArg::Auto => config::Discovery::Auto,
+                        DiscoveryArg::Explicit => config::Discovery::Explicit,
+                    }),
                 },
-            )?;
-            if !dry_run && initialized.agent == config::Agent::None {
-                refresh(&initialized, &cwd)?;
-                config::save(&config_path, &initialized)?;
-            }
+            )
+            .map_err(|error| Failure(error.to_string(), error.code()))?;
         }
-        Some(Command::Uninstall { purge_cache }) => integration::uninstall(purge_cache)?,
-        Some(Command::Doctor { strict }) => {
-            let report = doctor::inspect(&config_path, &cwd)?;
+
+        Some(Command::Uninstall { purge_cache }) => integration::uninstall(purge_cache)
+            .map_err(|error| Failure(error.to_string(), error.code()))?,
+        Some(Command::Doctor { strict, required }) => {
+            let report = doctor::inspect(&config_path, &cwd, &required)?;
             if args.json {
                 write_text(&format!("{}\n", serde_json::to_string(&report).unwrap()))?;
             } else {
                 write_output(doctor::text(&report))?;
             }
-            if strict && !report.healthy {
+            if (strict || !required.is_empty()) && !report.healthy {
                 return Err(Failure("strict health check failed".into(), 3));
             }
         }
-        Some(Command::Completions { shell: Shell::Zsh }) => clap_complete::generate(
-            clap_complete::Shell::Zsh,
-            &mut Args::command(),
-            "skillwick",
-            &mut io::stdout(),
-        ),
+        Some(Command::Completions { shell }) => {
+            let shell = match shell {
+                Shell::Zsh => clap_complete::Shell::Zsh,
+                Shell::Bash => clap_complete::Shell::Bash,
+                Shell::Fish => clap_complete::Shell::Fish,
+            };
+            let mut bytes = Vec::new();
+            clap_complete::generate(shell, &mut Args::command(), "skillwick", &mut bytes);
+            write_output(io::stdout().lock().write_all(&bytes))?;
+        }
         Some(Command::Instructions) => write_text(integration::instructions())?,
         Some(Command::Refresh) => {
             let settings = config::load(&config_path)?;
@@ -287,11 +335,10 @@ pub fn run() -> Result<(), Failure> {
         }
         command => {
             let settings = config::load(&config_path)?;
-            let mut db = index::open(Path::new(":memory:"))?;
             let operation = command_name(command.as_ref());
-            prepare_index(&mut db, &settings, &cwd, operation)?;
-            let roots = sources::root_keys(&cwd, &settings.roots, &settings.projects);
-            dispatch(command, args.json, &mut db, Some(&roots))?;
+            let mut snapshot =
+                inventory::reconcile(&settings, &cwd, operation).map_err(Failure::from)?;
+            dispatch(command, args.json, &mut snapshot.db, Some(&snapshot.roots))?;
         }
     }
     Ok(())
@@ -313,7 +360,7 @@ fn dispatch(
         }
         Some(Command::List) => {
             let rows = search::all(db, None, roots)?;
-            let total = search::count(db, roots)?;
+            let total = rows.len();
             if json {
                 write_output(output::list_json(&rows, total))?;
             } else {
@@ -330,7 +377,7 @@ fn dispatch(
                 write_text(&inspect_text(&row))?;
             }
         }
-        Some(Command::Read { target }) => read(db, &target, roots)?,
+        Some(Command::Read { targets, raw }) => read(db, &targets, raw, json, roots)?,
         _ => unreachable!(),
     }
     Ok(())
@@ -346,37 +393,18 @@ fn command_name(command: Option<&Command>) -> &'static str {
     }
 }
 
-fn prepare_index(
-    db: &mut Connection,
-    settings: &config::Config,
-    cwd: &Path,
-    operation: &str,
-) -> Result<(), Failure> {
-    let refreshed = inventory::reconcile(settings, cwd, operation).map_err(|error| match &error {
-        inventory::Error::Database(database) => Failure(
-            format!(
-                "database error: {database}; run `skillwick refresh` to rebuild the disposable cache"
-            ),
-            1,
-        ),
-        inventory::Error::Filesystem(_) => Failure(error.to_string(), 3),
-    })?;
-    *db = refreshed;
-    Ok(())
+impl From<inventory::Error> for Failure {
+    fn from(error: inventory::Error) -> Self {
+        let code = match error {
+            inventory::Error::Database(_) => 1,
+            inventory::Error::Filesystem(_) => 3,
+        };
+        Failure(error.to_string(), code)
+    }
 }
 
 fn refresh(settings: &config::Config, cwd: &Path) -> Result<(), Failure> {
-    inventory::refresh(settings, cwd).map_err(|error| match &error {
-        inventory::Error::Database(database) => Failure(
-            format!(
-                "database error: {database}; run `skillwick refresh` to rebuild the disposable cache"
-            ),
-            1,
-        ),
-        inventory::Error::Filesystem(_) => {
-            Failure(error.to_string(), 3)
-        }
-    })
+    inventory::refresh(settings, cwd).map_err(Failure::from)
 }
 
 fn find(db: &Connection, id: &str, roots: Option<&[String]>) -> Result<search::ResultRow, Failure> {
@@ -415,7 +443,6 @@ fn resolve_read(
 }
 
 struct ValidatedSource {
-    path: PathBuf,
     bytes: Vec<u8>,
 }
 
@@ -444,14 +471,23 @@ fn validate_source(row: &search::ResultRow) -> Result<ValidatedSource, Failure> 
             3,
         ));
     }
-    Ok(ValidatedSource {
-        path: current,
-        bytes,
-    })
+    Ok(ValidatedSource { bytes })
 }
 
 fn inspect_text(row: &search::ResultRow) -> String {
-    format!("id: {}\nname: {}\nscope: {}\nsource: {}\nenabled: {}\nplugin: {}\npath: {}\ncanonical: {}\nbase: {}\nhash: {}\ndegraded: {}\ndescription: {}\n", output::clean(&row.id), output::clean(&row.name), output::clean(&row.scope), output::clean(&row.source), row.enabled, row.plugin_id.as_deref().map(output::clean).unwrap_or_default(), output::clean(&row.path), output::clean(&row.canonical), output::clean(&row.base), output::clean(&row.hash), row.degraded, output::clean(&row.description))
+    let mut text = format!("id: {}\nname: {}\nscope: {}\nsource: {}\nenabled: {}\nplugin: {}\npath: {}\ncanonical: {}\nbase: {}\nhash: {}\ndegraded: {}\ndescription: {}\n", output::clean(&row.id), output::clean(&row.name), output::clean(&row.scope), output::clean(&row.source), row.enabled, row.plugin_id.as_deref().map(output::clean).unwrap_or_default(), output::clean(&row.path), output::clean(&row.canonical), output::clean(&row.base), output::clean(&row.hash), row.degraded, output::clean(&row.description));
+    for origin in &row.origins {
+        text.push_str(&format!(
+            "origin: {} [{}] {}\n",
+            output::clean(&origin.id),
+            output::clean(&origin.scope),
+            output::clean(&origin.path)
+        ));
+    }
+    if let Some(diagnostic) = &row.grouping_diagnostic {
+        text.push_str(&format!("grouping: {}\n", output::clean(diagnostic)));
+    }
+    text
 }
 
 fn inspect_files(row: &search::ResultRow, json: bool) -> Result<(), Failure> {
@@ -464,20 +500,19 @@ fn inspect_files(row: &search::ResultRow, json: bool) -> Result<(), Failure> {
             .iter()
             .map(|entry| {
                 serde_json::json!({
-                    "path": output::clean(&entry.path),
+                    "path": entry.path.clone(),
                     "file_type": entry.file_type,
                     "classification": entry.classification,
-                    "extension": entry.extension.as_deref().map(output::clean),
+                    "extension": entry.extension.clone(),
                 })
             })
             .collect();
-        let result =
-            serde_json::to_value(output::clean_row(row.clone())).expect("serializable result");
+        let result = serde_json::to_value(row).expect("serializable result");
         let value = serde_json::json!({
             "version": output::JSON_VERSION,
             "results": [result],
             "package": {
-                "base": output::clean(&row.base),
+                "base": row.base,
                 "entries": entries,
                 "truncated": report.truncated,
                 "counts_scope": if report.truncated {
@@ -552,22 +587,57 @@ fn inspect_files(row: &search::ResultRow, json: bool) -> Result<(), Failure> {
     }
 }
 
-fn read(db: &Connection, target: &str, roots: Option<&[String]>) -> Result<(), Failure> {
-    let (row, resolved_name) = resolve_read(db, target, roots)?;
-    let source = validate_source(&row)?;
-    let body = String::from_utf8(source.bytes)
-        .map_err(|_| Failure("instruction file is not UTF-8".into(), 3))?;
-    write_text(&format!(
-        "{}path: {}\nbase: {}\n\n{}",
-        if resolved_name {
-            format!("resolved-id: {}\n", output::clean(&row.id))
-        } else {
-            String::new()
-        },
-        source.path.display(),
-        row.base,
-        body
-    ))
+fn read(
+    db: &Connection,
+    targets: &[String],
+    raw: bool,
+    json: bool,
+    roots: Option<&[String]>,
+) -> Result<(), Failure> {
+    if raw && targets.len() != 1 {
+        return Err(Failure("--raw requires exactly one target".into(), 2));
+    }
+    // Resolve and validate every target before emitting any instruction bytes.
+    let mut selected = Vec::new();
+    for target in targets {
+        let (row, resolved_name) = resolve_read(db, target, roots)?;
+        let source = validate_source(&row)?;
+        let body = String::from_utf8(source.bytes)
+            .map_err(|_| Failure("instruction file is not UTF-8".into(), 3))?;
+        selected.push((row, resolved_name, body));
+    }
+    if json {
+        let results: Vec<_> = selected
+            .into_iter()
+            .map(|(row, _, body)| {
+                let mut value = serde_json::to_value(row).expect("serializable metadata");
+                value["content"] = body.into();
+                value
+            })
+            .collect();
+        return write_text(&format!(
+            "{}\n",
+            serde_json::json!({"version": output::JSON_VERSION, "results": results})
+        ));
+    }
+    let mut text = String::new();
+    for (row, resolved_name, body) in selected {
+        if !raw {
+            if !text.is_empty() && !text.ends_with('\n') {
+                text.push('\n');
+            }
+            if resolved_name {
+                text.push_str(&format!("resolved-id: {}\n", output::clean(&row.id)));
+            }
+            text.push_str(&format!(
+                "path: {}\nbase: {}\n\n",
+                output::clean(&row.canonical),
+                output::clean(&row.base)
+            ));
+        }
+        text.push_str(&body);
+    }
+    write_text(&text)
 }
 
 fn emit(rows: &[search::ResultRow], json: bool) -> Result<(), Failure> {
@@ -608,6 +678,13 @@ mod tests {
     use super::*;
 
     #[test]
+    fn failures_escape_terminal_controls() {
+        let failure = Failure("source\u{1b}[31m\nmissing".into(), 3);
+        assert_eq!(failure.to_string(), "source\\u{1b}[31m\\nmissing");
+        assert_eq!(failure.code(), 3);
+    }
+
+    #[test]
     fn search_limit_accepts_one_through_twenty_with_five_default() {
         assert!(matches!(search_limit(None), Ok(5)));
         assert!(matches!(search_limit(Some(1)), Ok(1)));
@@ -645,6 +722,8 @@ mod tests {
             plugin_id: None,
             degraded: false,
             hash: unsafe_text,
+            origins: Vec::new(),
+            grouping_diagnostic: None,
         };
 
         let rendered = inspect_text(&row);

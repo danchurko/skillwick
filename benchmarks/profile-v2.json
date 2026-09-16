@@ -1,0 +1,313 @@
+{
+  "version": 2,
+  "kind": "skillwick-lexical-profile",
+  "frozen_at": "2026-09-16",
+  "provenance": {
+    "labels": "Frozen before candidate and baseline evaluation; not revised in response to rankings.",
+    "query_source": "One sanitized task from this user request; remaining cases are explicitly synthetic. No private session archives.",
+    "limits": "Small engineering corpus, not representative traffic or family-held-out generalization evidence.",
+    "privacy": "No user paths or skill instruction bodies."
+  },
+  "corpus": {
+    "total": 12,
+    "sha256": "67a3ce6b805e04bd854ca7b48e56c457aa3d379cc2c966eae43b531b87972e70",
+    "records": [
+      {
+        "fixture_id": "architecture",
+        "name": "architecture-review",
+        "description": "Review Rust architecture, module ownership, dependencies and boundaries.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "cli",
+        "name": "cli-contracts",
+        "description": "Test shell pipelines, chained commands, exit codes, raw output and JSON CLI contracts.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "discovery",
+        "name": "source-discovery",
+        "description": "Discover installed skills across Codex and Claude plugins; respect active versions and project scope.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "ownership",
+        "name": "package-ownership",
+        "description": "Audit installer ownership, preserve user files and deduplicate identical skill packages.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "ranking",
+        "name": "ranking-evaluation",
+        "description": "Evaluate search retrieval ranking using recall, nDCG, negative queries and benchmark provenance.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "rust",
+        "name": "rust-tests",
+        "description": "Run Rust cargo test, clippy and formatting checks; reproduce compiler failures.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "review",
+        "name": "code-review",
+        "description": "Review patches for correctness, regression risks and security boundaries.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "setup",
+        "name": "setup-integration",
+        "description": "Configure reversible agent setup, context references, atomic writes and uninstall recovery.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "aws",
+        "name": "deploy",
+        "description": "Deploy AWS Lambda services and validate cloud infrastructure.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "edge",
+        "name": "deploy",
+        "description": "Deploy static websites to Cloudflare Workers and edge hosting.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "sqlite",
+        "name": "sqlite-maintenance",
+        "description": "Maintain SQLite FTS5 indexes, transactions, cache reconciliation and corruption recovery.",
+        "source_family": "synthetic"
+      },
+      {
+        "fixture_id": "docs",
+        "name": "docs-audit",
+        "description": "Audit documentation links, command examples and release compatibility claims.",
+        "source_family": "synthetic"
+      }
+    ]
+  },
+  "heldout": {
+    "case_count": 20,
+    "query_count": 20,
+    "sha256": "730b9f57aff41e670061718f652163de372b80e4325248755d5dc3ef28170d39",
+    "cases": [
+      {
+        "id": "user-architecture",
+        "kind": "positive",
+        "queries": [
+          "Simplify skillwick architecture, discover skills automatically, deduplicate them, and test abnormal but correct chained command invocations."
+        ],
+        "relevant": [
+          "architecture",
+          "discovery",
+          "ownership",
+          "cli"
+        ],
+        "provenance": "user-task-sanitized"
+      },
+      {
+        "id": "cli-chain",
+        "kind": "positive",
+        "queries": [
+          "Test CLI pipelines and chained commands with reliable exit codes."
+        ],
+        "relevant": [
+          "cli"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "active-version",
+        "kind": "positive",
+        "queries": [
+          "Discover skills from the active installed Codex and Claude plugin version."
+        ],
+        "relevant": [
+          "discovery"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "copies",
+        "kind": "positive",
+        "queries": [
+          "Preserve installer ownership while deduplicating identical packages."
+        ],
+        "relevant": [
+          "ownership"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "measure",
+        "kind": "positive",
+        "queries": [
+          "Evaluate retrieval ranking recall and nDCG with negative benchmark queries."
+        ],
+        "relevant": [
+          "ranking"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "compile",
+        "kind": "positive",
+        "queries": [
+          "Reproduce a Rust compiler failure with cargo test and clippy."
+        ],
+        "relevant": [
+          "rust"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "patch",
+        "kind": "positive",
+        "queries": [
+          "Review this patch for regressions and security problems."
+        ],
+        "relevant": [
+          "review"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "undo",
+        "kind": "positive",
+        "queries": [
+          "Configure reversible agent context setup and safe uninstall."
+        ],
+        "relevant": [
+          "setup"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "cloud",
+        "kind": "positive",
+        "queries": [
+          "Deploy an AWS Lambda service."
+        ],
+        "relevant": [
+          "aws"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "edge",
+        "kind": "positive",
+        "queries": [
+          "Deploy a static website to Cloudflare Workers."
+        ],
+        "relevant": [
+          "edge"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "index",
+        "kind": "positive",
+        "queries": [
+          "Recover a corrupt SQLite FTS5 cache using a transaction."
+        ],
+        "relevant": [
+          "sqlite"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "docs",
+        "kind": "positive",
+        "queries": [
+          "Audit command examples and compatibility claims in documentation."
+        ],
+        "relevant": [
+          "docs"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "multiple",
+        "kind": "positive",
+        "queries": [
+          "Review Rust module boundaries and patch correctness."
+        ],
+        "relevant": [
+          "architecture",
+          "review"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "setup-ownership",
+        "kind": "positive",
+        "queries": [
+          "Review setup ownership and preserve user files during uninstall."
+        ],
+        "relevant": [
+          "ownership",
+          "setup"
+        ],
+        "provenance": "synthetic"
+      },
+      {
+        "id": "vocabulary",
+        "kind": "positive",
+        "queries": [
+          "The instructions are twins but came from different installers. Keep the provenance."
+        ],
+        "relevant": [
+          "ownership"
+        ],
+        "provenance": "synthetic-vocabulary-mismatch"
+      },
+      {
+        "id": "vocabulary-shell",
+        "kind": "positive",
+        "queries": [
+          "A pipe closes early and the next command never runs."
+        ],
+        "relevant": [
+          "cli"
+        ],
+        "provenance": "synthetic-vocabulary-mismatch"
+      },
+      {
+        "id": "negative-weather",
+        "kind": "negative",
+        "queries": [
+          "What is the weather tomorrow?"
+        ],
+        "relevant": [],
+        "provenance": "synthetic-negative"
+      },
+      {
+        "id": "negative-food",
+        "kind": "negative",
+        "queries": [
+          "Suggest a lentil soup recipe."
+        ],
+        "relevant": [],
+        "provenance": "synthetic-negative"
+      },
+      {
+        "id": "negative-overlap",
+        "kind": "negative",
+        "queries": [
+          "Review my holiday photographs."
+        ],
+        "relevant": [],
+        "provenance": "synthetic-negative"
+      },
+      {
+        "id": "negative-cloud",
+        "kind": "negative",
+        "queries": [
+          "What are cirrus clouds?"
+        ],
+        "relevant": [],
+        "provenance": "synthetic-negative"
+      }
+    ]
+  }
+}

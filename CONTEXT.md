@@ -16,7 +16,7 @@ environment, including their source and discovery-policy information.
 _Avoid_: Evaluation dataset
 
 **Skill root**:
-A configured directory containing installed skill packages. Its contents are
+A configured or provider-resolved directory containing installed skill packages. Its contents are
 an authoritative source for Skillwick discovery.
 _Avoid_: Agent-native catalogue
 

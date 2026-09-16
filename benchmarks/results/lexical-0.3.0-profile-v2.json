@@ -1,0 +1,248 @@
+{
+  "version": 2,
+  "kind": "skillwick-lexical-baseline",
+  "measured_at": "2026-09-16T14:13:44.352536+00:00",
+  "profile_sha256": "1b070dc155c6adcc17f223616d001ec409939bffe3d5d22ca54e7bb75ddb5bba",
+  "corpus_sha256": "67a3ce6b805e04bd854ca7b48e56c457aa3d379cc2c966eae43b531b87972e70",
+  "corpus_total": 12,
+  "conditions": {
+    "cold": "fresh process; kernel file caches were not flushed",
+    "warm": "separate automatically reconciled search processes, 3 samples per query",
+    "optional_model_artifacts": false
+  },
+  "machine": {
+    "system": "Darwin",
+    "release": "27.0.0",
+    "machine": "arm64",
+    "processor": "arm",
+    "python": "3.14.7"
+  },
+  "executable": {
+    "path": "skillwick",
+    "version": "skillwick 0.3.0",
+    "sha256": "80fa7c6d4fb004db8d34058e06daab46aece5e30173d9752d48e93ae72007f48",
+    "bytes": 4079728
+  },
+  "measurements": {
+    "startup_ms": {
+      "samples": 3,
+      "min": 2.960625,
+      "median": 3.144375,
+      "p95": 8.250417,
+      "max": 8.250417
+    },
+    "cold_search_ms": 7.862583,
+    "warm_search_ms": {
+      "samples": 60,
+      "min": 5.324541,
+      "median": 5.6419795,
+      "p95": 6.311417,
+      "max": 7.839333
+    },
+    "refresh_ms": 23.617334,
+    "index_bytes": 73728,
+    "search_max_rss_kib": 6224
+  },
+  "case_count": 20,
+  "quality": {
+    "queries": 20,
+    "positive_queries": 16,
+    "negative_queries": 4,
+    "positive_recall_at_5": 0.8125,
+    "positive_recall_at_20": 0.8125,
+    "positive_mrr_at_5": 0.875,
+    "positive_ndcg_at_5": 0.8281143519686431,
+    "negative_false_positive_rate": 0.0
+  },
+  "rankings": [
+    {
+      "id": "user-architecture:1",
+      "query": "Simplify skillwick architecture, discover skills automatically, deduplicate them, and test abnormal but correct chained command invocations.",
+      "relevant": [
+        "architecture",
+        "cli",
+        "discovery",
+        "ownership"
+      ],
+      "ranked": [
+        "cli",
+        "discovery"
+      ]
+    },
+    {
+      "id": "cli-chain:1",
+      "query": "Test CLI pipelines and chained commands with reliable exit codes.",
+      "relevant": [
+        "cli"
+      ],
+      "ranked": [
+        "cli",
+        "rust"
+      ]
+    },
+    {
+      "id": "active-version:1",
+      "query": "Discover skills from the active installed Codex and Claude plugin version.",
+      "relevant": [
+        "discovery"
+      ],
+      "ranked": [
+        "discovery"
+      ]
+    },
+    {
+      "id": "copies:1",
+      "query": "Preserve installer ownership while deduplicating identical packages.",
+      "relevant": [
+        "ownership"
+      ],
+      "ranked": [
+        "ownership"
+      ]
+    },
+    {
+      "id": "measure:1",
+      "query": "Evaluate retrieval ranking recall and nDCG with negative benchmark queries.",
+      "relevant": [
+        "ranking"
+      ],
+      "ranked": [
+        "ranking"
+      ]
+    },
+    {
+      "id": "compile:1",
+      "query": "Reproduce a Rust compiler failure with cargo test and clippy.",
+      "relevant": [
+        "rust"
+      ],
+      "ranked": [
+        "rust"
+      ]
+    },
+    {
+      "id": "patch:1",
+      "query": "Review this patch for regressions and security problems.",
+      "relevant": [
+        "review"
+      ],
+      "ranked": [
+        "review"
+      ]
+    },
+    {
+      "id": "undo:1",
+      "query": "Configure reversible agent context setup and safe uninstall.",
+      "relevant": [
+        "setup"
+      ],
+      "ranked": [
+        "setup"
+      ]
+    },
+    {
+      "id": "cloud:1",
+      "query": "Deploy an AWS Lambda service.",
+      "relevant": [
+        "aws"
+      ],
+      "ranked": [
+        "aws"
+      ]
+    },
+    {
+      "id": "edge:1",
+      "query": "Deploy a static website to Cloudflare Workers.",
+      "relevant": [
+        "edge"
+      ],
+      "ranked": [
+        "edge"
+      ]
+    },
+    {
+      "id": "index:1",
+      "query": "Recover a corrupt SQLite FTS5 cache using a transaction.",
+      "relevant": [
+        "sqlite"
+      ],
+      "ranked": [
+        "sqlite"
+      ]
+    },
+    {
+      "id": "docs:1",
+      "query": "Audit command examples and compatibility claims in documentation.",
+      "relevant": [
+        "docs"
+      ],
+      "ranked": [
+        "docs"
+      ]
+    },
+    {
+      "id": "multiple:1",
+      "query": "Review Rust module boundaries and patch correctness.",
+      "relevant": [
+        "architecture",
+        "review"
+      ],
+      "ranked": [
+        "architecture",
+        "review"
+      ]
+    },
+    {
+      "id": "setup-ownership:1",
+      "query": "Review setup ownership and preserve user files during uninstall.",
+      "relevant": [
+        "ownership",
+        "setup"
+      ],
+      "ranked": [
+        "ownership",
+        "architecture"
+      ]
+    },
+    {
+      "id": "vocabulary:1",
+      "query": "The instructions are twins but came from different installers. Keep the provenance.",
+      "relevant": [
+        "ownership"
+      ],
+      "ranked": []
+    },
+    {
+      "id": "vocabulary-shell:1",
+      "query": "A pipe closes early and the next command never runs.",
+      "relevant": [
+        "cli"
+      ],
+      "ranked": []
+    },
+    {
+      "id": "negative-weather:1",
+      "query": "What is the weather tomorrow?",
+      "relevant": [],
+      "ranked": []
+    },
+    {
+      "id": "negative-food:1",
+      "query": "Suggest a lentil soup recipe.",
+      "relevant": [],
+      "ranked": []
+    },
+    {
+      "id": "negative-overlap:1",
+      "query": "Review my holiday photographs.",
+      "relevant": [],
+      "ranked": []
+    },
+    {
+      "id": "negative-cloud:1",
+      "query": "What are cirrus clouds?",
+      "relevant": [],
+      "ranked": []
+    }
+  ]
+}

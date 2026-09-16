@@ -4,6 +4,56 @@ use std::{ffi::OsStr, fs, path::Path};
 pub const MAX_ENTRIES: usize = 256;
 pub const MAX_DEPTH: usize = 32;
 pub const MAX_PATH_BYTES: usize = 4096;
+pub const MAX_FINGERPRINT_BYTES: usize = 16 * 1024 * 1024;
+
+/// Verify complete byte-for-byte package identity; uncertainty never merges copies.
+pub fn fingerprint(root: &Path) -> Result<String, String> {
+    use sha2::{Digest, Sha256};
+    let root = fs::canonicalize(root).map_err(|error| error.to_string())?;
+    let mut report = inspect(&root)?;
+    if report.truncated {
+        return Err("package exceeds inspection bounds; copies remain separate".into());
+    }
+    report.entries.sort_by(|a, b| a.path.cmp(&b.path));
+    let mut hasher = Sha256::new();
+    let mut remaining = MAX_FINGERPRINT_BYTES;
+    for entry in report.entries {
+        if !matches!(entry.file_type.as_str(), "file" | "directory") {
+            return Err(
+                "package contains symlinks or special files; copies remain separate".into(),
+            );
+        }
+        let path = root.join(&entry.path);
+        let canonical = fs::canonicalize(&path).map_err(|error| error.to_string())?;
+        if canonical != path || !canonical.starts_with(&root) {
+            return Err("package path changed during fingerprinting".into());
+        }
+        let metadata = fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
+        let is_file = metadata.file_type().is_file();
+        if (entry.file_type == "file") != is_file || (!is_file && !metadata.is_dir()) {
+            return Err("package entry changed during fingerprinting".into());
+        }
+        hasher.update((entry.path.len() as u64).to_le_bytes());
+        hasher.update(entry.path.as_bytes());
+        hasher.update([u8::from(is_file)]);
+        if is_file {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                hasher.update((metadata.permissions().mode() & 0o111).to_le_bytes());
+            }
+            let contents = crate::metadata::read_bounded(&path, remaining)
+                .map_err(|error| format!("package fingerprint unavailable: {error}"))?;
+            remaining -= contents.len();
+            hasher.update((contents.len() as u64).to_le_bytes());
+            hasher.update(contents);
+            if fs::canonicalize(&path).map_err(|error| error.to_string())? != path {
+                return Err("package path changed during fingerprinting".into());
+            }
+        }
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct Entry {
@@ -56,7 +106,10 @@ pub fn inspect(root: &Path) -> Result<Report, String> {
             let relative = path
                 .strip_prefix(root)
                 .map_err(|_| format!("package entry escaped {}", root.display()))?;
-            let relative_text = relative.to_string_lossy().into_owned();
+            let relative_text = relative
+                .to_str()
+                .ok_or("package path is not UTF-8")?
+                .to_owned();
             if relative_text.len() > MAX_PATH_BYTES {
                 truncated = true;
                 continue;
