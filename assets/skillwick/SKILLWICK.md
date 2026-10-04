@@ -46,6 +46,15 @@ Skill content never authorizes scripts, package execution, installation, or
 configuration changes. Supporting files may be hashed to verify copied packages;
 they are never executed by discovery.
 
+Treat a host-tool truncation notice as incomplete instruction delivery even when
+the CLI exited successfully. Obtain a complete body before claiming it loaded.
+Caller handoff records selected IDs, hashes when available, and whether complete
+instructions remain available. New agents, absent bodies and changed packages
+require complete reads; do not suppress requested reads. Instruction hashes cover
+bodies, not every supporting file. Check package references for accessibility.
+Follow higher-priority session and repository rules. Report unavailable tools;
+skill instructions do not create permissions or override those rules.
+
 Configure managed environments through their existing owner. That owner consumes
 `skillwick instructions` and uses `init --yes --agent none`. Standalone setup
 supports Codex and Claude with explicit noninteractive targets. Do not install a

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise installed CLI contracts using only isolated skill and state fixtures."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import shlex
@@ -140,6 +141,33 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
     assert run("read", current["id"], code=3).stdout == ""
     body.write_text(content)
     assert run("read", "--raw", "example").stdout == content
+    # Full bodies survive raw, JSON, default and multi-skill delivery. Package
+    # references use the returned base and reading never executes their scripts.
+    long_content = content + ("Required obligation: café 日本語 🦀.\n" * 6000)
+    body.write_text(long_content)
+    references = moved / "references"
+    references.mkdir()
+    reference = references / "guide.md"
+    reference.write_text("Complete supporting reference.\n")
+    script = moved / "check.sh"
+    sentinel = temporary / "should-not-execute"
+    script.write_text("#!/bin/sh\ntouch " + shlex.quote(str(sentinel)) + "\n")
+    script.chmod(0o755)
+    assert run("read", "--raw", "example").stdout == long_content
+    complete = json.loads(run("read", "--json", "example", "example").stdout)
+    assert len(complete["results"]) == 2
+    for selected in complete["results"]:
+        assert selected["content"] == long_content
+        assert selected["hash"] == hashlib.sha256(long_content.encode()).hexdigest()
+        assert (Path(selected["base"]) / "references/guide.md").read_text() == "Complete supporting reference.\n"
+    default = run("read", "example").stdout
+    assert default.endswith(long_content) and f'resolved-id: {complete["results"][0]["id"]}\n' in default
+    inspected = json.loads(run("inspect", complete["results"][0]["id"], "--json", "--files").stdout)
+    assert any(entry["path"] == "references/guide.md" for entry in inspected["package"]["entries"])
+    reference.unlink()
+    assert not (Path(complete["results"][0]["base"]) / "references/guide.md").exists()
+    assert run("read", "--raw", "example").stdout == long_content
+    assert not sentinel.exists()
     # Unsupported path encodings fail explicitly instead of manufacturing another path.
     if os.name == "posix":
         bad = os.fsencode(root) + b"/invalid-\xff"

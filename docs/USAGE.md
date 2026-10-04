@@ -103,3 +103,31 @@ package changes do not require a separate refresh.
 
 See [reference](REFERENCE.md) for commands and formats and [operations](OPERATIONS.md)
 for recovery, setup ownership, and uninstall.
+
+## Complete instruction delivery and handoff
+
+Read selected instructions in a dedicated operation, with enough tool output
+budget for all bodies. Raw output is exactly one UTF-8 body; JSON preserves each
+body with its selected identity, instruction hash and package base. Default
+output prints the base before the body. CLI bodies are bounded at 1 MiB and are
+not summarized. A host tool can truncate a successful CLI result: inspect its
+truncation notice and obtain the complete read before claiming guidance loaded.
+Do not combine required reads with large source dumps.
+
+Resolve relative references from each returned `base`, then check that the
+supporting file is accessible. `inspect ID --files` can describe package shape;
+it does not guarantee that every referenced file exists or is readable. Report
+missing or inaccessible references explicitly. Reading and inspecting never
+executes package content.
+
+Caller handoff records each selected ID, its `hash` when available, and whether
+complete instructions remain in the receiving agent's context. Read again when
+the body is absent, the package changed, or a new agent needs the instructions.
+An instruction hash identifies the body, not all supporting files. Never suppress
+a requested read based on another agent's earlier use or a historical ID.
+
+Skill instructions remain subject to system, session and repository priority.
+If a named tool is unavailable, report that limitation and use an authorized
+available equivalent when suitable. Reading a skill does not authorize scripts,
+installation, external messages or unrelated actions; package changes remain
+with the package's owner.
