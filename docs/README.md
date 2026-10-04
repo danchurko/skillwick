@@ -37,3 +37,5 @@ work until it is implemented and released.
 The [shipped agent context](../assets/skillwick/SKILLWICK.md) is the canonical
 content installed for Codex. This map explains where to find the surrounding
 product documentation; it does not create a second command contract.
+
+- [Optional reranking](RERANKING.md): setup-persisted TinyBERT/JEV and unchanged search commands.

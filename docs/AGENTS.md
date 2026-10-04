@@ -18,7 +18,10 @@ load. Read only selected live instructions, resolve relative references from
 the printed package base, and keep package scripts and supporting files
 non-executing until independently authorized.
 
-Search is explicit and local. No match is valid. The calling workflow owns
+Search is explicit; candidate retrieval stays local. An installation can opt into
+hosted reranking, which sends the query and candidate names/descriptions with
+opaque labels. Bodies, paths, provenance, and public IDs stay local. See
+[reranking](RERANKING.md). No match is valid. The calling workflow owns
 relevance, selection, orchestration, permissions, and whether to delegate.
 Skillwick does not require a search on every turn or a subagent for every task.
 Stable managed instructions may read one known skill by exact, case-sensitive

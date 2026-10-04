@@ -154,6 +154,9 @@ enum Command {
             help = "Use PATH for the owned agent context reference"
         )]
         instructions_file: Option<PathBuf>,
+        /// Select the optional local or hosted search reranker.
+        #[arg(long, value_enum, value_name = "BACKEND")]
+        reranker: Option<RerankerArg>,
     },
     /// Diagnose configuration, cache, inventory coverage, and integration health.
     ///
@@ -197,6 +200,13 @@ enum Shell {
 enum DiscoveryArg {
     Auto,
     Explicit,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum RerankerArg {
+    None,
+    Tinybert,
+    Jev,
 }
 
 pub struct Failure(String, i32);
@@ -270,6 +280,7 @@ pub fn run() -> Result<(), Failure> {
             root,
             project_root,
             instructions_file,
+            reranker,
         }) => {
             if agent.len() > 1 && agent.iter().any(|a| matches!(a, AgentArg::None)) {
                 return Err(Failure(
@@ -299,6 +310,11 @@ pub fn run() -> Result<(), Failure> {
                     discovery: discovery.map(|value| match value {
                         DiscoveryArg::Auto => config::Discovery::Auto,
                         DiscoveryArg::Explicit => config::Discovery::Explicit,
+                    }),
+                    reranker: reranker.map(|value| match value {
+                        RerankerArg::None => config::RerankerBackend::None,
+                        RerankerArg::Tinybert => config::RerankerBackend::Tinybert,
+                        RerankerArg::Jev => config::RerankerBackend::Jev,
                     }),
                 },
             )
@@ -338,7 +354,13 @@ pub fn run() -> Result<(), Failure> {
             let operation = command_name(command.as_ref());
             let mut snapshot =
                 inventory::reconcile(&settings, &cwd, operation).map_err(Failure::from)?;
-            dispatch(command, args.json, &mut snapshot.db, Some(&snapshot.roots))?;
+            dispatch(
+                command,
+                args.json,
+                &settings.reranker,
+                &mut snapshot.db,
+                Some(&snapshot.roots),
+            )?;
         }
     }
     Ok(())
@@ -347,16 +369,24 @@ pub fn run() -> Result<(), Failure> {
 fn dispatch(
     command: Option<Command>,
     json: bool,
+    reranker: &config::Reranker,
     db: &mut Connection,
     roots: Option<&[String]>,
 ) -> Result<(), Failure> {
     match command {
         None => unreachable!("missing command handled before index setup"),
         Some(Command::Search { query, limit }) => {
-            emit(
-                &search::query(db, &query.join(" "), search_limit(limit)?, roots)?,
-                json,
+            let outcome = crate::reranker::search(
+                db,
+                &query.join(" "),
+                search_limit(limit)?,
+                roots,
+                reranker,
             )?;
+            if let Some(category) = outcome.diagnostic {
+                report_reranker_diagnostic(category);
+            }
+            emit(&outcome.rows, json)?;
         }
         Some(Command::List) => {
             let rows = search::all(db, None, roots)?;
@@ -645,6 +675,17 @@ fn emit(rows: &[search::ResultRow], json: bool) -> Result<(), Failure> {
         write_output(output::json(rows))
     } else {
         write_output(output::text(rows))
+    }
+}
+
+fn report_reranker_diagnostic(category: &'static str) {
+    let safe: String = category
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+        .take(48)
+        .collect();
+    if !safe.is_empty() {
+        eprintln!("reranking: {safe}; using lexical order");
     }
 }
 

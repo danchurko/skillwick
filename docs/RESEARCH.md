@@ -65,18 +65,29 @@ The embedding candidate was `Snowflake/snowflake-arctic-embed-xs`, revision
 `d8c86521100d3556476a063fc2342036d45c106f`, with the measured ONNX SHA-256
 `cf2698d30ff05da02c70a088313bad56e5c2f401d734cb24a8390d446111936c`. The
 reranker was `cross-encoder/ms-marco-TinyBERT-L2-v2`, revision
-`81d1926f67cb8eee2cbe17ca9f793c7c3bd20cc`, with ONNX SHA-256
+`81d1926f67cb8eee2c2be17ca9f793c7c3bd20cc`, with ONNX SHA-256
 `7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68`.
-Neither artifact is a Skillwick runtime dependency.
+Lexical-only installations use neither artifact.
 
-The decision remains lexical-only production retrieval. Any future model
-proposal must preserve deterministic lexical behavior when unavailable, pin
+FTS5 remains the production candidate retrieval path. The separately approved
+[optional reranking](RERANKING.md) decision preserves lexical order when a backend
+is unavailable and pins its runtime artifacts. Further model
+proposals must preserve deterministic lexical behavior when unavailable, pin
 and verify artifacts, and report quality, selected-instruction loading,
 candidate-pool size, latency, memory, storage, and failure behavior on a
 reviewable corpus.
 
 The full comparison and adoption rationale are in the
 [semantic adoption decision](research/semantic-adoption.md).
+
+## Hosted JEV evaluation
+
+The separate [JEV SDK experiment](research/jev-evaluation.md) compares hosted
+reranking with fresh lexical and pinned TinyBERT runs on the frozen V1 and V2
+profiles. It records ranking, selection-oriented measures, confidence, hosted
+latency, failures, usage, estimated cost, and model identity. It remains outside
+the default lexical retrieval path. Optional production JEV uses the shared
+request and validation contract through its setup-prepared runtime.
 
 ## Durable lessons
 

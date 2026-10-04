@@ -34,4 +34,20 @@ with tempfile.TemporaryDirectory(prefix="skillwick-corpus-contract-") as directo
     support.unlink()
     assert snapshot() != before, "support deletion must be protected"
 
+for backend in ("none", "tinybert", "jev"):
+    reranker = {"backend": backend}
+    if backend != "none":
+        reranker["runtime"] = "/private/tmp/prepared-runtime"
+    config = corpus.normalize_config({"version": 1, "reranker": reranker}, Path("config.toml"))
+    assert "reranker" not in config, "corpus proof must keep temporary configs lexical-only"
+for reranker in ({"backend": "invalid"}, {"backend": "jev"},
+                 {"backend": "none", "runtime": "/tmp/runtime"},
+                 {"backend": "jev", "runtime": "relative"}, {"secret": "invalid"}):
+    try:
+        corpus.normalize_config({"version": 1, "reranker": reranker}, Path("config.toml"))
+    except corpus.CorpusError:
+        pass
+    else:
+        raise AssertionError("invalid reranker accepted by corpus verifier")
+
 print("Local corpus preservation contract passed")

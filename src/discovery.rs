@@ -1280,6 +1280,7 @@ mod tests {
             }],
             agents: Vec::new(),
             instructions_file: None,
+            reranker: config::Reranker::default(),
         };
         let in_project = discover(&settings, &child);
         let outside = discover(&settings, &sibling);
@@ -1415,6 +1416,7 @@ mod tests {
             }],
             agents: Vec::new(),
             instructions_file: None,
+            reranker: config::Reranker::default(),
         };
         let project = fs::canonicalize(project).unwrap();
         let mut builder = Builder::new(&project);

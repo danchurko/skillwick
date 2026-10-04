@@ -34,6 +34,34 @@ pub enum Agent {
     None,
 }
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum RerankerBackend {
+    #[default]
+    None,
+    Tinybert,
+    Jev,
+}
+
+impl RerankerBackend {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Tinybert => "tinybert",
+            Self::Jev => "jev",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Reranker {
+    #[serde(default)]
+    pub backend: RerankerBackend,
+    #[serde(default)]
+    pub runtime: Option<PathBuf>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -48,6 +76,8 @@ pub struct Config {
     pub agents: Vec<Agent>,
     #[serde(default)]
     pub instructions_file: Option<PathBuf>,
+    #[serde(default)]
+    pub reranker: Reranker,
 }
 
 impl Default for Config {
@@ -59,6 +89,7 @@ impl Default for Config {
             projects: Vec::new(),
             agents: Vec::new(),
             instructions_file: None,
+            reranker: Reranker::default(),
         }
     }
 }
@@ -133,6 +164,13 @@ fn config_home() -> PathBuf {
 }
 
 pub fn load(path: &Path) -> Result<Config, String> {
+    crate::integration::load_config(path).map_err(|error| error.to_string())
+}
+
+/// Parse the current file without acquiring the setup lock or recovering a
+/// pending transaction. Setup uses this after recovery; dry-run uses it to
+/// preserve its no-write contract.
+pub(crate) fn load_unlocked(path: &Path) -> Result<Config, String> {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Config::default()),
@@ -184,6 +222,12 @@ pub fn load(path: &Path) -> Result<Config, String> {
             path.display()
         ));
     }
+    validate_reranker(&config.reranker).map_err(|detail| {
+        format!(
+            "invalid Skillwick reranker configuration at {}: {detail}",
+            path.display()
+        )
+    })?;
     Ok(config)
 }
 
@@ -194,8 +238,26 @@ pub fn save(path: &Path, config: &Config) -> Result<(), String> {
             config.version, CONFIG_VERSION
         ));
     }
+    validate_reranker(&config.reranker)
+        .map_err(|detail| format!("invalid Skillwick reranker configuration: {detail}"))?;
     let text = toml_edit::ser::to_string_pretty(config).map_err(|e| e.to_string())?;
     atomic_write(path, text.as_bytes(), 0o600)
+}
+
+pub(crate) fn validate_reranker(reranker: &Reranker) -> Result<(), String> {
+    match (reranker.backend, reranker.runtime.as_deref()) {
+        (RerankerBackend::None, None) => Ok(()),
+        (RerankerBackend::None, Some(_)) => Err("backend `none` cannot specify a runtime".into()),
+        (_, None) => Err(format!(
+            "backend `{}` requires an absolute runtime path",
+            reranker.backend.as_str()
+        )),
+        (_, Some(runtime)) if !runtime.is_absolute() => Err(format!(
+            "backend `{}` requires an absolute runtime path",
+            reranker.backend.as_str()
+        )),
+        (_, Some(_)) => Ok(()),
+    }
 }
 
 pub fn atomic_write(path: &Path, contents: &[u8], mode: u32) -> Result<(), String> {
@@ -265,6 +327,7 @@ mod tests {
         assert!(config.roots.is_empty());
         assert!(config.projects.is_empty());
         assert!(config.agents.is_empty());
+        assert_eq!(config.reranker, Reranker::default());
     }
 
     #[test]
@@ -282,6 +345,7 @@ mod tests {
             }],
             agents: vec![Agent::Codex, Agent::Claude],
             instructions_file: Some(temp.path().join("AGENTS.md")),
+            reranker: Reranker::default(),
         };
         save(&path, &config).unwrap();
         assert_eq!(load(&path).unwrap(), config);

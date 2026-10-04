@@ -15,7 +15,11 @@ owner and use `skillwick instructions` with `--agent none` setup.
 
 ## Retrieval and grouping
 
-Search remains explicit and local FTS5. Exact names and IDs resolve deterministically.
+Search remains explicit, with local FTS5 candidate retrieval. Setup can select
+optional local TinyBERT or hosted JEV reranking of at most 20 eligible grouped
+candidates. Hosted requests contain only the query and candidate names/descriptions
+with request-local labels. IDs, paths, provenance, and bodies remain local.
+Exact names and IDs resolve deterministically.
 Identical package copies group after scope/policy filtering; incomplete fingerprints
 never collapse uncertainty. Origins and member IDs remain available. Different
 same-name packages require explicit ID selection. Reading and inspection do not
@@ -39,7 +43,12 @@ command aliases remain. Native Windows support is outside the 0.4 scope.
 
 ## Semantic retrieval
 
-No embedding or reranker ships in the runtime. Historical TinyBERT results justify
-further evaluation, not production adoption. New measurements separate independent
+Lexical-only remains the default and needs no Python runtime or hosted account.
+The opt-in reranker decision in [issue #33](https://github.com/danchurko/skillwick/issues/33)
+supersedes the earlier decision to ship no reranker. Setup prepares pinned backends;
+search never installs dependencies or downloads models. Backend failures preserve
+lexical order with a sanitized diagnostic; inventory failures still fail closed.
+No embedding retrieval ships. Relevance fixtures justify optional evaluation, not
+claims of agent task success. New measurements separate independent
 case count, provenance, positive ranking, negative false positives, and complete
-CLI resource costs. See [research](RESEARCH.md).
+CLI resource costs. See [reranking](RERANKING.md) and [research](RESEARCH.md).

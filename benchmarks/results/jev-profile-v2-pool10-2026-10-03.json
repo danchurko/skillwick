@@ -1,0 +1,794 @@
+{
+  "result_schema_version": 1,
+  "version": 2,
+  "kind": "skillwick-jev-reranker-experiment",
+  "measured_at": "2026-10-03T19:16:04.278568+00:00",
+  "status": "completed",
+  "profile_sha256": "1b070dc155c6adcc17f223616d001ec409939bffe3d5d22ca54e7bb75ddb5bba",
+  "candidate_source_sha256": "f0ec7dc4161df13ebf497d2dd72a2c19b132a541ff91513e96b0cd8a7aafda40",
+  "corpus_sha256": "67a3ce6b805e04bd854ca7b48e56c457aa3d379cc2c966eae43b531b87972e70",
+  "candidate_source": {
+    "kind": "skillwick-lexical-baseline",
+    "pool_size": 20,
+    "provenance": {
+      "skillwick_commit": "f100e7e5c1160bdf6c88425bdb0f4ed465328efc",
+      "working_tree_dirty": true,
+      "implementations_sha256": {
+        "scripts/benchmark_metrics.py": "ddb281ee38faee7a3412a0b52dd779fca0cf9274b4a922ff4768a17442d43fa6",
+        "scripts/benchmark_profiles.py": "6a69f32412941b91c541e0a0dc443752c4f19709505e23a26547432e1b022917",
+        "scripts/benchmark-lexical.py": "ed3c4ba665177c753d27fe72a1db354b76cb8470994b37705a2a46c3aa4d88bc",
+        "scripts/benchmark-semantic.py": "783a1a3b3ce4117319a9d84bea1f62b13b157d77d8c8f63296b0fa6850ba3d3c",
+        "scripts/benchmark_jev.py": "1c952d1ef47b558e9c1cfee34588e267d6b1e9e3ca3d48e6d1ccdaec69d389c3"
+      }
+    }
+  },
+  "pool_size": 10,
+  "smoke": {
+    "enabled": false,
+    "requested_queries": 20,
+    "profile_queries": 20
+  },
+  "endpoint": {
+    "base_url": "https://api.typesafe.ai",
+    "method_path": "/v1/systemone"
+  },
+  "model": {
+    "requested": "jev-latest",
+    "expected_resolved": "jev-1.13.0",
+    "resolved_counts": {
+      "jev-1.13.0": 14
+    },
+    "changed_from_requested": true,
+    "sdk_version": "0.7.2"
+  },
+  "formulation": {
+    "method": "one batched TypeSafe system_one request per query",
+    "judgment": "independent binary Choice probability of relevant for each candidate",
+    "choice_labels": [
+      "relevant",
+      "not_relevant"
+    ],
+    "payload_fields": [
+      "task",
+      "candidate id",
+      "candidate name",
+      "candidate description"
+    ],
+    "candidate_ids": "request-local c000 labels map back to fixture identities in memory",
+    "timeouts_seconds": 15.0,
+    "retries": 0,
+    "confidence_threshold": 0.55,
+    "low_confidence_behavior": "preserve complete lexical order for that query",
+    "tie_breaking": "original lexical candidate order",
+    "payload_bytes_basis": "compact UTF-8 JSON size of whitelisted state and question specs; excludes SDK envelope and HTTP headers"
+  },
+  "runtime": {
+    "python": "3.14.8",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O"
+  },
+  "request_counts": {
+    "attempted": 14,
+    "valid_responses": 14,
+    "failed_requests": 0,
+    "single_request_per_query": true
+  },
+  "candidate_counts": {
+    "provider_attempts": {
+      "source_pool": {
+        "queries": 14,
+        "mean": 1.2857142857142858,
+        "min": 1,
+        "median": 1.0,
+        "max": 2
+      },
+      "scored_pool": {
+        "queries": 14,
+        "mean": 1.2857142857142858,
+        "min": 1,
+        "median": 1.0,
+        "max": 2
+      }
+    },
+    "all_selected_queries": {
+      "source_pool": {
+        "queries": 20,
+        "mean": 0.9,
+        "min": 0,
+        "median": 1.0,
+        "max": 2
+      },
+      "scored_pool": {
+        "queries": 20,
+        "mean": 0.9,
+        "min": 0,
+        "median": 1.0,
+        "max": 2
+      }
+    }
+  },
+  "usage": {
+    "input_tokens": 6695,
+    "output_tokens": 746,
+    "queries_missing_input_usage": 0,
+    "queries_missing_output_usage": 0
+  },
+  "payload_bytes": 11000,
+  "latency_ms": {
+    "samples": 14,
+    "min": 198.137166,
+    "median": 218.98502100000002,
+    "p95": 326.319041,
+    "max": 326.319041
+  },
+  "wall_time_ms": 3472.1805,
+  "outcomes": {
+    "reranked": 14,
+    "skipped_no_candidates": 6
+  },
+  "failure_categories": {},
+  "quality": {
+    "queries": 20,
+    "positive_queries": 16,
+    "negative_queries": 4,
+    "positive_recall_at_5": 0.8125,
+    "positive_recall_at_20": 0.8125,
+    "positive_mrr_at_5": 0.875,
+    "positive_ndcg_at_5": 0.8281143519686431,
+    "negative_false_positive_rate": 0.0
+  },
+  "retrieval_metrics": {
+    "queries": 20,
+    "positive_queries": 16,
+    "negative_queries": 4,
+    "positive_recall_at_5": 0.8125,
+    "positive_recall_at_20": 0.8125,
+    "positive_mrr_at_5": 0.875,
+    "positive_ndcg_at_5": 0.8281143519686431,
+    "negative_false_positive_rate": 0.0,
+    "positive_recall_at_1": 0.765625,
+    "positive_recall_at_3": 0.8125
+  },
+  "selection_metrics": {
+    "queries": 20,
+    "positive_queries": 16,
+    "improved": 0,
+    "worsened": 0,
+    "unchanged_materially": 20,
+    "ordering_changed": 2,
+    "relevant_displacement_queries": 0,
+    "relevant_displacements": 0,
+    "relevant_ranked_first": 14,
+    "negative_correct_abstentions": 4,
+    "relevant_ranked_first_rate": 0.875,
+    "material_change_measure": "top-five discounted relevant gain, then relevant coverage; negative cases use empty-result correctness",
+    "selected_skill_success": null,
+    "selection_limit": "labels describe relevance, not actual agent selection or task success; no unique best skill is labelled for multi-relevant cases"
+  },
+  "lexical_baseline_quality": {
+    "queries": 20,
+    "positive_queries": 16,
+    "negative_queries": 4,
+    "positive_recall_at_5": 0.8125,
+    "positive_recall_at_20": 0.8125,
+    "positive_mrr_at_5": 0.875,
+    "positive_ndcg_at_5": 0.8281143519686431,
+    "negative_false_positive_rate": 0.0
+  },
+  "aggregate_metrics_status": "complete",
+  "cost": {
+    "actual_cost_usd": null,
+    "actual_cost_reason": "Provider billing totals were not returned or independently verified.",
+    "estimated_cost_usd": 0.00028119,
+    "estimated_cost_complete": true,
+    "estimated_cost_scope": "valid responses in this run",
+    "estimate_reason": "This is a usage-based estimate, not a provider billing total.",
+    "pricing": {
+      "source": "https://docs.typesafe.ai/models; official TypeSafe model pricing verified 2026-10-03",
+      "input_usd_per_million_tokens": 0.042,
+      "output_usd_per_million_tokens": 0.0,
+      "as_of": "2026-10-03"
+    }
+  },
+  "confidence_metrics": {
+    "candidate_choice_confidence": {
+      "correct": {
+        "count": 18,
+        "min": 0.88,
+        "median": 0.995,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "incorrect": {
+        "count": 0,
+        "min": null,
+        "median": null,
+        "p95": null,
+        "max": null
+      }
+    },
+    "reranked_first_probability_relevant": {
+      "relevant": {
+        "count": 14,
+        "min": 0.98,
+        "median": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "irrelevant": {
+        "count": 0,
+        "min": null,
+        "median": null,
+        "p95": null,
+        "max": null
+      }
+    },
+    "scope": "binary judgement correctness includes valid low-confidence responses; top-ranked probabilities include only accepted reranks",
+    "limit": "confidence in a binary relevance judgement is not a calibrated probability of successful skill selection"
+  },
+  "provenance": {
+    "skillwick_commit": "f100e7e5c1160bdf6c88425bdb0f4ed465328efc",
+    "working_tree_dirty": true,
+    "implementations_sha256": {
+      "scripts/benchmark_metrics.py": "ddb281ee38faee7a3412a0b52dd779fca0cf9274b4a922ff4768a17442d43fa6",
+      "scripts/benchmark_profiles.py": "6a69f32412941b91c541e0a0dc443752c4f19709505e23a26547432e1b022917",
+      "scripts/benchmark-lexical.py": "ed3c4ba665177c753d27fe72a1db354b76cb8470994b37705a2a46c3aa4d88bc",
+      "scripts/benchmark-semantic.py": "783a1a3b3ce4117319a9d84bea1f62b13b157d77d8c8f63296b0fa6850ba3d3c",
+      "scripts/benchmark_jev.py": "1c952d1ef47b558e9c1cfee34588e267d6b1e9e3ca3d48e6d1ccdaec69d389c3"
+    }
+  },
+  "rankings": [
+    {
+      "id": "user-architecture:1",
+      "query": "Simplify skillwick architecture, discover skills automatically, deduplicate them, and test abnormal but correct chained command invocations.",
+      "relevant": [
+        "architecture",
+        "cli",
+        "discovery",
+        "ownership"
+      ],
+      "ranked": [
+        "discovery",
+        "cli"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 2,
+      "scored_candidate_count": 2,
+      "payload_bytes": 1258,
+      "latency_ms": 244.087334,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 610,
+        "output_tokens": 81
+      },
+      "judgments": [
+        {
+          "candidate": "cli",
+          "choice": "relevant",
+          "confidence": 0.93,
+          "probability_relevant": 0.96
+        },
+        {
+          "candidate": "discovery",
+          "choice": "relevant",
+          "confidence": 0.99,
+          "probability_relevant": 0.99
+        }
+      ]
+    },
+    {
+      "id": "cli-chain:1",
+      "query": "Test CLI pipelines and chained commands with reliable exit codes.",
+      "relevant": [
+        "cli"
+      ],
+      "ranked": [
+        "cli",
+        "rust"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 2,
+      "scored_candidate_count": 2,
+      "payload_bytes": 1155,
+      "latency_ms": 211.523958,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 588,
+        "output_tokens": 82
+      },
+      "judgments": [
+        {
+          "candidate": "cli",
+          "choice": "relevant",
+          "confidence": 1.0,
+          "probability_relevant": 1.0
+        },
+        {
+          "candidate": "rust",
+          "choice": "not_relevant",
+          "confidence": 0.99,
+          "probability_relevant": 0.0
+        }
+      ]
+    },
+    {
+      "id": "active-version:1",
+      "query": "Discover skills from the active installed Codex and Claude plugin version.",
+      "relevant": [
+        "discovery"
+      ],
+      "ranked": [
+        "discovery"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 667,
+      "latency_ms": 215.158458,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 440,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "discovery",
+          "choice": "relevant",
+          "confidence": 1.0,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "copies:1",
+      "query": "Preserve installer ownership while deduplicating identical packages.",
+      "relevant": [
+        "ownership"
+      ],
+      "ranked": [
+        "ownership"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 649,
+      "latency_ms": 326.319041,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 439,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "ownership",
+          "choice": "relevant",
+          "confidence": 0.99,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "measure:1",
+      "query": "Evaluate retrieval ranking recall and nDCG with negative benchmark queries.",
+      "relevant": [
+        "ranking"
+      ],
+      "ranked": [
+        "ranking"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 665,
+      "latency_ms": 208.583708,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 441,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "ranking",
+          "choice": "relevant",
+          "confidence": 0.99,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "compile:1",
+      "query": "Reproduce a Rust compiler failure with cargo test and clippy.",
+      "relevant": [
+        "rust"
+      ],
+      "ranked": [
+        "rust"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 626,
+      "latency_ms": 212.794666,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 437,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "rust",
+          "choice": "relevant",
+          "confidence": 1.0,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "patch:1",
+      "query": "Review this patch for regressions and security problems.",
+      "relevant": [
+        "review"
+      ],
+      "ranked": [
+        "review"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 616,
+      "latency_ms": 209.263041,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 430,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "review",
+          "choice": "relevant",
+          "confidence": 1.0,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "undo:1",
+      "query": "Configure reversible agent context setup and safe uninstall.",
+      "relevant": [
+        "setup"
+      ],
+      "ranked": [
+        "setup"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 644,
+      "latency_ms": 263.990458,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 433,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "setup",
+          "choice": "relevant",
+          "confidence": 1.0,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cloud:1",
+      "query": "Deploy an AWS Lambda service.",
+      "relevant": [
+        "aws"
+      ],
+      "ranked": [
+        "aws"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 572,
+      "latency_ms": 242.652167,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 422,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "aws",
+          "choice": "relevant",
+          "confidence": 1.0,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "edge:1",
+      "query": "Deploy a static website to Cloudflare Workers.",
+      "relevant": [
+        "edge"
+      ],
+      "ranked": [
+        "edge"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 590,
+      "latency_ms": 217.631334,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 431,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "edge",
+          "choice": "relevant",
+          "confidence": 1.0,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "index:1",
+      "query": "Recover a corrupt SQLite FTS5 cache using a transaction.",
+      "relevant": [
+        "sqlite"
+      ],
+      "ranked": [
+        "sqlite"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 639,
+      "latency_ms": 198.137166,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 439,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "sqlite",
+          "choice": "relevant",
+          "confidence": 1.0,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "docs:1",
+      "query": "Audit command examples and compatibility claims in documentation.",
+      "relevant": [
+        "docs"
+      ],
+      "ranked": [
+        "docs"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 1,
+      "scored_candidate_count": 1,
+      "payload_bytes": 628,
+      "latency_ms": 220.338708,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 429,
+        "output_tokens": 42
+      },
+      "judgments": [
+        {
+          "candidate": "docs",
+          "choice": "relevant",
+          "confidence": 1.0,
+          "probability_relevant": 1.0
+        }
+      ]
+    },
+    {
+      "id": "multiple:1",
+      "query": "Review Rust module boundaries and patch correctness.",
+      "relevant": [
+        "architecture",
+        "review"
+      ],
+      "ranked": [
+        "review",
+        "architecture"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 2,
+      "scored_candidate_count": 2,
+      "payload_bytes": 1129,
+      "latency_ms": 307.651333,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 573,
+        "output_tokens": 81
+      },
+      "judgments": [
+        {
+          "candidate": "architecture",
+          "choice": "relevant",
+          "confidence": 0.88,
+          "probability_relevant": 0.94
+        },
+        {
+          "candidate": "review",
+          "choice": "relevant",
+          "confidence": 0.96,
+          "probability_relevant": 0.98
+        }
+      ]
+    },
+    {
+      "id": "setup-ownership:1",
+      "query": "Review setup ownership and preserve user files during uninstall.",
+      "relevant": [
+        "ownership",
+        "setup"
+      ],
+      "ranked": [
+        "ownership",
+        "architecture"
+      ],
+      "outcome": "reranked",
+      "fallback_category": null,
+      "provider_status": "valid_response",
+      "source_candidate_count": 2,
+      "scored_candidate_count": 2,
+      "payload_bytes": 1162,
+      "latency_ms": 240.1125,
+      "resolved_model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 583,
+        "output_tokens": 82
+      },
+      "judgments": [
+        {
+          "candidate": "ownership",
+          "choice": "relevant",
+          "confidence": 0.99,
+          "probability_relevant": 1.0
+        },
+        {
+          "candidate": "architecture",
+          "choice": "not_relevant",
+          "confidence": 0.91,
+          "probability_relevant": 0.04
+        }
+      ]
+    },
+    {
+      "id": "vocabulary:1",
+      "query": "The instructions are twins but came from different installers. Keep the provenance.",
+      "relevant": [
+        "ownership"
+      ],
+      "ranked": [],
+      "outcome": "skipped_no_candidates",
+      "fallback_category": "no_candidates",
+      "provider_status": "not_attempted",
+      "source_candidate_count": 0,
+      "scored_candidate_count": 0,
+      "payload_bytes": 0,
+      "latency_ms": null,
+      "resolved_model": null,
+      "usage": null,
+      "judgments": null
+    },
+    {
+      "id": "vocabulary-shell:1",
+      "query": "A pipe closes early and the next command never runs.",
+      "relevant": [
+        "cli"
+      ],
+      "ranked": [],
+      "outcome": "skipped_no_candidates",
+      "fallback_category": "no_candidates",
+      "provider_status": "not_attempted",
+      "source_candidate_count": 0,
+      "scored_candidate_count": 0,
+      "payload_bytes": 0,
+      "latency_ms": null,
+      "resolved_model": null,
+      "usage": null,
+      "judgments": null
+    },
+    {
+      "id": "negative-weather:1",
+      "query": "What is the weather tomorrow?",
+      "relevant": [],
+      "ranked": [],
+      "outcome": "skipped_no_candidates",
+      "fallback_category": "no_candidates",
+      "provider_status": "not_attempted",
+      "source_candidate_count": 0,
+      "scored_candidate_count": 0,
+      "payload_bytes": 0,
+      "latency_ms": null,
+      "resolved_model": null,
+      "usage": null,
+      "judgments": null
+    },
+    {
+      "id": "negative-food:1",
+      "query": "Suggest a lentil soup recipe.",
+      "relevant": [],
+      "ranked": [],
+      "outcome": "skipped_no_candidates",
+      "fallback_category": "no_candidates",
+      "provider_status": "not_attempted",
+      "source_candidate_count": 0,
+      "scored_candidate_count": 0,
+      "payload_bytes": 0,
+      "latency_ms": null,
+      "resolved_model": null,
+      "usage": null,
+      "judgments": null
+    },
+    {
+      "id": "negative-overlap:1",
+      "query": "Review my holiday photographs.",
+      "relevant": [],
+      "ranked": [],
+      "outcome": "skipped_no_candidates",
+      "fallback_category": "no_candidates",
+      "provider_status": "not_attempted",
+      "source_candidate_count": 0,
+      "scored_candidate_count": 0,
+      "payload_bytes": 0,
+      "latency_ms": null,
+      "resolved_model": null,
+      "usage": null,
+      "judgments": null
+    },
+    {
+      "id": "negative-cloud:1",
+      "query": "What are cirrus clouds?",
+      "relevant": [],
+      "ranked": [],
+      "outcome": "skipped_no_candidates",
+      "fallback_category": "no_candidates",
+      "provider_status": "not_attempted",
+      "source_candidate_count": 0,
+      "scored_candidate_count": 0,
+      "payload_bytes": 0,
+      "latency_ms": null,
+      "resolved_model": null,
+      "usage": null,
+      "judgments": null
+    }
+  ]
+}

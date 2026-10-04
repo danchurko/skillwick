@@ -1,5 +1,5 @@
 use crate::{
-    config::{self, Agent, Config, Discovery},
+    config::{self, Agent, Config, Discovery, RerankerBackend},
     inventory,
 };
 use serde::{Deserialize, Serialize};
@@ -11,11 +11,16 @@ use std::{
     io::{self, IsTerminal, Write},
     path::{Path, PathBuf},
     process::Command,
+    sync::{Mutex, MutexGuard, TryLockError},
+    thread,
+    time::{Duration, Instant},
 };
 
 const CONTEXT: &str = include_str!("../assets/skillwick/SKILLWICK.md");
 const JOURNAL_VERSION: u32 = 3;
 const TRANSACTION_VERSION: u32 = 1;
+const CONFIG_READ_LOCK_WAIT: Duration = Duration::from_secs(5);
+static SETUP_MUTEX: Mutex<()> = Mutex::new(());
 
 pub fn instructions() -> &'static str {
     CONTEXT
@@ -31,6 +36,7 @@ pub struct InitRequest {
     pub project_roots: Vec<PathBuf>,
     pub instructions_file: Option<PathBuf>,
     pub discovery: Option<Discovery>,
+    pub reranker: Option<RerankerBackend>,
     pub project: bool,
 }
 
@@ -123,12 +129,19 @@ struct SetupPlan {
 
 struct SetupLock {
     path: PathBuf,
+    _process_guard: MutexGuard<'static, ()>,
 }
 
 impl Drop for SetupLock {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.path);
     }
+}
+
+pub(crate) fn load_config(config_path: &Path) -> Result<Config, Error> {
+    let _lock = acquire_lock_with_wait(Some(CONFIG_READ_LOCK_WAIT))?;
+    recover_pending()?;
+    config::load_unlocked(config_path).map_err(Error::Operational)
 }
 
 pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, Error> {
@@ -146,7 +159,7 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, Error> {
                 pending_path().display()
             ))?;
         }
-        let settings = config::load(config_path).map_err(Error::Operational)?;
+        let settings = config::load_unlocked(config_path).map_err(Error::Operational)?;
         let selected = select_agents(&settings, &request)?;
         let settings = merge_settings(settings, &request, &selected)?;
         let journal = read_journal()?.unwrap_or(Journal {
@@ -161,16 +174,24 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, Error> {
     // Recover an interrupted write before planning. Planning inspects current
     // destinations for ownership collisions, so a partial transaction must be
     // rolled back before those checks run.
-    let _lock = acquire_lock()?;
+    let lock = acquire_lock()?;
     recover_pending()?;
-    let settings = config::load(config_path).map_err(Error::Operational)?;
+    let config_before = read_optional(config_path)?;
+    let journal_before = read_optional(&journal_path())?;
+    let settings = config::load_unlocked(config_path).map_err(Error::Operational)?;
+    let previous_reranker = settings.reranker.clone();
     let selected = select_agents(&settings, &request)?;
-    let settings = merge_settings(settings, &request, &selected)?;
     let journal = read_journal()?.unwrap_or(Journal {
         version: JOURNAL_VERSION,
         targets: Vec::new(),
     });
+    // Backend selection may wait for a person; let readers keep using the
+    // current publication while the picker is open.
+    drop(lock);
+    let settings = merge_settings(settings, &request, &selected)?;
     let plan = build_plan(config_path, &request, settings, selected, journal)?;
+    // Confirmation and runtime preparation can take a long time; readers keep
+    // using the existing publication while those steps run.
     print_plan(&plan)?;
     if !request.yes {
         confirm()?;
@@ -179,6 +200,21 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, Error> {
     // Setup owns reconciliation so an applied configuration is immediately usable.
     inventory::prime(&plan.settings, &request.cwd)
         .map_err(|error| Error::Operational(error.to_string()))?;
+    crate::reranker::prepare(&plan.settings.reranker, Some(&previous_reranker))
+        .map_err(Error::Operational)?;
+
+    // Another setup may have published while preparation ran. Never apply a
+    // plan built from an older configuration or integration journal.
+    let _publication_lock = acquire_lock()?;
+    recover_pending()?;
+    if read_optional(config_path)? != config_before
+        || read_optional(&journal_path())? != journal_before
+    {
+        return Err(Error::Operational(
+            "Skillwick configuration or integration journal changed during setup; re-run `skillwick init`"
+                .into(),
+        ));
+    }
     apply_plan(&plan)
 }
 
@@ -228,6 +264,33 @@ fn merge_settings(
     request: &InitRequest,
     agents: &[Agent],
 ) -> Result<Config, Error> {
+    if let Some(backend) = request.reranker {
+        settings.reranker = crate::reranker::planned(backend);
+    } else if !request.yes && !request.dry_run && interactive() {
+        let current = settings.reranker.backend;
+        let starting_cursor = match current {
+            RerankerBackend::None => 0,
+            RerankerBackend::Tinybert => 1,
+            RerankerBackend::Jev => 2,
+        };
+        let options = vec!["none", "tinybert", "jev"];
+        let selected = inquire::Select::new("Reranking backend", options)
+            .with_starting_cursor(starting_cursor)
+            .prompt()
+            .map_err(|error| Error::Operational(error.to_string()))?;
+        let backend = match selected {
+            "none" => RerankerBackend::None,
+            "tinybert" => RerankerBackend::Tinybert,
+            "jev" => RerankerBackend::Jev,
+            _ => unreachable!("selection came from the fixed reranker options"),
+        };
+        if backend != current {
+            settings.reranker = crate::reranker::planned(backend);
+        }
+    }
+    if settings.reranker.backend == RerankerBackend::Jev {
+        settings.reranker = crate::reranker::planned(RerankerBackend::Jev);
+    }
     settings.agents = agents
         .iter()
         .copied()
@@ -340,6 +403,12 @@ fn build_plan(
     let mut summary = Vec::new();
     summary.push(format!("config: {}", config_path.display()));
     append_source_summary(&mut summary, &settings, request);
+    summary.push(format!("reranker: {}", settings.reranker.backend.as_str()));
+    if settings.reranker.backend == RerankerBackend::Jev {
+        summary.push(
+            "reranker: hosted API receives the query and candidate skill names/descriptions; credentials are stored separately".into(),
+        );
+    }
 
     for agent in agents {
         if agent == Agent::None {
@@ -460,6 +529,7 @@ fn build_plan(
         }
     }
 
+    config::validate_reranker(&settings.reranker).map_err(Error::Operational)?;
     let config_bytes = toml_edit::ser::to_string_pretty(&settings)
         .map_err(|error| Error::Operational(error.to_string()))?
         .into_bytes();
@@ -696,6 +766,18 @@ pub fn uninstall(purge_cache: bool) -> Result<(), Error> {
 }
 
 fn apply_changes(changes: Vec<Change>) -> Result<(), Error> {
+    // Check every destination before creating a recoverable transaction. If a
+    // user changed an owned file while setup was preparing, fail without
+    // leaving a pending journal that would block subsequent reads.
+    for change in &changes {
+        let current = read_optional(&change.path)?;
+        if current != change.before {
+            return Err(Error::Operational(format!(
+                "setup destination changed while waiting: {}",
+                change.path.display()
+            )));
+        }
+    }
     let transaction = Transaction {
         version: TRANSACTION_VERSION,
         committed: false,
@@ -932,11 +1014,27 @@ fn recover_pending() -> Result<(), Error> {
 }
 
 fn acquire_lock() -> Result<SetupLock, Error> {
+    acquire_lock_with_wait(None)
+}
+
+fn acquire_lock_with_wait(wait: Option<Duration>) -> Result<SetupLock, Error> {
+    let started = Instant::now();
+    let deadline = wait.map(|timeout| started + timeout);
     let directory = config::state_dir();
+    let path = directory.join("setup.lock");
+    let process_guard = loop {
+        match SETUP_MUTEX.try_lock() {
+            Ok(guard) => break guard,
+            Err(TryLockError::Poisoned(error)) => break error.into_inner(),
+            Err(TryLockError::WouldBlock) if wait_for_lock(deadline) => continue,
+            Err(TryLockError::WouldBlock) => {
+                return Err(lock_error(&path));
+            }
+        }
+    };
     fs::create_dir_all(&directory)
         .map_err(|error| Error::Operational(format!("{}: {error}", directory.display())))?;
-    let path = directory.join("setup.lock");
-    for attempt in 0..2 {
+    loop {
         let mut options = fs::OpenOptions::new();
         options.write(true).create_new(true);
         #[cfg(unix)]
@@ -950,26 +1048,47 @@ fn acquire_lock() -> Result<SetupLock, Error> {
                     .map_err(|error| Error::Operational(format!("{}: {error}", path.display())))?;
                 file.sync_all()
                     .map_err(|error| Error::Operational(format!("{}: {error}", path.display())))?;
-                return Ok(SetupLock { path });
+                return Ok(SetupLock {
+                    path,
+                    _process_guard: process_guard,
+                });
             }
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists && attempt == 0 => {
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
                 if stale_lock(&path) {
                     fs::remove_file(&path).map_err(|remove_error| {
                         Error::Operational(format!("{}: {remove_error}", path.display()))
                     })?;
                     continue;
                 }
-                return Err(Error::Operational(format!(
-                    "another Skillwick setup is in progress: {}",
-                    path.display()
-                )));
+                if wait_for_lock(deadline) {
+                    continue;
+                }
+                return Err(lock_error(&path));
             }
             Err(error) => {
                 return Err(Error::Operational(format!("{}: {error}", path.display())));
             }
         }
     }
-    unreachable!("lock acquisition either succeeds or returns")
+}
+
+fn wait_for_lock(deadline: Option<Instant>) -> bool {
+    let Some(deadline) = deadline else {
+        return false;
+    };
+    let remaining = deadline.saturating_duration_since(Instant::now());
+    if remaining.is_zero() {
+        return false;
+    }
+    thread::sleep(remaining.min(Duration::from_millis(25)));
+    true
+}
+
+fn lock_error(path: &Path) -> Error {
+    Error::Operational(format!(
+        "another Skillwick setup is in progress: {}",
+        path.display()
+    ))
 }
 
 fn stale_lock(path: &Path) -> bool {

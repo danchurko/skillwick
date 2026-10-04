@@ -1,6 +1,12 @@
 # Semantic retrieval adoption decision
 
-Status: decided 14 September 2026. Skillwick remains lexical-only.
+Status: historical decision from 14 September 2026. Optional reranking was later
+approved in [issue #33](https://github.com/danchurko/skillwick/issues/33); see the
+[current reranking guide](../RERANKING.md). The dated measurements and quality
+limits below remain historical evidence.
+
+The separate [hosted JEV experiment](jev-evaluation.md) adds new evaluation
+evidence. Its findings do not establish independent agent task success.
 
 This decision uses the frozen 531-record profile and 105 held-out query
 perspectives in [`benchmarks/profile-v1.json`](../../benchmarks/profile-v1.json).

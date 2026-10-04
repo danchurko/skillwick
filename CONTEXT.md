@@ -37,6 +37,21 @@ _Avoid_: Selected skill
 An installed skill the calling agent chooses to read and use for the current task.
 _Avoid_: Automatically activated skill
 
+**Candidate pool**:
+The bounded, ordered set of Skillwick search candidates eligible for one
+reranking comparison. Reranking cannot introduce a skill outside that set.
+_Avoid_: Skill inventory
+
+**Benchmark profile**:
+A frozen corpus of skill metadata and labelled query cases used to compare
+retrieval paths. A profile does not establish which skills are currently installed.
+_Avoid_: Live inventory
+
+**Relevance label**:
+A benchmark judgement that a skill is relevant to a query. Multiple skills can
+be relevant; a label does not prove actual selection or successful task completion.
+_Avoid_: Selected skill
+
 **Filesystem record**:
 
 A metadata record discovered under an authorized filesystem root.
@@ -75,3 +90,8 @@ _Avoid_: Safety approval
 The configuration and usage instructions that make Skillwick available to a
 coding agent. It does not determine the agent's general workflow.
 _Avoid_: Orchestration
+
+**Reranker**:
+An explicitly configured backend that reorders a bounded eligible lexical
+candidate pool without changing candidate identity or activating a skill.
+_Avoid_: Skill selector

@@ -17,6 +17,18 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from benchmark_metrics import provenance, quality, retrieval_metrics, selection_metrics
+
+ASSETS = Path(__file__).resolve().parents[1] / "assets"
+if str(ASSETS) not in sys.path:
+    sys.path.insert(0, str(ASSETS))
+from skillwick.reranker_runtime import (
+    RuntimeErrorCategory,
+    TINYBERT,
+    load_tinybert_scorer,
+    pinned_model as shared_pinned_model,
+)
+
 ARCTIC = {
     "name": "snowflake/snowflake-arctic-embed-xs",
     "revision": "d8c86521100d3556476a063fc2342036d45c106f",
@@ -30,18 +42,6 @@ ARCTIC = {
         "tokenizer_config.json": {"sha256": "9ca59277519f6e3692c8685e26b94d4afca2d5438deff66483db495e48735810", "bytes": 1_433},
         "special_tokens_map.json": {"sha256": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a", "bytes": 695},
         "onnx/model.onnx": {"sha256": "cf2698d30ff05da02c70a088313bad56e5c2f401d734cb24a8390d446111936c", "bytes": 90_387_631},
-    },
-}
-TINYBERT = {
-    "name": "cross-encoder/ms-marco-TinyBERT-L2-v2",
-    "revision": "81d1926f67cb8eee2c2be17ca9f793c7c3bd20cc",
-    "file": "onnx/model_qint8_arm64.onnx",
-    "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
-    "bytes": 4_518_071,
-    "license": "Apache-2.0",
-    "required_files": {
-        "tokenizer.json": {"sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66", "bytes": 711_396},
-        "onnx/model_qint8_arm64.onnx": {"sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68", "bytes": 4_518_071},
     },
 }
 
@@ -71,6 +71,15 @@ def pinned_path(cache: Path, model: dict) -> Path:
 
 
 def pinned_model(cache: Path, model: dict, offline: bool) -> Path:
+    if model.get("name") == TINYBERT["name"] and model.get("revision") == TINYBERT["revision"]:
+        try:
+            return shared_pinned_model(cache, model, allow_download=not offline)
+        except RuntimeErrorCategory as error:
+            labels = {
+                "model_artifact_missing": "model artifact missing",
+                "model_artifact_checksum": "model artifact checksum mismatch",
+            }
+            raise ValueError(f"{labels.get(error.category, 'model artifact resolution failed')}: {error.category}") from None
     from huggingface_hub import hf_hub_download
 
     root = pinned_path(cache, model).parents[len(Path(model["file"]).parts) - 1]
@@ -90,27 +99,6 @@ def rss_kib() -> int:
     return maximum // 1024 if sys.platform == "darwin" else maximum
 
 
-def metric(rankings: list[dict]) -> dict:
-    recalls, reciprocals, ndcgs = [], [], []
-    for item in rankings:
-        ranked, relevant = item["ranked"][:5], set(item["relevant"])
-        if not relevant:
-            recalls.append(1.0 if not ranked else 0.0)
-            reciprocals.append(1.0 if not ranked else 0.0)
-            ndcgs.append(1.0 if not ranked else 0.0)
-            continue
-        hits = [name in relevant for name in ranked]
-        recalls.append(sum(hits) / len(relevant))
-        reciprocals.append(next((1 / (i + 1) for i, hit in enumerate(hits) if hit), 0.0))
-        dcg = sum(hit / math.log2(i + 2) for i, hit in enumerate(hits))
-        ideal = sum(1 / math.log2(i + 2) for i in range(min(len(relevant), 5)))
-        ndcgs.append(dcg / ideal if ideal else 0.0)
-    return {
-        "queries": len(rankings), "recall_at_5": statistics.fmean(recalls),
-        "mrr_at_5": statistics.fmean(reciprocals), "ndcg_at_5": statistics.fmean(ndcgs),
-    }
-
-
 def timings(values: list[float]) -> dict:
     values = sorted(values)
     return {
@@ -119,7 +107,8 @@ def timings(values: list[float]) -> dict:
     }
 
 
-def common_result(kind: str, profile_path: Path, model: dict, load_ms: float, rankings: list[dict], warm: list[float], build_ms: float) -> dict:
+def common_result(kind: str, profile_path: Path, model: dict, load_ms: float, rankings: list[dict], warm: list[float],
+                  build_ms: float, candidate_pool_size: int = 20) -> dict:
     with tempfile.TemporaryDirectory() as temporary:
         corrupt = Path(temporary) / "model.onnx"
         corrupt.write_bytes(b"corrupt")
@@ -129,12 +118,18 @@ def common_result(kind: str, profile_path: Path, model: dict, load_ms: float, ra
                 verify_artifact(path, model)
             except ValueError as error:
                 failures[name] = str(error).split(":", 1)[0]
+    profile = read_json(profile_path)
+    profile_version = profile["version"]
     return {
-        "version": 1,
+        "version": profile_version,
         "kind": kind,
         "measured_at": datetime.now(timezone.utc).isoformat(),
         "status": "research-only; no production behavior changed",
         "profile_sha256": digest(profile_path),
+        "corpus_sha256": profile["corpus"]["sha256"],
+        "corpus_total": profile["corpus"]["total"],
+        "candidate_pool_size": candidate_pool_size,
+        "provenance": provenance(),
         "model": model,
         "runtime": {
             "python": platform.python_version(), "platform": platform.platform(),
@@ -145,7 +140,9 @@ def common_result(kind: str, profile_path: Path, model: dict, load_ms: float, ra
             "cold_model_load_ms": load_ms, "index_or_candidate_build_ms": build_ms,
             "warm_query_ms": timings(warm), "peak_rss_kib": rss_kib(), "artifact_bytes": model["bytes"],
         },
-        "quality": metric(rankings),
+        "quality": quality(profile_version, rankings),
+        "retrieval_metrics": retrieval_metrics(profile_version, rankings),
+        "selection_metrics": selection_metrics(rankings, rankings),
         "failure_behavior": {
             **failures,
             "verified_before_offline_model_load": True,
@@ -159,6 +156,7 @@ def embedding(args: argparse.Namespace) -> None:
     import numpy as np
     from fastembed import TextEmbedding
 
+    started_wall = time.perf_counter_ns()
     profile = read_json(args.profile)
     records = profile["corpus"]["records"]
     texts = [f"{record['name']}: {record['description']}" for record in records]
@@ -186,69 +184,81 @@ def embedding(args: argparse.Namespace) -> None:
             order = np.argsort(scores)[::-1][:20]
             rankings.append({
                 "id": f"{case['id']}:{index}", "query": query, "relevant": case["relevant"],
-                "ranked": [records[position]["name"] for position in order],
+                "ranked": [records[position].get("fixture_id", records[position]["name"]) for position in order],
             })
     result = common_result("skillwick-embedding-experiment", args.profile, ARCTIC, load_ms, rankings, warm, build_ms)
+    result["wall_time_ms"] = (time.perf_counter_ns() - started_wall) / 1_000_000
     result["design"] = "Arctic XS query prefix and pooling are owned by fastembed 0.8.0; top-20 cosine retrieval"
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result["quality"], sort_keys=True))
 
 
 def tinybert_model(cache: Path, offline: bool):
-    import numpy as np
-    import onnxruntime as ort
-    from tokenizers import Tokenizer
-
-    model_dir = pinned_model(cache, TINYBERT, offline)
-    tokenizer = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
-    tokenizer.enable_truncation(max_length=512)
-    tokenizer.enable_padding()
-    session = ort.InferenceSession(str(model_dir / TINYBERT["file"]), providers=["CPUExecutionProvider"])
-
-    def score(query: str, documents: list[str]) -> np.ndarray:
-        encodings = tokenizer.encode_batch([(query, document) for document in documents])
-        available = {value.name for value in session.get_inputs()}
-        inputs = {
-            "input_ids": np.asarray([value.ids for value in encodings], dtype=np.int64),
-            "attention_mask": np.asarray([value.attention_mask for value in encodings], dtype=np.int64),
+    try:
+        return load_tinybert_scorer(cache, allow_download=not offline, check_versions=False)
+    except RuntimeErrorCategory as error:
+        labels = {
+            "model_artifact_missing": "model artifact missing",
+            "model_artifact_checksum": "model artifact checksum mismatch",
         }
-        if "token_type_ids" in available:
-            inputs["token_type_ids"] = np.asarray(
-                [value.type_ids or [0] * len(value.ids) for value in encodings], dtype=np.int64
-            )
-        return np.asarray(session.run(None, inputs)[0]).reshape(-1)
-
-    return score
+        raise ValueError(f"{labels.get(error.category, 'model load failed')}: {error.category}") from None
 
 
 def rerank(args: argparse.Namespace) -> None:
     import numpy as np
 
+    started_wall = time.perf_counter_ns()
     profile = read_json(args.profile)
     candidates = read_json(args.candidates)
-    descriptions = {row["name"]: f"{row['name']}: {row['description']}" for row in profile["corpus"]["records"]}
+    from benchmark_profiles import profile_rows, validate_candidate_document
+
+    try:
+        expected_rows = profile_rows(profile)
+        source_rows, selected_pool_size = validate_candidate_document(
+            args.profile, profile, expected_rows, args.candidates, candidates, args.pool_size,
+            allowed_kinds=("skillwick-lexical-baseline", "skillwick-embedding-experiment"),
+            require_provenance=False,
+        )
+    except (ValueError, KeyError, TypeError):
+        raise ValueError("candidate profile, provenance, query, label or identity contract failed") from None
+    requested_pool_size = selected_pool_size
+    identities = {
+        row.get("fixture_id", row["name"]): f"{row['name']}: {row['description']}"
+        for row in profile["corpus"]["records"]
+    }
     started = time.perf_counter_ns()
     score = tinybert_model(args.cache, args.offline)
     load_ms = (time.perf_counter_ns() - started) / 1_000_000
     rankings, warm = [], []
     started_build = time.perf_counter_ns()
-    for item in candidates["rankings"]:
-        names = item["ranked"][:20]
+    for item in source_rows:
+        lexical_names = item["ranked"]
+        names = lexical_names[:requested_pool_size]
+        tail = lexical_names[requested_pool_size:]
         if not names:
-            rankings.append({**item, "ranked": []})
+            rankings.append({**item, "ranked": lexical_names})
             continue
-        documents = [descriptions[name] for name in names]
+        documents = [identities[name] for name in names]
         scores = None
         for _ in range(args.samples):
             started = time.perf_counter_ns()
             scores = score(item["query"], documents)
             warm.append((time.perf_counter_ns() - started) / 1_000_000)
+        # Preserve the historical TinyBERT runner's ordering for comparison.
         order = np.argsort(scores)[::-1]
-        rankings.append({**item, "ranked": [names[position] for position in order]})
+        rankings.append({**item, "ranked": [names[position] for position in order] + tail})
     build_ms = (time.perf_counter_ns() - started_build) / 1_000_000
-    result = common_result("skillwick-reranker-experiment", args.profile, TINYBERT, load_ms, rankings, warm, build_ms)
-    result["design"] = f"TinyBERT independently reranks the bounded top-20 pool from {candidates['kind']}"
+    result = common_result(
+        "skillwick-reranker-experiment", args.profile, TINYBERT, load_ms, rankings, warm, build_ms,
+        candidate_pool_size=requested_pool_size,
+    )
+    result["selection_metrics"] = selection_metrics(source_rows, rankings)
+    result["source_candidate_pool_size"] = candidates.get("candidate_pool_size", 20)
+    result["candidate_source_kind"] = candidates["kind"]
+    result["design"] = f"TinyBERT reranks the bounded top-{requested_pool_size} pool from {candidates['kind']}"
     result["candidate_source_sha256"] = digest(args.candidates)
+    result["candidate_source_provenance"] = candidates.get("provenance")
+    result["wall_time_ms"] = (time.perf_counter_ns() - started_wall) / 1_000_000
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result["quality"], sort_keys=True))
 
@@ -260,7 +270,21 @@ def main() -> None:
     embed.set_defaults(handler=embedding)
     reranker = commands.add_parser("rerank")
     reranker.add_argument("--candidates", type=Path, required=True)
+    reranker.add_argument("--pool-size", type=int, choices=range(1, 21))
     reranker.set_defaults(handler=rerank)
+    jev = commands.add_parser("jev", help="opt-in TypeSafe JEV relevance reranking experiment")
+    jev.add_argument("--candidates", type=Path, required=True)
+    jev.add_argument("--profile", type=Path, required=True)
+    jev.add_argument("--output", type=Path, required=True)
+    jev.add_argument("--pool-size", type=int, choices=range(1, 21))
+    jev.add_argument("--base-url")
+    jev.add_argument("--model", default="jev-latest")
+    jev.add_argument("--timeout", type=float, default=15.0)
+    jev.add_argument("--confidence-threshold", type=float, default=0.55)
+    jev.add_argument("--expected-model")
+    jev.add_argument("--live", action="store_true", help="allow requests to the configured TypeSafe endpoint")
+    jev.add_argument("--max-queries", type=int, help="run a prefix smoke sample; aggregate reranking metrics are omitted")
+    jev.set_defaults(handler=jev_command)
     for command in (embed, reranker):
         command.add_argument("--profile", type=Path, required=True)
         command.add_argument("--output", type=Path, required=True)
@@ -269,7 +293,15 @@ def main() -> None:
         command.add_argument("--offline", action="store_true")
     embed.add_argument("--threads", type=int, default=4)
     args = parser.parse_args()
+    if hasattr(args, "samples") and args.samples < 1:
+        parser.error("samples must be positive")
     args.handler(args)
+
+
+def jev_command(args: argparse.Namespace) -> None:
+    from benchmark_jev import run_from_args
+
+    run_from_args(args)
 
 
 if __name__ == "__main__":
