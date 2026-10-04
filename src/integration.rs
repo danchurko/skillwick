@@ -10,7 +10,6 @@ use std::{
     fs,
     io::{self, IsTerminal, Write},
     path::{Path, PathBuf},
-    process::Command,
     sync::{Mutex, MutexGuard, TryLockError},
     thread,
     time::{Duration, Instant},
@@ -128,14 +127,8 @@ struct SetupPlan {
 }
 
 struct SetupLock {
-    path: PathBuf,
+    _directory: fs::File,
     _process_guard: MutexGuard<'static, ()>,
-}
-
-impl Drop for SetupLock {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
-    }
 }
 
 pub(crate) fn load_config(config_path: &Path) -> Result<Config, Error> {
@@ -1021,53 +1014,54 @@ fn acquire_lock_with_wait(wait: Option<Duration>) -> Result<SetupLock, Error> {
     let started = Instant::now();
     let deadline = wait.map(|timeout| started + timeout);
     let directory = config::state_dir();
-    let path = directory.join("setup.lock");
+    let path = directory.as_path();
     let process_guard = loop {
         match SETUP_MUTEX.try_lock() {
             Ok(guard) => break guard,
             Err(TryLockError::Poisoned(error)) => break error.into_inner(),
             Err(TryLockError::WouldBlock) if wait_for_lock(deadline) => continue,
             Err(TryLockError::WouldBlock) => {
-                return Err(lock_error(&path));
+                return Err(lock_error(path));
             }
         }
     };
     fs::create_dir_all(&directory)
         .map_err(|error| Error::Operational(format!("{}: {error}", directory.display())))?;
+    config::refuse_symlink(&directory).map_err(Error::Operational)?;
+    let file = fs::File::open(&directory)
+        .map_err(|error| Error::Operational(format!("{}: {error}", directory.display())))?;
+    // The state directory is a stable coordination inode. Locking its read-only
+    // descriptor needs no persistent write, and closing it releases the lock even
+    // after a crash. Readers still serialize with setup and recover real journals.
     loop {
-        let mut options = fs::OpenOptions::new();
-        options.write(true).create_new(true);
+        #[cfg(unix)]
+        let result = {
+            use std::os::fd::AsRawFd;
+            // SAFETY: file owns a live descriptor; flock does not retain it.
+            unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) }
+        };
+        #[cfg(not(unix))]
+        return Err(Error::Operational("setup locking requires Unix".into()));
+        #[cfg(unix)]
+        if result == 0 {
+            return Ok(SetupLock {
+                _directory: file,
+                _process_guard: process_guard,
+            });
+        }
         #[cfg(unix)]
         {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        match options.open(&path) {
-            Ok(mut file) => {
-                file.write_all(std::process::id().to_string().as_bytes())
-                    .map_err(|error| Error::Operational(format!("{}: {error}", path.display())))?;
-                file.sync_all()
-                    .map_err(|error| Error::Operational(format!("{}: {error}", path.display())))?;
-                return Ok(SetupLock {
-                    path,
-                    _process_guard: process_guard,
-                });
+            let error = io::Error::last_os_error();
+            if error.kind() == io::ErrorKind::Interrupted {
+                continue;
             }
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                if stale_lock(&path) {
-                    fs::remove_file(&path).map_err(|remove_error| {
-                        Error::Operational(format!("{}: {remove_error}", path.display()))
-                    })?;
-                    continue;
-                }
+            if error.kind() == io::ErrorKind::WouldBlock {
                 if wait_for_lock(deadline) {
                     continue;
                 }
-                return Err(lock_error(&path));
+                return Err(lock_error(path));
             }
-            Err(error) => {
-                return Err(Error::Operational(format!("{}: {error}", path.display())));
-            }
+            return Err(Error::Operational(format!("{}: {error}", path.display())));
         }
     }
 }
@@ -1089,30 +1083,6 @@ fn lock_error(path: &Path) -> Error {
         "another Skillwick setup is in progress: {}",
         path.display()
     ))
-}
-
-fn stale_lock(path: &Path) -> bool {
-    let Ok(contents) = fs::read_to_string(path) else {
-        return false;
-    };
-    let Ok(pid) = contents.trim().parse::<u32>() else {
-        return false;
-    };
-    if pid == std::process::id() {
-        return false;
-    }
-    #[cfg(unix)]
-    {
-        Command::new("kill")
-            .args(["-0", &pid.to_string()])
-            .status()
-            .is_ok_and(|status| !status.success())
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = pid;
-        false
-    }
 }
 
 fn journal_path() -> PathBuf {

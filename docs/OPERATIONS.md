@@ -22,6 +22,14 @@ $XDG_STATE_HOME/skillwick/integration.json
 operation. Configuration has strict `version = 1` and automatic or explicit
 source discovery. Unknown fields and obsolete configuration are errors.
 
+Managed session cache placement belongs to the environment owner. A writable
+`XDG_CACHE_HOME` can hold disposable metadata while configuration and setup
+journals remain at their authoritative locations. Stable reads coordinate with
+setup through a native advisory lock on the existing state directory; they do
+not create/remove a persistent lock file. A pending setup transaction still
+requires authorized recovery writes and fails explicitly when those are blocked.
+Do not redirect `XDG_STATE_HOME` merely to hide a journal or a permission failure.
+
 ## Re-setup after an upgrade
 
 Preserve a copy of existing configuration before recreating it. Inspect custom
