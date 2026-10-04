@@ -103,7 +103,7 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
     assert ambiguous.stdout == "" and "ambiguous" in ambiguous.stderr
     assert str(unusual).replace("\n", "\\n") in ambiguous.stderr and str(copied) in ambiguous.stderr
     assert run("read", "--raw", original_id).stdout == content
-    run("read", original_id, "example", code=3)
+    assert run("read", original_id, "example", code=3).stdout == ""
     shutil.rmtree(copied)
     moved = root / "moved package"
     unusual.rename(moved)
@@ -115,12 +115,16 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
     changed_content = content + "New live obligation.\n"
     body.write_text(changed_content)
     assert run("read", "--raw", "example").stdout == changed_content
+    anchor = root / "batch-anchor"
+    anchor.mkdir()
+    (anchor / "SKILL.md").write_text("---\nname: batch-anchor\ndescription: Valid leading batch member.\n---\nLeading obligation.\n")
     policy = moved / "agents/openai.yaml"
     policy.parent.mkdir()
     policy.write_text("policy:\n  allow_implicit_invocation: false\n")
-    assert json.loads(run("list", "--json").stdout)["results"] == []
-    denied = run("read", current["id"], "example", code=3)
+    assert [r["name"] for r in json.loads(run("list", "--json").stdout)["results"]] == ["batch-anchor"]
+    denied = run("read", "batch-anchor", "example", code=3)
     assert denied.stdout == "" and "invocation policy" in denied.stderr
+    assert run("read", current["id"], code=3).stdout == ""
     denied_health = json.loads(run("doctor", "--json", "--require", "example", code=3).stdout)
     assert denied_health["required"][0]["resolved_id"] is None
     assert "invocation policy" in denied_health["required"][0]["diagnostic"]
@@ -131,13 +135,13 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
     try:
         if os.access(body, os.R_OK):
             raise AssertionError("unreadable fixture requires an unprivileged test process")
-        assert run("read", "example", code=3).stdout == ""
+        assert run("read", "batch-anchor", "example", code=3).stdout == ""
         assert (temporary / "cache/skillwick/index-v4.sqlite").read_bytes() == before_failure
     finally:
         body.chmod(0o600)
     assert run("read", "--raw", "example").stdout == changed_content
     body.unlink()
-    assert json.loads(run("list", "--json").stdout)["results"] == []
+    assert [r["name"] for r in json.loads(run("list", "--json").stdout)["results"]] == ["batch-anchor"]
     assert run("read", current["id"], code=3).stdout == ""
     body.write_text(content)
     assert run("read", "--raw", "example").stdout == content
@@ -153,12 +157,17 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
     sentinel = temporary / "should-not-execute"
     script.write_text("#!/bin/sh\ntouch " + shlex.quote(str(sentinel)) + "\n")
     script.chmod(0o755)
+    second = root / "second long package"
+    shutil.copytree(moved, second)
+    second_content = long_content.replace("name: example", "name: long-other", 1)
+    (second / "SKILL.md").write_text(second_content)
+    expected = {"example": long_content, "long-other": second_content}
     assert run("read", "--raw", "example").stdout == long_content
-    complete = json.loads(run("read", "--json", "example", "example").stdout)
+    complete = json.loads(run("read", "--json", "example", "long-other").stdout)
     assert len(complete["results"]) == 2
     for selected in complete["results"]:
-        assert selected["content"] == long_content
-        assert selected["hash"] == hashlib.sha256(long_content.encode()).hexdigest()
+        assert selected["content"] == expected[selected["name"]]
+        assert selected["hash"] == hashlib.sha256(expected[selected["name"]].encode()).hexdigest()
         assert (Path(selected["base"]) / "references/guide.md").read_text() == "Complete supporting reference.\n"
     default = run("read", "example").stdout
     assert default.endswith(long_content) and f'resolved-id: {complete["results"][0]["id"]}\n' in default

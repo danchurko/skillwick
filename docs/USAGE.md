@@ -42,8 +42,8 @@ skillwick read missing; printf 'trailing command\n' # final status can be 0
 if skillwick read astra-orchestrator caveman; then
   printf 'required batch read succeeded\n'
 else
-  status=$?
-  printf 'required batch read failed: %s\n' "$status" >&2
+  read_status=$?
+  printf 'required batch read failed: %s\n' "$read_status" >&2
 fi
 ```
 
@@ -61,6 +61,7 @@ Save output after checking the command's status, then parse required fields:
 
 ```sh
 output=$(mktemp)
+read_status=0
 if skillwick --json read caveman > "$output"; then
   python3 - "$output" <<'PY'
 import json, sys
@@ -72,11 +73,16 @@ for row in value["results"]:
     assert all(isinstance(row[key], str) for key in ("id", "hash", "path", "base", "content"))
     print(row["id"], row["base"])
 PY
+  read_status=$?
+  if [ "$read_status" -ne 0 ]; then
+    printf 'JSON validation failed: %s\n' "$read_status" >&2
+  fi
 else
-  status=$?
-  printf 'read failed: %s\n' "$status" >&2
+  read_status=$?
+  printf 'read failed: %s\n' "$read_status" >&2
 fi
 rm -f "$output"
+(exit "$read_status")
 ```
 
 Doctor uses a different version-3 envelope. Validate `healthy` as a Boolean,
