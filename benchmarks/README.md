@@ -18,6 +18,9 @@ The query labels predate these retrieval runs. They were taken from the
 reviewed held-out split in `c0ea8d9^:benchmarks/local-skills-v2.json`; only
 path-derived ID suffixes were replaced by the corresponding unique skill name.
 
+The [synthetic acceptance record](../docs/research/synthetic-acceptance.md)
+summarizes the current offline comparison and the post-merge real-test boundary.
+
 ## Current task evaluation
 
 `profile-v2.json` is a separate frozen 12-record, 20-case corpus. One query is a

@@ -5,9 +5,12 @@ Git-ignored `benchmarks/results/` (or an external output directory). The measure
 findings and limitations are summarized here; raw files are not distributed
 with the repository. See [benchmark instructions](../../benchmarks/README.md) to generate and validate new results.
 
-**Status: partial and blocked; this does not close #46.** The replay qualifies
+**Historical real-corpus status: partial and blocked.** #46 now covers
+[synthetic pre-merge acceptance](synthetic-acceptance.md), following the user’s
+sequencing decision. [#49](https://github.com/danchurko/skillwick/issues/49)
+preserves this unfinished real-corpus work. The replay qualifies
 only the current explicit eligible subset. The intended automatic corpus is
-still blocked by the production Ponytail manifest version mismatch, so absent
+still blocked by the native Ponytail inventory/manifest version disagreement, so absent
 targets cannot be distinguished from ranking failures yet.
 
 ## Frozen scope

@@ -97,12 +97,17 @@ be reported as successful. Automatic discovery separately fails on a Ponytail
 plugin manifest version mismatch. No historical plugin version was guessed
 or activated to manufacture a passing baseline.
 
-[#46's retained qualification](reliability-retrieval.md) is partial and blocked.
-The explicit subset lacks Bedrock and AWS container/deployment targets. Exact
+The [historical real-corpus qualification](reliability-retrieval.md) is partial
+and blocked; [#49](https://github.com/danchurko/skillwick/issues/49) preserves it.
+The user chose [synthetic acceptance](synthetic-acceptance.md) for #46 before
+merge, with real installed-source qualification afterward.
+The explicit subset lacks Bedrock and AWS container/deployment targets, although
+the native packages are installed and AWS MCP retrieval is available; see the
+[installation audit](synthetic-acceptance.md#native-installation-audit-boundary). Exact
 historical queries are retained unscored; six bounded synthetic positives rank
 first, while both negative controls return candidates. Those failures remain
 unfixed. Intended-corpus qualification and backend comparison remain pending
-coverage correction by the package owner. Ranking evidence does not establish
+source-policy/discovery reconciliation in #49. Ranking evidence does not establish
 agent selection, instruction use, or task success.
 
 ## Ticket dispositions
@@ -115,12 +120,13 @@ agent selection, instruction use, or task success.
 | #43 | Verified existing behavior with hardened proof | Selection, freshness, recovery, atomic failure contracts |
 | #44 | Fixed and verified | Denial diagnostics, observable JSON and shell status contracts |
 | #45 | Fixed and verified | Complete Unicode delivery, distinct batch identities, caller handoff |
-| #46 | Blocked, partial evidence retained | Intended corpus missing; backend comparison pending; both negative controls fail |
+| #46 | Verified existing behavior on frozen synthetic scope | Offline lexical/TinyBERT comparison; real qualification and prior negative findings preserved in #49 |
 | #47 | Controlled integration verified | Installed command, managed setup, sandbox agents, source fingerprints and explicit limitations |
 
 Each ticket received independent Standards and Spec reviews, with zero remaining
 actionable findings on both axes. Material findings
-were corrected before completion; the qualification review assessed its explicit
-partial scope and did not convert blocked evidence into acceptance. Production
+were corrected before completion; the qualification records distinguish synthetic acceptance from unfinished
+real-corpus work. Production
 required-capability acceptance, intended-corpus/backend qualification, and a
-published release remain unverified. Parent #39 remains open.
+published release remain unverified. #39–47 may close on the product PR merge
+after the companion owner changes merge; #49 retains the post-merge work.
