@@ -19,6 +19,8 @@ use std::{
 pub const CODEX_PLUGIN_TIMEOUT: Duration = Duration::from_secs(10);
 pub const MAX_PLUGIN_OUTPUT: usize = 8 * 1024 * 1024;
 const MAX_MANIFEST_BYTES: usize = 1024 * 1024;
+const AGENT_PLUGIN_SCHEMA_PREFIX: &str = "https://agent-plugins.org/schemas/";
+const AGENT_PLUGIN_SCHEMA_URI: &str = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json";
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct SourceSpec {
@@ -578,12 +580,7 @@ fn codex_plugin_roots(home: &Path) -> Result<Vec<PluginRoot>, String> {
                 }
             }
         }
-        let manifest_roots = manifest_roots(
-            &package_canonical,
-            ".codex-plugin/plugin.json",
-            &plugin_id,
-            &version,
-        )?;
+        let manifest_roots = codex_manifest_roots(&package_canonical, &plugin_id, &version)?;
         for root in manifest_roots {
             roots_push(
                 &mut discovered,
@@ -845,15 +842,187 @@ fn manifest_roots(
             ))
         }
     };
-    let mut paths = declared;
+    skill_roots(package, declared, object.get("skills").is_some())
+}
+
+fn codex_manifest_roots(
+    package: &Path,
+    plugin_id: &str,
+    version: &str,
+) -> Result<Vec<PathBuf>, String> {
+    let agent_manifest = package.join("plugin.json");
+    match fs::symlink_metadata(&agent_manifest) {
+        Ok(metadata) if metadata.file_type().is_symlink() || !metadata.file_type().is_file() => {
+            return Err(format!(
+                "Agent Plugins root manifest is not a regular file: {}",
+                agent_manifest.display()
+            ));
+        }
+        Ok(_) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return manifest_roots(package, ".codex-plugin/plugin.json", plugin_id, version);
+        }
+        Err(error) => {
+            return Err(format!(
+                "active plugin {plugin_id}@{version} manifest cannot be read: {}: {error}",
+                agent_manifest.display()
+            ));
+        }
+    }
+    let agent_manifest_canonical = fs::canonicalize(&agent_manifest).map_err(|error| {
+        format!(
+            "active plugin {plugin_id}@{version} manifest cannot be read: {}: {error}",
+            agent_manifest.display()
+        )
+    })?;
+    if !agent_manifest_canonical.starts_with(package) {
+        return Err(format!(
+            "active plugin manifest escapes package: {}",
+            agent_manifest.display()
+        ));
+    }
+    let bytes = read_bounded(&agent_manifest, MAX_MANIFEST_BYTES)
+        .map_err(|error| format!("{}: {error}", agent_manifest.display()))?;
+    let document: Value = match serde_json::from_slice(&bytes) {
+        Ok(document) => document,
+        Err(_) => {
+            return manifest_roots(package, ".codex-plugin/plugin.json", plugin_id, version);
+        }
+    };
+    let Some(schema) = document.get("$schema").and_then(Value::as_str) else {
+        return manifest_roots(package, ".codex-plugin/plugin.json", plugin_id, version);
+    };
+    if !schema.starts_with(AGENT_PLUGIN_SCHEMA_PREFIX) {
+        return manifest_roots(package, ".codex-plugin/plugin.json", plugin_id, version);
+    }
+    if schema != AGENT_PLUGIN_SCHEMA_URI {
+        return Err(format!(
+            "unsupported Agent Plugins schema {schema:?}: {}",
+            agent_manifest.display()
+        ));
+    }
+    let object = document.as_object().ok_or_else(|| {
+        format!(
+            "Agent Plugins root manifest is not an object: {}",
+            agent_manifest.display()
+        )
+    })?;
+    let plugin_name = plugin_id.split_once('@').map(|(name, _)| name);
+    let name = object.get("name").and_then(Value::as_str).ok_or_else(|| {
+        format!(
+            "Agent Plugins root manifest name must be a string: {}",
+            agent_manifest.display()
+        )
+    })?;
+    if !valid_agent_plugin_name(name) {
+        return Err(format!(
+            "invalid Agent Plugins name {name:?}: {}",
+            agent_manifest.display()
+        ));
+    }
+    if Some(name) != plugin_name {
+        return Err(format!(
+            "plugin manifest name mismatch: {}",
+            agent_manifest.display()
+        ));
+    }
+    validate_agent_plugin_metadata(object, &agent_manifest)?;
+
+    // Agent Plugins v1 has no skill-root field. Codex uses the conventional ./skills directory;
+    // .codex-plugin/plugin.json is only an extension overlay and cannot redirect skill discovery.
+    skill_roots(package, vec!["skills".to_owned()], false)
+}
+
+fn valid_agent_plugin_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && !name.contains("--")
+        && !name.contains("..")
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || b".-".contains(&byte))
+        && name
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_alphanumeric)
+        && name
+            .as_bytes()
+            .last()
+            .is_some_and(u8::is_ascii_alphanumeric)
+}
+
+fn validate_agent_plugin_metadata(
+    object: &serde_json::Map<String, Value>,
+    manifest: &Path,
+) -> Result<(), String> {
+    for field in [
+        "version",
+        "description",
+        "homepage",
+        "repository",
+        "license",
+    ] {
+        if object.get(field).is_some_and(|value| !value.is_string()) {
+            return Err(format!(
+                "Agent Plugins `{field}` must be a string when present: {}",
+                manifest.display()
+            ));
+        }
+    }
+
+    if let Some(author) = object.get("author") {
+        let Some(author) = author.as_object() else {
+            return Err(format!(
+                "Agent Plugins `author` must be an object when present: {}",
+                manifest.display()
+            ));
+        };
+        for (field, value) in author {
+            if !["name", "email", "url"].contains(&field.as_str()) {
+                return Err(format!(
+                    "unknown Agent Plugins author field `{field}`: {}",
+                    manifest.display()
+                ));
+            }
+            if !value.is_string() {
+                return Err(format!(
+                    "Agent Plugins `author.{field}` must be a string when present: {}",
+                    manifest.display()
+                ));
+            }
+        }
+    }
+
+    if let Some(keywords) = object.get("keywords") {
+        let Some(keywords) = keywords.as_array() else {
+            return Err(format!(
+                "Agent Plugins `keywords` must be an array of strings when present: {}",
+                manifest.display()
+            ));
+        };
+        if keywords.iter().any(|keyword| !keyword.is_string()) {
+            return Err(format!(
+                "Agent Plugins `keywords` entries must be strings: {}",
+                manifest.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn skill_roots(
+    package: &Path,
+    mut paths: Vec<String>,
+    declared: bool,
+) -> Result<Vec<PathBuf>, String> {
     if paths.is_empty() {
         paths.push("skills".to_owned());
     }
     let mut roots = Vec::new();
-    for declared in paths {
-        let path = package.join(&declared);
+    for skill_path in paths {
+        let path = package.join(&skill_path);
         if !fs::symlink_metadata(&path).is_ok() {
-            if object.get("skills").is_some() {
+            if declared {
                 return Err(format!(
                     "active plugin skill path is missing: {}",
                     path.display()

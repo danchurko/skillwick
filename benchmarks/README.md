@@ -20,6 +20,9 @@ path-derived ID suffixes were replaced by the corresponding unique skill name.
 
 The [synthetic acceptance record](../docs/research/synthetic-acceptance.md)
 summarizes the current offline comparison and the post-merge real-test boundary.
+The subsequent [real installed-source qualification](../docs/research/real-source-qualification.md)
+uses automatic native discovery and the tracked `real-source-cases.json` input;
+its generated full corpus and receipts remain local ignored artifacts.
 
 ## Current task evaluation
 

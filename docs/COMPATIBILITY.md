@@ -16,6 +16,14 @@ The Codex plugin JSON and Claude registry fixtures capture the host schemas
 observed on 2026-09-16. Unknown, incomplete or conflicting inputs fail visibly;
 cache directories alone never establish an active plugin version.
 
+Codex automatic discovery supports the exact Agent Plugins 1.0 root-manifest
+schema before legacy `.codex-plugin/plugin.json`, verified against Codex
+0.160.0. Native plugins use `skills/`; legacy overlay versions and paths do not
+replace the root manifest's values. The native list's version selects the cache
+directory and can differ from optional native manifest metadata. Legacy
+manifest version equality and package-containment checks remain enforced.
+See [real-source qualification](research/real-source-qualification.md).
+
 | Platform | Release target | Runtime evidence |
 |---|---|---|
 | macOS ARM64 | `aarch64-apple-darwin` | Installed candidate gates passed 2026-09-16 |
