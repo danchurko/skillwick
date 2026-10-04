@@ -15,7 +15,10 @@ Reads accept exact IDs or unambiguous exact names. Verified identical packages
 are grouped with all origins retained; differing packages with the same name
 require an ID. Batch reads validate every target before printing any content.
 Use `read --raw NAME` for one instruction body or `read --json NAME` for content
-and provenance. JSON version 3 preserves exact strings and paths.
+and provenance. JSON version 3 preserves exact strings and paths. Search, list,
+inspect and read have a required `results` array; read entries have `content`.
+Doctor instead has `healthy`, `sources`, `diagnostics`, `counts` and `required`.
+Validate the version and required fields; a missing field is not an empty inventory.
 
 Automatic sources include shared skills, Codex, Claude, and eligible installed
 plugins. Codex plugin resolution uses the bounded installed-plugin CLI listing;
@@ -26,10 +29,16 @@ No home-directory sweep, prompt hook, daemon, or package execution is involved.
 Every lookup reconciles current applicable sources. Missing required roots,
 unreadable sources, ambiguous installed versions, and invalid provider metadata
 fail the operation and preserve the last complete cache. Do not conceal these
-failures with `|| true`. A valid search with no matches succeeds. Use
-`skillwick doctor --strict --require NAME` to check required guidance and coverage.
-For an authorized permission failure, retry the same operation once through the
-host's supported approval mechanism; otherwise report the concrete blocker.
+failures with `|| true`. A valid search with no matches succeeds. Verify required
+names with `skillwick doctor --strict --require NAME` (repeat `--require`), then
+one atomic `skillwick read NAME...` for the same names and environment. Health
+proves resolution; the read proves complete instruction delivery. Either failure
+means verification failed. Correct the named source or cache restriction through
+its owner before retrying; do not guess an active plugin cache version.
+
+Check each required command's status separately. A failed predecessor in an `&&`
+chain skips later reads; a successful trailing command after `;` can mask a failed
+read. Keep required instruction reads separate from large source dumps.
 
 Use `skillwick inspect ID --files` to inspect bounded package entries. Read only
 selected instructions and resolve references from the reported package base.

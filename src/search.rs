@@ -260,6 +260,20 @@ pub fn find_name(
     Ok(group(rows))
 }
 
+/// Diagnose a denied exact selection only within the current applicable roots.
+pub fn policy_denied(
+    db: &Connection,
+    target: &str,
+    roots: Option<&[String]>,
+) -> rusqlite::Result<bool> {
+    let mut sql = "SELECT EXISTS(SELECT 1 FROM skills s WHERE (s.id=?1 OR s.name=?1) AND s.model_discoverable=0 AND s.source_kind='filesystem'".to_owned();
+    sql.push_str(&root_filter("s", roots, 2));
+    sql.push(')');
+    let mut values = vec![Value::Text(target.to_owned())];
+    append_root_values(&mut values, roots);
+    db.query_row(&sql, params_from_iter(values), |row| row.get(0))
+}
+
 fn contextualize(
     db: &Connection,
     rows: &mut [ResultRow],

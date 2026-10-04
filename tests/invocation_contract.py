@@ -49,6 +49,17 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
     assert [row["content"] for row in batch["results"]] == [content, content]
     run("search", "cobalt", "--limit", "21", code=2)
     run("unknown", code=2)
+    for args in [("find", "cobalt"), ("find", "--limit", "3", "cobalt"),
+                 ("search", "cobalt", "--limit", "0"), ("search", "cobalt", "--bad"),
+                 ("--json", "instructions"), ("read", "example", "--format", "xml")]:
+        run(*args, code=2)
+    assert json.loads(run("search", "no_such_skill_987654", "--json").stdout)["results"] == []
+    health = json.loads(run("doctor", "--json", "--strict", "--require", "example").stdout)
+    assert health["version"] == 3 and health["healthy"] is True
+    assert all(isinstance(health[key], list) for key in ("sources", "diagnostics", "required"))
+    assert isinstance(health["counts"], dict) and "results" not in health
+    assert health["required"][0]["name"] == "example"
+    assert health["required"][0]["resolved_id"] == row["id"]
     for shell in ["bash", "zsh", "fish"]:
         assert run("completions", shell).stdout
     command = shlex.join([binary, "read", "example"])
@@ -60,6 +71,14 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
         script = f'{command} >/dev/null && {no_match} >/dev/null && printf CHAIN_OK'
         result = subprocess.run([executable, "-c", script], env=env, capture_output=True, text=True)
         assert result.returncode == 0 and result.stdout == "CHAIN_OK", result
+        missing = shlex.join([binary, "read", "missing"])
+        result = subprocess.run([executable, "-c", f'{missing} && printf SHOULD_NOT_RUN'],
+                                env=env, capture_output=True, text=True)
+        assert result.returncode == 3 and result.stdout == ""
+        result = subprocess.run([executable, "-c", f'{missing}; printf TRAILING_SUCCESS'],
+                                env=env, capture_output=True, text=True)
+        assert result.returncode == 0 and result.stdout == "TRAILING_SUCCESS"
+        assert "skill not found" in result.stderr
         result = subprocess.run([executable, "-c", f'body=$({shlex.join([binary,"read","--raw","example"])}); test -n "$body"'], env=env)
         assert result.returncode == 0
         if shell != "sh":
@@ -99,7 +118,11 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
     policy.parent.mkdir()
     policy.write_text("policy:\n  allow_implicit_invocation: false\n")
     assert json.loads(run("list", "--json").stdout)["results"] == []
-    assert run("read", current["id"], "example", code=3).stdout == ""
+    denied = run("read", current["id"], "example", code=3)
+    assert denied.stdout == "" and "invocation policy" in denied.stderr
+    denied_health = json.loads(run("doctor", "--json", "--require", "example", code=3).stdout)
+    assert denied_health["required"][0]["resolved_id"] is None
+    assert "invocation policy" in denied_health["required"][0]["diagnostic"]
     policy.unlink()
     assert run("read", "--raw", "example").stdout == changed_content
     before_failure = (temporary / "cache/skillwick/index-v4.sqlite").read_bytes()

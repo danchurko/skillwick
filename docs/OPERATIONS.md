@@ -44,14 +44,21 @@ skillwick init --yes --agent codex --discovery auto --root "$HOME/my-skills"
 Retire product-owned integration with its owning binary before moving its journal;
 backing up a receipt alone does not remove the files it owns.
 
-On this managed workstation, mac-state remains the owner of persistent setup.
-Do not run a second standalone integration over its instruction files. Its
-`agents/apply.sh` uses auto discovery plus the selected agent's generated skill
-root. `agents/lib/skillwick.sh` owns `~/.codex/SKILLWICK.md` and
-`~/.claude/SKILLWICK.md` and their references. It checks required names after
-provisioning and refuses a competing product-owned integration. Prepare the
-configuration backup and reviewed custom roots before the separately authorized
-managed apply. This source change does not itself upgrade the installed binary.
+In managed environments, agent-state remains the owner of persistent setup.
+Do not run standalone integration over its instruction files. Its
+`services/skillwick/install.sh` owns executable provisioning and source/release
+provenance; `services/skillwick/config.sh` owns staged discovery configuration,
+canonical contexts and their references. The selected workflow owns required
+capability names and checks their health followed by one complete batch read
+under the same configuration, workspace and environment. Generic healthy output
+is insufficient. Retire competing product-owned integration through its matching
+binary before managed setup.
+
+CLI root registration is additive. Desired-state retirement of obsolete managed
+roots belongs to the environment owner, which preserves custom registrations,
+modified contexts and rollback material. Validate staged configuration before
+the separately authorized managed apply. Source changes and fixture success do
+not themselves upgrade the installed binary or prove a published release.
 
 ## Coverage and failures
 

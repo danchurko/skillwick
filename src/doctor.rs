@@ -44,7 +44,15 @@ pub fn inspect(config_path: &Path, cwd: &Path, required: &[String]) -> Result<Re
                     .map_err(|e| e.to_string())?;
                 let diagnostic = match rows.len() {
                     1 => None,
-                    0 => Some("required skill is unavailable in the applicable sources".into()),
+                    0 => Some(
+                        if search::policy_denied(&snapshot.db, name, Some(&snapshot.roots))
+                            .map_err(|e| e.to_string())?
+                        {
+                            "required skill is denied by invocation policy".into()
+                        } else {
+                            "required skill is unavailable in the applicable sources".into()
+                        },
+                    ),
                     _ => Some(
                         "required skill name is ambiguous; select or correct the source".into(),
                     ),
