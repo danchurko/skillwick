@@ -40,6 +40,8 @@ configuration + cwd + bounded host metadata
 - `index` owns scoped SQLite records and atomic publication.
 - `search` owns deterministic FTS5 ranking, exact resolution, and grouping after
   applicability/policy filtering and before result limits.
+- `reranker` owns optional prepared backends and configured search. It validates
+  a complete permutation of the bounded lexical pool and preserves result metadata.
 - `package` owns bounded inspection and complete package fingerprints. Incomplete
   fingerprints never establish that copies are identical.
 - `integration` owns setup plans, locks, ownership receipts, and recovery.
@@ -48,4 +50,5 @@ configuration + cwd + bounded host metadata
 Selected content is revalidated and read from the live file. SQLite never stores
 an authoritative copy of instructions. JSON preserves exact values; terminal
 rendering escapes control characters separately. Lexical search is the only
-production retrieval path. No model runtime, prompt hook, or watcher is required.
+production candidate retrieval path. Setup-selected TinyBERT or JEV can reorder
+that pool; lexical-only needs no model runtime. No prompt hook or watcher is required.

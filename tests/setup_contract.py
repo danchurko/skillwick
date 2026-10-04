@@ -6,9 +6,12 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import pty
+import select
 import subprocess
 import sys
 import tempfile
+import time
 
 
 def main() -> None:
@@ -271,19 +274,31 @@ def relative_destinations(binary: str) -> None:
         assert (second / "AGENTS.md").read_bytes() == untouched
 
 def reranker_recovery(binary: str) -> None:
-    # Recover at the installed CLI seam without invoking a provider.
+    # Recovery runs before ordinary configuration reads, without invoking a provider.
     for committed in (False, True):
         with tempfile.TemporaryDirectory(prefix="skillwick-key-recovery-") as directory:
             temporary = Path(directory).resolve()
             state = temporary / "state"
             config = temporary / "config.toml"
+            skills = temporary / "skills"
+            skill = skills / "example"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\nname: example\ndescription: Setup recovery fixture.\n---\nBody.\n"
+            )
             old, new = temporary / "old-runtime", temporary / "new-runtime"
             for runtime, key in ((old, "previous-key"), (new, "prepared-key")):
                 runtime.mkdir(mode=0o700)
                 (runtime / "api-key").write_text(key)
                 (runtime / "api-key").chmod(0o600)
+
             def contents(runtime: Path) -> bytes:
-                return (f'version = 1\ndiscovery = "explicit"\n[reranker]\nbackend = "jev"\nruntime = "{runtime}"\n').encode()
+                return (
+                    "version = 1\n"
+                    'discovery = "explicit"\n'
+                    f"roots = [{json.dumps(str(skills))}]\n"
+                    f'[reranker]\nbackend = "jev"\nruntime = "{runtime}"\n'
+                ).encode()
             before, after = contents(old), contents(new)
             config.write_bytes(after)
             pending = state / "skillwick/integration.pending.json"
@@ -294,16 +309,320 @@ def reranker_recovery(binary: str) -> None:
             env = os.environ.copy()
             env.update(HOME=str(temporary / "home"), XDG_STATE_HOME=str(state),
                        XDG_CONFIG_HOME=str(temporary / "config"), XDG_CACHE_HOME=str(temporary / "cache"))
-            result = subprocess.run([binary, "--config", str(config), "uninstall"],
-                                    env=env, capture_output=True, text=True, timeout=30)
-            assert result.returncode == 0, result.stderr
+
+            config_before = config.read_bytes()
+            pending_before = pending.read_bytes()
+            dry_run = subprocess.run(
+                [binary, "--config", str(config), "--cwd", str(temporary), "init",
+                 "--yes", "--dry-run", "--agent", "none", "--discovery", "explicit",
+                 "--root", str(skills)],
+                env=env,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            assert dry_run.returncode == 0, dry_run.stderr
+            assert config.read_bytes() == config_before
+            assert pending.read_bytes() == pending_before
+            lock_path = pending.parent / "setup.lock"
+            assert not lock_path.exists()
+
+            # A reader waits briefly for an active setup lock, then recovers the
+            # pending transaction before interpreting the config pointer.
+            lock_path.write_text(str(os.getpid()))
+            process = subprocess.Popen(
+                [binary, "--config", str(config), "--json", "search", "Setup recovery fixture"],
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            time.sleep(0.25)
+            assert process.poll() is None, "config reader should wait for the active setup lock"
+            lock_path.unlink()
+            stdout, stderr = process.communicate(timeout=30)
+            assert process.returncode == 0, stderr
+            assert json.loads(stdout)["results"]
             assert config.read_bytes() == (after if committed else before)
             assert not pending.exists()
             assert (old / "api-key").read_text() == "previous-key"
             assert (new / "api-key").read_text() == "prepared-key"
 
+
+def search_during_preparation(binary: str) -> None:
+    with tempfile.TemporaryDirectory(prefix="skillwick-slow-setup-") as directory:
+        temporary = Path(directory).resolve()
+        skills = temporary / "skills"
+        skill = skills / "example"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text(
+            "---\nname: example\ndescription: Setup preparation fixture.\n---\nBody.\n"
+        )
+        workspace = temporary / "workspace"
+        workspace.mkdir()
+        config = temporary / "config" / "skillwick" / "config.toml"
+        config.parent.mkdir(parents=True)
+        original_config = (
+            "version = 1\n"
+            'discovery = "explicit"\n'
+            f"roots = [{json.dumps(str(skills))}]\n"
+            "agents = []\n"
+        ).encode()
+        config.write_bytes(original_config)
+        state = temporary / "state"
+        cache = temporary / "cache"
+        tools = temporary / "bin"
+        tools.mkdir()
+        started = temporary / "uv-started"
+        release = temporary / "uv-release"
+        uv = tools / "uv"
+        uv.write_text(
+            "#!/bin/sh\n"
+            'if [ "$1" = "venv" ]; then\n'
+            '  : > "$UV_STARTED"\n'
+            '  while [ ! -e "$UV_RELEASE" ]; do sleep 0.02; done\n'
+            "  exit 1\n"
+            "fi\n"
+            "exit 1\n"
+        )
+        uv.chmod(0o755)
+        env = os.environ.copy()
+        env.update(
+            HOME=str(temporary / "home"),
+            XDG_CONFIG_HOME=str(temporary / "config"),
+            XDG_STATE_HOME=str(state),
+            XDG_CACHE_HOME=str(cache),
+            UV_STARTED=str(started),
+            UV_RELEASE=str(release),
+            PATH=str(tools) + os.pathsep + os.environ.get("PATH", ""),
+        )
+        setup = subprocess.Popen(
+            [binary, "--config", str(config), "--cwd", str(workspace), "init",
+             "--yes", "--agent", "none", "--discovery", "explicit", "--root", str(skills),
+             "--reranker", "tinybert"],
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            deadline = time.monotonic() + 10
+            while not started.exists() and setup.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.02)
+            assert started.exists(), "setup should reach the stalled runtime preparation"
+            search = subprocess.run(
+                [binary, "--config", str(config), "--cwd", str(workspace), "--json",
+                 "search", "Setup preparation fixture"],
+                env=env,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
+        finally:
+            release.touch()
+            setup_stdout, setup_stderr = setup.communicate(timeout=30)
+
+        assert setup.returncode == 1, (setup_stdout, setup_stderr)
+        assert search.returncode == 0, search.stderr
+        assert json.loads(search.stdout)["results"]
+        assert config.read_bytes() == original_config, "failed preparation must preserve the prior config"
+
+
+def search_during_interactive_picker(binary: str) -> None:
+    with tempfile.TemporaryDirectory(prefix="skillwick-picker-setup-") as directory:
+        temporary = Path(directory).resolve()
+        skills = temporary / "skills"
+        skill = skills / "example"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text(
+            "---\nname: example\ndescription: Picker concurrency fixture.\n---\nBody.\n"
+        )
+        workspace = temporary / "workspace"
+        workspace.mkdir()
+        config = temporary / "config" / "skillwick" / "config.toml"
+        config.parent.mkdir(parents=True)
+        config.write_text(
+            "version = 1\n"
+            'discovery = "explicit"\n'
+            f"roots = [{json.dumps(str(skills))}]\n"
+            "agents = []\n"
+        )
+        env = os.environ.copy()
+        env.update(
+            HOME=str(temporary / "home"),
+            CODEX_HOME=str(temporary / "codex"),
+            CLAUDE_CONFIG_DIR=str(temporary / "claude"),
+            XDG_CONFIG_HOME=str(temporary / "config"),
+            XDG_STATE_HOME=str(temporary / "state"),
+            XDG_CACHE_HOME=str(temporary / "cache"),
+            TERM="xterm-256color",
+        )
+        master, slave = pty.openpty()
+        setup = subprocess.Popen(
+            [binary, "--config", str(config), "--cwd", str(workspace), "init",
+             "--agent", "none", "--discovery", "explicit", "--root", str(skills)],
+            env=env,
+            stdin=slave,
+            stdout=slave,
+            stderr=slave,
+            close_fds=True,
+        )
+        os.close(slave)
+        output = bytearray()
+        try:
+            deadline = time.monotonic() + 10
+            while b"Reranking backend" not in output and setup.poll() is None:
+                if time.monotonic() >= deadline:
+                    break
+                ready, _, _ = select.select([master], [], [], 0.05)
+                if ready:
+                    try:
+                        output.extend(os.read(master, 4096))
+                    except OSError:
+                        break
+            assert b"Reranking backend" in output, (
+                "setup should pause at the reranking picker; output was "
+                + output.decode(errors="replace")
+            )
+            try:
+                search = subprocess.run(
+                    [binary, "--config", str(config), "--cwd", str(workspace), "--json",
+                     "search", "Picker concurrency fixture"],
+                    env=env,
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                )
+            except subprocess.TimeoutExpired as error:
+                raise AssertionError(
+                    "ordinary search waited for setup's interactive reranker picker"
+                ) from error
+            assert setup.poll() is None, "setup should still be paused in the picker"
+            assert search.returncode == 0, search.stderr
+            assert json.loads(search.stdout)["results"]
+        finally:
+            if setup.poll() is None:
+                setup.terminate()
+                try:
+                    setup.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    setup.kill()
+                    setup.wait()
+            os.close(master)
+
+
+def user_edit_during_preparation(binary: str) -> None:
+    with tempfile.TemporaryDirectory(prefix="skillwick-user-edit-setup-") as directory:
+        temporary = Path(directory).resolve()
+        skills = temporary / "skills"
+        skill = skills / "example"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text(
+            "---\nname: example\ndescription: User edit fixture.\n---\nBody.\n"
+        )
+        workspace = temporary / "workspace"
+        workspace.mkdir()
+        config = temporary / "config" / "skillwick" / "config.toml"
+        config.parent.mkdir(parents=True)
+        original_config = (
+            "version = 1\n"
+            'discovery = "explicit"\n'
+            f"roots = [{json.dumps(str(skills))}]\n"
+            "agents = []\n"
+        ).encode()
+        config.write_bytes(original_config)
+        state = temporary / "state"
+        cache = temporary / "cache"
+        codex = temporary / "codex"
+        codex.mkdir()
+        instructions = codex / "AGENTS.md"
+        tools = temporary / "bin"
+        tools.mkdir()
+        started = temporary / "uv-started"
+        release = temporary / "uv-release"
+        uv = tools / "uv"
+        uv.write_text(
+            "#!/bin/bash\n"
+            'if [ "$1" = "venv" ]; then\n'
+            '  venv="${@: -1}"\n'
+            '  mkdir -p "$venv/bin"\n'
+            '  cat > "$venv/bin/python" <<\'PYTHON\'\n'
+            "#!/usr/bin/env python3\n"
+            "import json\n"
+            "print(json.dumps({\"status\": \"ready\", \"backend\": \"tinybert\", "
+            "\"model\": \"cross-encoder/ms-marco-TinyBERT-L2-v2@81d1926f67cb8eee2c2be17ca9f793c7c3bd20cc\"}))\n"
+            "PYTHON\n"
+            '  chmod +x "$venv/bin/python"\n'
+            '  : > "$UV_STARTED"\n'
+            '  while [ ! -e "$UV_RELEASE" ]; do sleep 0.02; done\n'
+            "  exit 0\n"
+            "fi\n"
+            'if [ "$1" = "pip" ]; then exit 0; fi\n'
+            "exit 1\n"
+        )
+        uv.chmod(0o755)
+        env = os.environ.copy()
+        env.update(
+            HOME=str(temporary / "home"),
+            CODEX_HOME=str(codex),
+            XDG_CONFIG_HOME=str(temporary / "config"),
+            XDG_STATE_HOME=str(state),
+            XDG_CACHE_HOME=str(cache),
+            UV_STARTED=str(started),
+            UV_RELEASE=str(release),
+            PATH=str(tools) + os.pathsep + os.environ.get("PATH", ""),
+        )
+        setup = subprocess.Popen(
+            [binary, "--config", str(config), "--cwd", str(workspace), "init",
+             "--yes", "--agent", "codex", "--discovery", "explicit", "--root", str(skills),
+             "--reranker", "tinybert"],
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            deadline = time.monotonic() + 10
+            while not started.exists() and setup.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.02)
+            assert started.exists(), "setup should reach runtime preparation"
+            instructions.write_text("# User-owned instructions added during setup\n")
+        finally:
+            release.touch()
+            stdout, stderr = setup.communicate(timeout=30)
+
+        assert setup.returncode == 1, (stdout, stderr)
+        assert "setup destination changed while waiting" in stderr, stderr
+        assert instructions.read_text() == "# User-owned instructions added during setup\n"
+        assert config.read_bytes() == original_config, "preflight must reject before writing config"
+        assert not (codex / "SKILLWICK.md").exists()
+        assert not (state / "skillwick" / "integration.json").exists()
+        assert not (state / "skillwick" / "integration.pending.json").exists(), (
+            "destination drift must not leave a recovery journal"
+        )
+        search = subprocess.run(
+            [binary, "--config", str(config), "--cwd", str(workspace), "--json",
+             "search", "User edit fixture"],
+            env=env,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        assert search.returncode == 0, search.stderr
+        assert json.loads(search.stdout)["results"]
+
 if __name__ == "__main__":
     main()
     reranker_recovery(str(Path(sys.argv[1]).resolve()))
+    search_during_preparation(str(Path(sys.argv[1]).resolve()))
+    search_during_interactive_picker(str(Path(sys.argv[1]).resolve()))
+    user_edit_during_preparation(str(Path(sys.argv[1]).resolve()))
     relative_destinations(str(Path(sys.argv[1]).resolve()))
     print("Setup contract passed")

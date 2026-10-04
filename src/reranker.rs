@@ -3,7 +3,7 @@ use crate::{
     config::{self, Reranker, RerankerBackend},
     search::{self, ResultRow},
 };
-use rusqlite::Connection;
+use rusqlite::{Connection, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -30,6 +30,7 @@ const BERT_PACKAGES: &[&str] = &[
 ];
 const MAX_OUTPUT: u64 = 65_536;
 const SEARCH_TIMEOUT: Duration = Duration::from_secs(25);
+const PREPARATION_LOCK_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub struct SearchOutcome {
     pub rows: Vec<ResultRow>,
@@ -289,6 +290,24 @@ pub fn prepare(settings: &Reranker, previous: Option<&Reranker>) -> Result<(), S
         None
     };
     private_directory(directory)?;
+    // TinyBERT reuses a deterministic directory. Serialize preparation there
+    // without holding the global config publication lock.
+    let lock_path = directory.join("preparation.sqlite");
+    config::refuse_symlink(&lock_path)?;
+    let mut lock_db = Connection::open(&lock_path)
+        .map_err(|error| format!("cannot open reranker preparation lock: {error}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&lock_path, fs::Permissions::from_mode(0o600))
+            .map_err(|error| format!("cannot protect reranker preparation lock: {error}"))?;
+    }
+    lock_db
+        .busy_timeout(PREPARATION_LOCK_TIMEOUT)
+        .map_err(|error| format!("cannot configure reranker preparation timeout: {error}"))?;
+    let transaction = lock_db
+        .transaction_with_behavior(TransactionBehavior::Exclusive)
+        .map_err(|error| format!("cannot lock reranker preparation: {error}"))?;
     if !ready(directory, settings.backend) {
         let mut venv = Command::new("uv");
         venv.args(["venv", "--allow-existing", "--python", "3.14"])
@@ -342,6 +361,9 @@ pub fn prepare(settings: &Reranker, previous: Option<&Reranker>) -> Result<(), S
     if let Some(key) = key {
         config::atomic_write(&directory.join("api-key"), key.as_bytes(), 0o600)?;
     }
+    transaction
+        .commit()
+        .map_err(|error| format!("cannot finish reranker preparation: {error}"))?;
     Ok(())
 }
 

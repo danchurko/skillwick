@@ -84,22 +84,60 @@ fn prepared_backend_library_search() {
     assert_ne!(settings.reranker.backend, RerankerBackend::None);
     let cwd = std::env::current_dir().unwrap();
     let snapshot = skillwick::inventory::reconcile(&settings, &cwd, "search").unwrap();
-    let query = "Make p95 latency and data freshness explicit success criteria for the design";
-    let outcome = reranker::search(
-        &snapshot.db,
-        query,
-        5,
-        Some(&snapshot.roots),
-        &settings.reranker,
-    )
-    .unwrap();
-    assert!(
-        outcome.diagnostic.is_none(),
-        "backend failed: {:?}",
-        outcome.diagnostic
-    );
-    assert!(!outcome.rows.is_empty());
+    let profile: serde_json::Value =
+        serde_json::from_str(include_str!("../benchmarks/profile-v1.json")).unwrap();
+    let mut rankings = Vec::new();
+    for case in profile["heldout"]["cases"].as_array().unwrap() {
+        for (index, query) in case["queries"].as_array().unwrap().iter().enumerate() {
+            let query = query.as_str().unwrap();
+            let started = std::time::Instant::now();
+            let outcome = reranker::search(
+                &snapshot.db,
+                query,
+                5,
+                Some(&snapshot.roots),
+                &settings.reranker,
+            )
+            .unwrap();
+            let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+            assert!(
+                outcome.diagnostic.is_none(),
+                "backend failed: {:?}",
+                outcome.diagnostic
+            );
+            let lexical = search::query(&snapshot.db, query, 20, Some(&snapshot.roots)).unwrap();
+            assert_eq!(outcome.rows.len(), lexical.len().min(5));
+            for row in &outcome.rows {
+                let original = lexical
+                    .iter()
+                    .find(|candidate| candidate.id == row.id)
+                    .unwrap();
+                assert_eq!(
+                    serde_json::to_value(row).unwrap(),
+                    serde_json::to_value(original).unwrap(),
+                    "reranking changed candidate metadata"
+                );
+            }
+            rankings.push(serde_json::json!({
+                "id": format!("{}:{}", case["id"].as_str().unwrap(), index + 1),
+                "query": query,
+                "relevant": case["relevant"],
+                "ranked": outcome.rows.iter().map(|row| &row.name).collect::<Vec<_>>(),
+                "diagnostic": outcome.diagnostic,
+                "metadata_preserved": true,
+                "latency_ms": elapsed_ms,
+            }));
+        }
+    }
+    assert_eq!(rankings.len(), 105);
     if let Ok(path) = std::env::var("SKILLWICK_LIVE_RECEIPT") {
-        std::fs::write(path, serde_json::to_vec_pretty(&serde_json::json!({"backend": settings.reranker.backend, "query":query,"names":outcome.rows.iter().map(|v| &v.name).collect::<Vec<_>>(),"ids":outcome.rows.iter().map(|v| &v.id).collect::<Vec<_>>(),"diagnostic":outcome.diagnostic,"status":"passed"})).unwrap()).unwrap();
+        let receipt = serde_json::json!({
+            "backend": settings.reranker.backend,
+            "profile_version": profile["version"],
+            "rankings": rankings,
+            "metadata_preserved": true,
+            "status": "passed",
+        });
+        std::fs::write(path, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
     }
 }

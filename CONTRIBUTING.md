@@ -41,8 +41,9 @@ make test-trust
 ## Design rules
 
 - Keep installed skills in their existing locations.
-- Keep search lexical and local. Do not add MCP, embeddings, a daemon, or a
-  package manager without a new product decision.
+- Keep candidate retrieval lexical and local. Optional setup-selected reranking
+  follows the [reranking decision](docs/DECISIONS.md#semantic-retrieval). Do not add
+  MCP, embeddings, a daemon, or a package manager without a new product decision.
 - Preserve unrelated user configuration during setup and uninstall.
 - Add compatibility fixtures before changing the supported Codex version.
 - Keep source, metadata, and policy errors visible. Never treat an incomplete
@@ -51,7 +52,9 @@ make test-trust
 See [the architecture](docs/ARCHITECTURE.md), [command reference](docs/REFERENCE.md),
 [decisions](docs/DECISIONS.md), and [verification history](docs/IMPLEMENTATION.md).
 
-Keep the CLI's search path explicit and local. Tests should use temporary homes
+Keep CLI search explicit. Hosted reranking sends only the query and candidate
+names/descriptions with opaque labels; package bodies and provenance stay local.
+Tests should use temporary homes
 and fixture skill packages for filesystem integration coverage; do not modify a
 developer's installed skills or persistent configuration.
 

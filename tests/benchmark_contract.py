@@ -66,4 +66,53 @@ except ValueError:
     pass
 else:
     raise AssertionError('changed frozen labels accepted')
-print('Benchmark metric and profile contracts passed')
+
+# Observe the live verifier at its recorded CLI diagnostic boundary.
+live_spec = importlib.util.spec_from_file_location(
+    "reranker_live", root / "scripts/verify-reranker-live.py"
+)
+live = importlib.util.module_from_spec(live_spec)
+live_spec.loader.exec_module(live)
+assert live.diagnostic("reranking: missing_api_key; using lexical order\n") == "missing_api_key"
+assert live.diagnostic("reranking: runtime_timeout; using lexical order\n") == "runtime_timeout"
+assert live.diagnostic("") is None
+assert live.diagnostic("reranking: unknown; using lexical order\n") == "unexpected_diagnostic_output"
+assert live.diagnostic("reranking: missing_api_key; raw-secret\n") == "unexpected_diagnostic_output"
+
+# A one-query smoke receipt cannot claim complete library profile coverage.
+expected_rows = [
+    {"id": "one:1", "query": "SQLite", "relevant": ["sqlite"]},
+    {"id": "two:1", "query": "no matching skill", "relevant": []},
+]
+library_receipt = {
+    "backend": "jev", "profile_version": 1, "status": "passed", "metadata_preserved": True,
+    "rankings": [
+        {**expected_rows[0], "ranked": ["sqlite"], "latency_ms": 10.0,
+         "diagnostic": None, "metadata_preserved": True},
+        {**expected_rows[1], "ranked": [], "latency_ms": 0.1,
+         "diagnostic": None, "metadata_preserved": True},
+    ],
+}
+assert len(live.library_rankings(library_receipt, "jev", {"sqlite"}, expected_rows)) == 2
+for field, value in (("rankings", library_receipt["rankings"][:1]),
+                     ("metadata_preserved", False), ("profile_version", True)):
+    invalid = copy.deepcopy(library_receipt)
+    invalid[field] = value
+    try:
+        live.library_rankings(invalid, "jev", {"sqlite"}, expected_rows)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(f"invalid library {field} accepted")
+for field, value in (("ranked", ["unknown"]), ("ranked", ["sqlite", "sqlite"]),
+                     ("latency_ms", math.nan), ("diagnostic", "authentication"),
+                     ("metadata_preserved", False), ("query", "changed task")):
+    invalid = copy.deepcopy(library_receipt)
+    invalid["rankings"][0][field] = value
+    try:
+        live.library_rankings(invalid, "jev", {"sqlite"}, expected_rows)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(f"invalid library row {field} accepted")
+print('Benchmark metric, profile, and live receipt contracts passed')

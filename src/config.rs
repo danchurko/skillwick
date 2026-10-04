@@ -164,6 +164,13 @@ fn config_home() -> PathBuf {
 }
 
 pub fn load(path: &Path) -> Result<Config, String> {
+    crate::integration::load_config(path).map_err(|error| error.to_string())
+}
+
+/// Parse the current file without acquiring the setup lock or recovering a
+/// pending transaction. Setup uses this after recovery; dry-run uses it to
+/// preserve its no-write contract.
+pub(crate) fn load_unlocked(path: &Path) -> Result<Config, String> {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Config::default()),

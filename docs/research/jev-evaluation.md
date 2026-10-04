@@ -1,6 +1,7 @@
 # Hosted JEV reranking experiment
 
-Status: experimental. Production search and read remain local and unchanged.
+Status: experimental evaluation. Production candidate retrieval and reads remain
+local. Setup can opt into hosted JEV reranking; see [reranking](../RERANKING.md).
 
 ## Hypothesis and boundary
 
@@ -13,8 +14,8 @@ The experiment extends the existing external Python semantic benchmark through
 the official [TypeSafe Python SDK](https://github.com/typesafe-ai/typesafe-sdk-python).
 The experiment pins `typesafe-sdk==0.7.2` and uses Python 3.14.
 The SDK owns HTTP transport and typed questions. Skillwick still owns discovery,
-applicability, identity, freshness, lexical candidates, and live reads. Nothing
-loads a model or contacts TypeSafe from the Rust CLI.
+applicability, identity, freshness, lexical candidates, and live reads. Optional
+production reranking uses the shared JEV contract in a setup-prepared runtime.
 
 Remote state contains only a frozen benchmark query and candidate labels, names,
 and descriptions. Labels map locally to known benchmark identities. No skill

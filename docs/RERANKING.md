@@ -59,6 +59,11 @@ the configuration transaction selects it. Setup can reuse the currently selected
 JEV credential when the environment key is absent. Disabling reranking retains
 prepared runtimes, but selecting JEV again requires supplying the key.
 
+Ordinary search remains available while a backend prepares. Setup checks that
+configuration and integration have not changed before publishing its choice.
+Configuration reads recover an interrupted publication before loading the
+backend, preserving the old choice when the transaction did not commit.
+
 ## Ranking and failures
 
 Skillwick first reconciles inventory freshness and gets up to 20 eligible,
@@ -130,7 +135,20 @@ configuration and executable were backed up, and strict doctor passed. Installat
 uses the managed agent-state source-checkout override; this capability has not
 been published as a release. Full agent-state apply was not needed or run.
 
-The [validation summary](../benchmarks/results/configured-reranker-validation-2026-10-04.json)
-records all final checks. The broader source-install automatic native-inventory
+The [initial validation summary](../benchmarks/results/configured-reranker-validation-2026-10-04.json)
+records the earlier checks. The broader source-install automatic native-inventory
 acceptance remains failed on a pre-existing Ponytail plugin manifest version
 mismatch; the reranker tests and workstation explicit-root health checks passed.
+
+The [reviewed source-installed receipt](../benchmarks/results/configured-reranker-live-reviewed-2026-10-04.json)
+extends the library proof to all 105 queries for each optional backend, with
+complete result-row preservation checks. The
+[independent proof](../benchmarks/results/configured-reranker-reviewed-proof-2026-10-04.json)
+checks receipt identities, mappings, recomputed CLI/library metrics, and restored
+searches after controlled missing-credential, missing-artifact, and provider
+rejection failures. The
+[reviewed validation summary](../benchmarks/results/configured-reranker-reviewed-validation-2026-10-04.json)
+records the final code reviews and checks, including setup concurrency and
+interrupted-publication recovery. Source-install validation with private provider
+homes uses the real configured skill roots; the broader native-inventory failure
+remains separately recorded.

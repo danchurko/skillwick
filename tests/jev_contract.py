@@ -2,6 +2,7 @@
 """Offline contracts for the opt-in JEV adapter; no SDK import or network access."""
 
 import importlib.util
+import copy
 import json
 import math
 import sys
@@ -191,6 +192,22 @@ def run(directory, version=1, *, client=None, key="test-secret-key", **kwargs):
     )
     return status, json.loads(output.read_text()), rows, lexical, output
 
+
+# Exported source may report unavailable Git provenance, but that receipt cannot
+# be accepted as a strict candidate input for a new hosted experiment.
+with tempfile.TemporaryDirectory(prefix="skillwick-jev-provenance-") as temporary:
+    document, profile_path, candidate_path, rows, _ = write_inputs(Path(temporary))
+    candidates = json.loads(candidate_path.read_text())
+    jev.validate_candidate_document(profile_path, document, rows, candidate_path, candidates, None)
+    for field in ("skillwick_commit", "working_tree_dirty", "implementations_sha256"):
+        incomplete = copy.deepcopy(candidates)
+        incomplete["provenance"][field] = None
+        try:
+            jev.validate_candidate_document(profile_path, document, rows, candidate_path, incomplete, None)
+        except jev.JEVInputError as error:
+            assert error.category == "missing_candidate_provenance"
+        else:
+            raise AssertionError(f"unavailable {field} accepted as strict candidate provenance")
 
 # Payloads carry only task and a bounded candidate view; local fixture identities remain local.
 v2 = profile(2)

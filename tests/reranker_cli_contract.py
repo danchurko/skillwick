@@ -9,6 +9,8 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
+import tomllib
 
 
 def isolated_env(root: Path, tools: Path) -> dict[str, str]:
@@ -346,6 +348,111 @@ def main() -> None:
         assert synthetic_key not in failed_prepare.stdout + failed_prepare.stderr
         assert {path: path.read_bytes() for path in tracked} == before
         assert not list(state.rglob("api-key"))
+
+        # Controlled provider responses exercise credential replacement through
+        # the CLI; setup still embeds the real program and readiness manifest.
+        reference = temporary / "skills" / "sqlite-reference"
+        reference.mkdir()
+        (reference / "SKILL.md").write_text(
+            "---\nname: sqlite-reference\ndescription: SQLite reference.\n---\nFixture body.\n",
+            encoding="utf-8",
+        )
+        fake_tools = temporary / "fake-tools"
+        fake_tools.mkdir()
+        fake_python = f"#!{sys.executable}\n" + '''
+import json, os, sys
+if "--prepare" in sys.argv:
+    if os.environ.get("TYPESAFE_API_KEY") == "rejected-replacement-key":
+        print(json.dumps({"error": "authentication"}))
+        raise SystemExit(1)
+    print(json.dumps({"status": "ready", "backend": "jev", "model": "jev-1.13.0"}))
+else:
+    request = json.load(sys.stdin)
+    print(json.dumps({"ranked": [row["id"] for row in reversed(request["candidates"])],
+                      "model": "jev-1.13.0"}))
+'''
+        fake_uv = fake_tools / "uv"
+        fake_uv.write_text(
+            f"#!{sys.executable}\n" +
+            "import os, pathlib, sys, time\n" +
+            "assert 'TYPESAFE_API_KEY' not in os.environ\n" +
+            "if sys.argv[1] == 'venv':\n" +
+            "    if os.environ.get('SLOW_SETUP'):\n" +
+            "        pathlib.Path(os.environ['PREPARATION_STARTED']).touch()\n" +
+            "        while not pathlib.Path(os.environ['PREPARATION_RELEASE']).exists(): time.sleep(0.02)\n" +
+            "    destination = pathlib.Path(sys.argv[-1]) / 'bin/python'\n" +
+            "    destination.parent.mkdir(parents=True, exist_ok=True)\n" +
+            f"    destination.write_text({fake_python!r})\n" +
+            "    destination.chmod(0o700)\n",
+            encoding="utf-8",
+        )
+        fake_uv.chmod(0o700)
+        prepared_env = env.copy()
+        prepared_env["PATH"] = str(fake_tools)
+        prepared_env["TYPESAFE_API_KEY"] = "saved-old-contract-key"
+        prepare_args = (
+            "--config", str(config), "--cwd", str(workspace),
+            "init", "--yes", "--agent", "codex", "--reranker", "jev",
+        )
+        ordinary_args = ("--json", "search", "SQLite", "--limit", "2")
+        lexical_before = search(binary, env, config, workspace, *ordinary_args)
+        require(lexical_before, 0, "lexical baseline before preparing JEV")
+        lexical_rows = json.loads(lexical_before.stdout)["results"]
+        assert len(lexical_rows) == 2
+        require(run(binary, prepared_env, *prepare_args), 0, "prepare controlled JEV runtime")
+        selected_runtime = Path(tomllib.loads(config.read_text())["reranker"]["runtime"])
+        credential = selected_runtime / "api-key"
+        protected = [*tracked, credential]
+        prepared_before = {path: path.read_bytes() for path in protected}
+        saved_env = prepared_env.copy()
+        saved_env.pop("TYPESAFE_API_KEY")
+        ordinary_before = search(binary, saved_env, config, workspace, *ordinary_args)
+        require(ordinary_before, 0, "prepared search with saved credential")
+        assert not ordinary_before.stderr
+        # Compare complete rows, including IDs, paths, origins, and policy.
+        assert json.loads(ordinary_before.stdout)["results"] == list(reversed(lexical_rows))
+        replacement_env = prepared_env.copy()
+        replacement_env["TYPESAFE_API_KEY"] = "rejected-replacement-key"
+        rejected = run(binary, replacement_env, *prepare_args)
+        require(rejected, 1, "reject replacement credential")
+        assert "authentication" in rejected.stderr
+        assert "rejected-replacement-key" not in rejected.stdout + rejected.stderr
+        assert {path: path.read_bytes() for path in protected} == prepared_before
+        ordinary_after = search(binary, saved_env, config, workspace, *ordinary_args)
+        require(ordinary_after, 0, "saved credential search after failed replacement")
+        assert not ordinary_after.stderr
+        assert json.loads(ordinary_after.stdout) == json.loads(ordinary_before.stdout)
+
+        # A newer completed setup wins over a plan still preparing its runtime.
+        started, release = temporary / "started", temporary / "release"
+        slow_env = prepared_env.copy()
+        slow_env.update(SLOW_SETUP="1", PREPARATION_STARTED=str(started), PREPARATION_RELEASE=str(release))
+        preparing = subprocess.Popen(
+            [str(binary), *prepare_args], env=slow_env, stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        try:
+            deadline = time.monotonic() + 10
+            while not started.exists() and preparing.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.02)
+            assert started.exists(), "setup did not reach controlled preparation"
+            concurrent_search = search(binary, saved_env, config, workspace, *ordinary_args)
+            require(concurrent_search, 0, "search during successful backend preparation")
+            assert not concurrent_search.stderr
+            assert concurrent_search.stdout == ordinary_before.stdout
+            require(run(binary, saved_env, *prepare_args[:-1], "none"), 0, "intervening setup")
+            newer_publication = {path: path.read_bytes() for path in protected}
+        finally:
+            release.touch()
+            preparing_stdout, preparing_stderr = preparing.communicate(timeout=30)
+        assert preparing.returncode == 1
+        assert "changed during setup" in preparing_stderr
+        assert {path: path.read_bytes() for path in protected} == newer_publication
+        assert tomllib.loads(config.read_text())["reranker"]["backend"] == "none"
+        resumed = search(binary, saved_env, config, workspace, *ordinary_args)
+        require(resumed, 0, "search after intervening setup wins")
+        assert not resumed.stderr
+        assert json.loads(resumed.stdout)["results"] == lexical_rows
 
         # Disabling an unavailable selection restores ordinary lexical search.
         disabled_root = temporary / "disabled"

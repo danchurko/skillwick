@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -367,8 +368,8 @@ def diagnostic(stderr: str) -> str | None:
     unexpected = False
     for line in stderr.splitlines():
         if line.startswith("reranking: "):
-            category = line.removeprefix("reranking: ").strip()
-            if category in allowed:
+            category, separator, suffix = line.removeprefix("reranking: ").partition("; ")
+            if category in allowed and separator and suffix == "using lexical order":
                 categories.append(category)
             else:
                 unexpected = True
@@ -495,8 +496,35 @@ def latency_summary(values: list[float]) -> dict:
     }
 
 
+def library_rankings(receipt: dict, backend: str, fixture_identities: set[str],
+                     expected_rows: list[dict]) -> list[dict]:
+    if (not isinstance(receipt, dict) or receipt.get("status") != "passed"
+            or receipt.get("backend") != backend or type(receipt.get("profile_version")) is not int
+            or receipt.get("profile_version") != 1 or receipt.get("metadata_preserved") is not True):
+        raise ValueError("invalid_library_receipt")
+    rankings = receipt.get("rankings")
+    if not isinstance(rankings, list) or len(rankings) != len(expected_rows):
+        raise ValueError("invalid_library_receipt")
+    for row, expected in zip(rankings, expected_rows):
+        if not isinstance(row, dict):
+            raise ValueError("invalid_library_receipt")
+        names, elapsed = row.get("ranked"), row.get("latency_ms")
+        if (any(row.get(field) != expected[field] for field in ("id", "query", "relevant"))
+                or not isinstance(names, list) or len(names) > 5
+                or not all(isinstance(name, str) and name in fixture_identities for name in names)
+                or len(set(names)) != len(names) or "diagnostic" not in row
+                or row["diagnostic"] is not None
+                or row.get("metadata_preserved") is not True
+                or isinstance(elapsed, bool) or not isinstance(elapsed, (int, float))
+                or not math.isfinite(elapsed) or elapsed < 0):
+            raise ValueError("invalid_library_receipt")
+    return [{field: row[field] for field in (
+        "id", "query", "relevant", "ranked", "latency_ms", "diagnostic", "metadata_preserved"
+    )} for row in rankings]
+
+
 def library_test(env: dict[str, str], config: Path, workdir: Path, backend: str,
-                 fixture_identities: set[str]) -> dict:
+                 fixture_identities: set[str], expected_rows: list[dict]) -> dict:
     receipt_path = workdir / f"library-receipt-{backend}.json"
     command = [
         "cargo",
@@ -527,26 +555,18 @@ def library_test(env: dict[str, str], config: Path, workdir: Path, backend: str,
         return evidence
     try:
         receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-        names = receipt.get("names")
-        valid = (
-            receipt.get("status") == "passed"
-            and str(receipt.get("backend", "")).lower() == backend
-            and isinstance(names, list)
-            and bool(names)
-            and all(isinstance(name, str) and name in fixture_identities for name in names)
-            and receipt.get("diagnostic") is None
-        )
-        if valid:
-            evidence["receipt"] = {
-                "status": "passed",
-                "backend": backend,
-                "ranked_fixture_ids": names,
-                "diagnostic_category": None,
-            }
-        else:
-            evidence["status"] = "failed"
-            evidence["failure_category"] = "invalid_library_receipt"
-    except (OSError, json.JSONDecodeError, AttributeError, TypeError):
+        rankings = library_rankings(receipt, backend, fixture_identities, expected_rows)
+        evidence["receipt"] = {
+            "status": "passed",
+            "backend": backend,
+            "query_count": len(rankings),
+            "rankings": rankings,
+            "quality": quality(1, rankings),
+            "latency_ms": latency_summary([row["latency_ms"] for row in rankings]),
+            "latency_scope": "configured library search; inventory reconciled once before the profile",
+            "metadata_preserved": True,
+        }
+    except (OSError, ValueError, AttributeError, TypeError):
         evidence["status"] = "failed"
         evidence["failure_category"] = "missing_or_invalid_library_receipt"
     finally:
@@ -698,7 +718,7 @@ def main() -> int:
                 backend_result["rankings"],
             )
             stage["library_test"] = library_test(
-                query_env, config, workdir, backend, fixture_identities
+                query_env, config, workdir, backend, fixture_identities, rows
             )
         atomic_result(output, base_result)
 

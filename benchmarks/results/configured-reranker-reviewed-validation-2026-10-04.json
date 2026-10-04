@@ -1,0 +1,71 @@
+{
+  "kind": "skillwick-reviewed-configured-reranker-validation",
+  "date": "2026-10-04",
+  "status": "passed_with_pre_existing_native_inventory_failure",
+  "comparison_base": "f100e7e5c1160bdf6c88425bdb0f4ed465328efc",
+  "issues": [
+    33,
+    34,
+    35,
+    36,
+    37
+  ],
+  "checks": {
+    "full_suite": "make check test-filesystem passed; staged snapshot make check repeated by commit hook",
+    "installed_cli": "105 frozen V1 queries for lexical, TinyBERT, JEV; no fallback",
+    "configured_library": "105 queries for TinyBERT and JEV; complete result metadata preserved; no fallback",
+    "saved_credentials": "key environment cleared for CLI and library",
+    "sdk_transport": "pinned TypeSafe SDK mock transport passed",
+    "managed_installer": "isolated agent-state installer contract passed",
+    "receipt_independent_checks": "fixture, implementation, binary and verifier hashes; query identity, mapping, full coverage and recomputed metrics passed",
+    "controlled_live_failures": "missing key, missing model artifact, provider rejection; lexical output retained and restored searches passed",
+    "setup_regressions": "crash recovery, bounded read lock, searches during backend preparation and picker, stale plan rejection, user instruction edit preservation passed",
+    "source_install_native_inventory": "failed: pre-existing Ponytail manifest version mismatch; state left untouched",
+    "source_install_private_provider_homes": "passed with real configured explicit skill roots; narrower scope than native inventory",
+    "staged_commit_hook": "enabled; private provider homes; real configured skill roots; no bypass",
+    "secret_scan": "passed"
+  },
+  "reviews": {
+    "standards": "passed; no material defects after fixes",
+    "spec": "passed after final lock-scope and preflight-journal fixes",
+    "nonblocking_observations": [
+      "Duplicated model identity dispatch and SDK smoke/ranking lifecycle remain."
+    ]
+  },
+  "evidence": [
+    "configured-reranker-live-reviewed-2026-10-04.json",
+    "configured-reranker-reviewed-proof-2026-10-04.json"
+  ],
+  "identities": {
+    "src/config.rs": "02eebd05c38b955d76696c22d84dcbdcfe65f591c41bf1f002cfa6e94709a321",
+    "src/integration.rs": "f75e2b8929511fab65360ecc8cb12ea6d6db2c8d7bf780e7a3fb397402faa27e",
+    "src/reranker.rs": "e548ad2534286f9e92e206d7c6430c96773c864b162bfc15cc8e951958ebf54b",
+    "src/cli.rs": "c6feba9220f0270d4abe7f9cfb5d14c5d73d3e72d6be50ff5069d38c412adbf7",
+    "assets/skillwick/reranker_runtime.py": "29efcddf12369fd23fb5001b1ed5c457f8a5796d631d604d4a0c2a22f70a6b6d",
+    "scripts/verify-reranker-live.py": "fc3d805b01e5ebac1c56507f93e936ba2c89721d50d9f9c0ca0a44e3aa24d835",
+    "scripts/benchmark_metrics.py": "fd18482edd454d34da115ba171c56e5b478e0e51b706cdfa10f81569b436d06c",
+    "scripts/benchmark_profiles.py": "6a69f32412941b91c541e0a0dc443752c4f19709505e23a26547432e1b022917",
+    "scripts/verify-local-corpus.py": "41c13deb9b355d597930d10186d7724f3576d409d12ec189817b3bf55a44afc8",
+    "tests/setup_contract.py": "44ca78815d863357ceac694a3a12eaac59a825f08509b4f64f2af3ecf11b78ca",
+    "tests/reranker_cli_contract.py": "f5eb1554cab91c05de4e8d504d2a1598a6f62a985ea23e5f93142ef80fda8e73",
+    "tests/reranker_library.rs": "b19e5dbb54e6f1033c673a2d3eae2fa800a2aa2a8c0eda346e292a41e07efcec",
+    "tests/benchmark_contract.py": "31851f29f89d41b6bd8b7f2f5da6bdd3d330e26791776a5ca80f4ff40deed53c",
+    "tests/jev_contract.py": "fe7fc4bf5f6101b7c36b6a8144d79fb9f264ee907935dfa5adb1dcf7e0c0e812",
+    "tests/jev_sdk_contract.py": "63d6bfbfbf49a57ac2f40a5a9f8ecd5a265a2c4586f2446b29dd9ec3b78c33d0",
+    "tests/reranker_runtime_contract.py": "1a49a91a16647cbd3d833eb0a94371b8ead3c72a1b5877b20163721301fd8076"
+  },
+  "evidence_sha256": {
+    "configured-reranker-live-reviewed-2026-10-04.json": "8cd08bef1ac67434ed6baf2d8d133f6d1003ac8f6d79f0a1c810664e988cd3eb",
+    "configured-reranker-reviewed-proof-2026-10-04.json": "9b67e4bae37bf74256ddf8048e7f1d552b0fa487144762bd72b4fb029537efc8"
+  },
+  "limitations": [
+    "Frozen V1 relevance fixtures are correlated; this is not independent generalization or agent task-success evidence.",
+    "Native automatic inventory acceptance remains blocked by the existing Ponytail plugin manifest mismatch.",
+    "Earlier validation, workstation and live receipts describe their original inputs; final source-installed proof is separate."
+  ],
+  "not_run": {
+    "release": "not requested",
+    "merge": "not requested",
+    "full_agent_state_apply": "not requested"
+  }
+}
