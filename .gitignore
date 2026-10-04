@@ -6,3 +6,6 @@ __pycache__/
 
 # Generated benchmark rankings, receipts, audits, and raw request traces.
 /benchmarks/results/
+
+# ONNX Runtime telemetry fallback produced by local benchmark execution.
+/:memory:.ses
