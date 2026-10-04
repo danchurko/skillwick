@@ -1,0 +1,520 @@
+{
+  "version": 2,
+  "kind": "skillwick-lexical-baseline",
+  "measured_at": "2026-10-04T17:56:32.972766+00:00",
+  "profile_sha256": "83e8dadbe64c1166ccc2b81ea4b5c0b992b0ee044c4cf57551ee333094195050",
+  "corpus_sha256": "e44f1bebbafbcdc77c58546f990a2de17b2a769cca9534a2e70c5aa103e6563c",
+  "corpus_total": 171,
+  "conditions": {
+    "cold": "fresh process; kernel file caches were not flushed",
+    "warm": "separate automatically reconciled search processes, 1 samples per query",
+    "optional_model_artifacts": false
+  },
+  "machine": {
+    "system": "Darwin",
+    "release": "27.0.0",
+    "machine": "arm64",
+    "processor": "arm",
+    "python": "3.14.8"
+  },
+  "executable": {
+    "path": "skillwick",
+    "version": "skillwick 0.4.0",
+    "sha256": "b6e4b9532d44ed561527a4676c92c87c9438d2da62f412dfc3c223f2d249b754",
+    "bytes": 4700448
+  },
+  "measurements": {
+    "startup_ms": {
+      "samples": 1,
+      "min": 11.018209,
+      "median": 11.018209,
+      "p95": 11.018209,
+      "max": 11.018209
+    },
+    "cold_search_ms": 47.475209,
+    "warm_search_ms": {
+      "samples": 8,
+      "min": 27.218625,
+      "median": 40.142292,
+      "p95": 55.053334,
+      "max": 55.053334
+    },
+    "refresh_ms": 92.248625,
+    "index_bytes": 606208,
+    "search_max_rss_kib": 9360
+  },
+  "case_count": 8,
+  "candidate_pool_size": 20,
+  "provenance": {
+    "skillwick_commit": "8c01ffc7f6389ce23d2803d76c12f35adbf2632b",
+    "working_tree_dirty": true,
+    "implementations_sha256": {
+      "scripts/benchmark_metrics.py": "fd18482edd454d34da115ba171c56e5b478e0e51b706cdfa10f81569b436d06c",
+      "scripts/benchmark_profiles.py": "6a69f32412941b91c541e0a0dc443752c4f19709505e23a26547432e1b022917",
+      "scripts/benchmark-lexical.py": "ed3c4ba665177c753d27fe72a1db354b76cb8470994b37705a2a46c3aa4d88bc",
+      "scripts/benchmark-semantic.py": "30a43c7c86b2b06e6f8540d78872874b985550d2a3e20a6ea8654c9d15b20980",
+      "scripts/benchmark_jev.py": "e16b2576a509b2c305d419b57b9eb1d6715977b19a4dc49f5d6d94ceed959005",
+      "assets/skillwick/reranker_runtime.py": "29efcddf12369fd23fb5001b1ed5c457f8a5796d631d604d4a0c2a22f70a6b6d"
+    }
+  },
+  "retrieval_metrics": {
+    "queries": 8,
+    "positive_queries": 6,
+    "negative_queries": 2,
+    "positive_recall_at_5": 1.0,
+    "positive_recall_at_20": 1.0,
+    "positive_mrr_at_5": 1.0,
+    "positive_ndcg_at_5": 1.0,
+    "negative_false_positive_rate": 1.0,
+    "positive_recall_at_1": 1.0,
+    "positive_recall_at_3": 1.0
+  },
+  "selection_metrics": {
+    "queries": 8,
+    "positive_queries": 6,
+    "improved": 0,
+    "worsened": 0,
+    "unchanged_materially": 8,
+    "ordering_changed": 0,
+    "relevant_displacement_queries": 0,
+    "relevant_displacements": 0,
+    "relevant_ranked_first": 6,
+    "negative_correct_abstentions": 0,
+    "relevant_ranked_first_rate": 1.0,
+    "material_change_measure": "top-five discounted relevant gain, then relevant coverage; negative cases use empty-result correctness",
+    "selected_skill_success": null,
+    "selection_limit": "labels describe relevance, not actual agent selection or task success; no unique best skill is labelled for multi-relevant cases"
+  },
+  "quality": {
+    "queries": 8,
+    "positive_queries": 6,
+    "negative_queries": 2,
+    "positive_recall_at_5": 1.0,
+    "positive_recall_at_20": 1.0,
+    "positive_mrr_at_5": 1.0,
+    "positive_ndcg_at_5": 1.0,
+    "negative_false_positive_rate": 1.0
+  },
+  "rankings": [
+    {
+      "id": "gke-inference-domain:1",
+      "query": "Deploy an LLM inference server on GKE with GPU support and model serving.",
+      "relevant": [
+        "gke-inference"
+      ],
+      "ranked": [
+        "gke-inference",
+        "google-cloud-solution-guided-gke-ai-migration",
+        "gke-manifest-generation",
+        "gke-cluster-creation",
+        "agent-platform-inference",
+        "agent-platform-eval-flywheel",
+        "gke-ai-troubleshooting-handle-disruption-gpu-tpu",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+        "google-cloud-solution-n-tier-serverless-web-app",
+        "agent-platform-tuning",
+        "agent-platform-tuning-management",
+        "agent-platform-endpoint-management",
+        "agent-platform-deploy",
+        "gke-cost-optimization",
+        "gke-workload-identity",
+        "gke-upgrades",
+        "agent-platform-model-registry",
+        "agent-platform-prompt-management",
+        "google-cloud-filestore-log-troubleshooting",
+        "google-cloud-storage-fuse"
+      ]
+    },
+    {
+      "id": "agent-platform-inference-domain:1",
+      "query": "Run an inference request against a Gemini or OpenMaaS model through Google Cloud Agent Platform.",
+      "relevant": [
+        "agent-platform-inference"
+      ],
+      "ranked": [
+        "agent-platform-inference",
+        "google-cloud-solution-guided-gke-ai-migration",
+        "agent-platform-troubleshooting",
+        "agent-platform-migrate-from-ai-studio",
+        "finding-google-skills",
+        "gemini-api",
+        "google-cloud-global-frontend-configuration",
+        "agent-platform-endpoint-management",
+        "agent-platform-deploy",
+        "agent-platform-eval-flywheel",
+        "cloud-run-alert-configuration",
+        "google-agents-cli-onboarding",
+        "google-cloud-solution-multi-agent-security",
+        "google-cloud-solution-agentic-ai-borderless-data-lakehouse",
+        "workload-manager-basics",
+        "google-cloud-storage-fuse",
+        "google-cloud-waf-sustainability",
+        "dpop-adoption",
+        "google-cloud-networking-observability",
+        "agent-platform-tuning"
+      ]
+    },
+    {
+      "id": "developer-documentation:1",
+      "query": "Find current official API documentation and code examples for a developer SDK change.",
+      "relevant": [
+        "find-docs"
+      ],
+      "ranked": [
+        "find-docs",
+        "retrieving-developer-knowledge",
+        "google-ads-api-mcp-setup",
+        "finding-google-skills",
+        "developing-genkit-dart",
+        "google-ads-api-quickstart",
+        "codebase-design",
+        "gemini-api",
+        "agent-platform-inference",
+        "google-ads-api-account-diagnostics",
+        "google-mobile-ads-android-migrate-to-next-gen",
+        "gke-workload-identity",
+        "gcloud",
+        "data-manager-api-setup",
+        "data-manager-api-event-ingestion",
+        "data-manager-api-audience-ingestion",
+        "google-cloud-storage-bucket-architect",
+        "research",
+        "dpop-adoption"
+      ]
+    },
+    {
+      "id": "codex-release-orchestration:1",
+      "query": "Orchestrate delegated multi-file coding work from a release specification, including exploration, implementation, tests, and review.",
+      "relevant": [
+        "astra-orchestrator"
+      ],
+      "ranked": [
+        "astra-orchestrator",
+        "gke-productionize",
+        "google-cloud-networking-observability",
+        "finding-google-skills",
+        "code-review",
+        "migrate-to-shoehorn",
+        "research",
+        "gke-upgrades",
+        "application-design-center-design-deploy",
+        "gke-observability",
+        "bigquery-bigframes",
+        "cloud-monitoring-list-time-series-request",
+        "detection-engineering-coverage-evaluation",
+        "google-cloud-solution-agentic-analytics-spark-knowledge-catalog",
+        "google-cloud-filestore-log-troubleshooting",
+        "google-cloud-waf-sustainability",
+        "google-cloud-global-frontend-configuration"
+      ]
+    },
+    {
+      "id": "gke-readiness-orchestration:1",
+      "query": "Orchestrate a production readiness review of GKE workloads across reliability, security, observability, backups, and cost.",
+      "relevant": [
+        "gke-productionize"
+      ],
+      "ranked": [
+        "gke-productionize",
+        "google-cloud-filestore-auditing",
+        "gke-manifest-generation",
+        "gke-reliability",
+        "gke-golden-path",
+        "agent-platform-alert-configuration",
+        "gke-cost-analysis",
+        "gke-cluster-creation",
+        "gke-ai-troubleshooting-jobset-interruption",
+        "astra-orchestrator",
+        "gke-ai-troubleshooting-tpu-metrics-monitoring",
+        "google-cloud-global-frontend-configuration",
+        "gke-observability",
+        "gke-cost-optimization",
+        "google-cloud-waf-reliability",
+        "gke-backup-dr",
+        "google-cloud-waf-sustainability",
+        "bigquery-observability",
+        "google-cloud-waf-security",
+        "gke-platform-security"
+      ]
+    },
+    {
+      "id": "google-multi-agent-design:1",
+      "query": "Design and build a Google Cloud multi-agent system, gather requirements, and produce architecture and deployment guidance.",
+      "relevant": [
+        "google-cloud-solution-build-deploy-agents"
+      ],
+      "ranked": [
+        "google-cloud-solution-build-deploy-agents",
+        "google-cloud-solution-agentic-ai-bidirectional-streaming",
+        "google-cloud-solution-architecture",
+        "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+        "google-cloud-solution-hybrid-search-alloydb",
+        "google-cloud-waf-operational-excellence",
+        "google-cloud-solution-n-tier-serverless-web-app",
+        "google-cloud-global-frontend-configuration",
+        "google-cloud-solution-agentic-ai-borderless-data-lakehouse",
+        "google-cloud-waf-performance-optimization",
+        "google-cloud-waf-cost-optimization",
+        "google-cloud-waf-security",
+        "google-cloud-solution-multi-agent-security",
+        "cloud-build-basics",
+        "agent-platform-eval-flywheel",
+        "google-cloud-solution-agentic-ai-data-science-workflow",
+        "google-cloud-recipe-foundation-builder",
+        "google-cloud-solution-agentic-analytics-spark-knowledge-catalog",
+        "google-cloud-recipe-onboarding",
+        "application-design-center-design-deploy"
+      ]
+    },
+    {
+      "id": "negative-general-knowledge:1",
+      "query": "What is the capital of Portugal?",
+      "relevant": [],
+      "ranked": [
+        "cloud-databases-onboarding",
+        "code-review"
+      ]
+    },
+    {
+      "id": "negative-lexical-phrase:1",
+      "query": "Translate the phrase \"find docs\" into French.",
+      "relevant": [],
+      "ranked": [
+        "find-docs",
+        "bigquery-ai-ml",
+        "research"
+      ]
+    }
+  ],
+  "qualification": {
+    "status": "partial_blocked",
+    "scope": "current explicit eligible subset only",
+    "source_policy": "managed explicit Codex and Claude roots",
+    "live_inventory": {
+      "total": 171,
+      "format_version": 3,
+      "sha256": "6a4873b6304881d2f3d3bbdfbfd2208b4976708b9587e6b4035ce2c00be2fd1a",
+      "matches_frozen_inventory_fields": true,
+      "missing_relevant_targets": [
+        "amazon-bedrock",
+        "aws-containers",
+        "aws-deployment"
+      ],
+      "duplicate_names": 0,
+      "scope": "global",
+      "enabled": true,
+      "degraded": false,
+      "source_kind": "filesystem",
+      "origin_count_distribution": {
+        "1": 17,
+        "2": 154
+      }
+    },
+    "historical_bedrock_replays": [
+      {
+        "id": "bedrock-availability-pricing",
+        "query": "AWS Bedrock model availability pricing direct inference invoke-model CLI eu-west-1",
+        "query_source": "sanitized historical query supplied for qualification",
+        "status": "eligibility_blocked_unscored",
+        "target_name": "amazon-bedrock",
+        "target_eligible": false,
+        "reason": "The target is absent from the current eligible explicit subset. Returned candidates cannot establish a ranking miss.",
+        "result_count": 6,
+        "candidate_limit": 20,
+        "top_candidates": [
+          "gke-inference",
+          "agent-platform-inference",
+          "google-cloud-solution-guided-gke-ai-migration",
+          "gke-manifest-generation",
+          "google-cloud-waf-sustainability"
+        ]
+      },
+      {
+        "id": "bedrock-typescript-tool-use",
+        "query": "AWS Bedrock direct inference TypeScript tool use evaluation",
+        "query_source": "sanitized historical query supplied for qualification",
+        "status": "eligibility_blocked_unscored",
+        "target_name": "amazon-bedrock",
+        "target_eligible": false,
+        "reason": "The target is absent from the current eligible explicit subset. Returned candidates cannot establish a ranking miss.",
+        "result_count": 20,
+        "candidate_limit": 20,
+        "top_candidates": [
+          "developing-genkit-js",
+          "detection-engineering-coverage-evaluation",
+          "agent-platform-inference",
+          "datalineage-bigquery-asset-impact-analysis",
+          "gke-inference"
+        ]
+      }
+    ],
+    "compound_known_name_diagnostic": {
+      "id": "compound-known-names",
+      "query": "astra-orchestrator find-docs agent-platform-inference",
+      "query_source": "synthetic diagnostic",
+      "status": "unscored",
+      "reason": "A list of known skill names does not express a coherent task and is excluded from relevance metrics.",
+      "result_count": 0,
+      "candidate_limit": 20,
+      "top_candidates": []
+    },
+    "scored_positive_cases": [
+      {
+        "case_id": "gke-inference-domain",
+        "relevant": [
+          "gke-inference"
+        ],
+        "first_relevant_rank": 1,
+        "top_candidates": [
+          "gke-inference",
+          "google-cloud-solution-guided-gke-ai-migration",
+          "gke-manifest-generation",
+          "gke-cluster-creation",
+          "agent-platform-inference"
+        ]
+      },
+      {
+        "case_id": "agent-platform-inference-domain",
+        "relevant": [
+          "agent-platform-inference"
+        ],
+        "first_relevant_rank": 1,
+        "top_candidates": [
+          "agent-platform-inference",
+          "google-cloud-solution-guided-gke-ai-migration",
+          "agent-platform-troubleshooting",
+          "agent-platform-migrate-from-ai-studio",
+          "finding-google-skills"
+        ]
+      },
+      {
+        "case_id": "developer-documentation",
+        "relevant": [
+          "find-docs"
+        ],
+        "first_relevant_rank": 1,
+        "top_candidates": [
+          "find-docs",
+          "retrieving-developer-knowledge",
+          "google-ads-api-mcp-setup",
+          "finding-google-skills",
+          "developing-genkit-dart"
+        ]
+      },
+      {
+        "case_id": "codex-release-orchestration",
+        "relevant": [
+          "astra-orchestrator"
+        ],
+        "first_relevant_rank": 1,
+        "top_candidates": [
+          "astra-orchestrator",
+          "gke-productionize",
+          "google-cloud-networking-observability",
+          "finding-google-skills",
+          "code-review"
+        ]
+      },
+      {
+        "case_id": "gke-readiness-orchestration",
+        "relevant": [
+          "gke-productionize"
+        ],
+        "first_relevant_rank": 1,
+        "top_candidates": [
+          "gke-productionize",
+          "google-cloud-filestore-auditing",
+          "gke-manifest-generation",
+          "gke-reliability",
+          "gke-golden-path"
+        ]
+      },
+      {
+        "case_id": "google-multi-agent-design",
+        "relevant": [
+          "google-cloud-solution-build-deploy-agents"
+        ],
+        "first_relevant_rank": 1,
+        "top_candidates": [
+          "google-cloud-solution-build-deploy-agents",
+          "google-cloud-solution-agentic-ai-bidirectional-streaming",
+          "google-cloud-solution-architecture",
+          "google-cloud-solution-rag-enterprise-search-gke-sqldb",
+          "google-cloud-solution-hybrid-search-alloydb"
+        ]
+      }
+    ],
+    "scored_negative_cases": [
+      {
+        "case_id": "negative-general-knowledge",
+        "query": "What is the capital of Portugal?",
+        "returned_count": 2,
+        "top_candidates": [
+          "cloud-databases-onboarding",
+          "code-review"
+        ],
+        "false_positive": true
+      },
+      {
+        "case_id": "negative-lexical-phrase",
+        "query": "Translate the phrase \"find docs\" into French.",
+        "returned_count": 3,
+        "top_candidates": [
+          "find-docs",
+          "bigquery-ai-ml",
+          "research"
+        ],
+        "false_positive": true
+      }
+    ],
+    "remaining_ranking_regressions": [
+      {
+        "id": "ordinary-knowledge-negative-matches",
+        "evidence": "The Portugal capital negative returned one or more candidates in the frozen pool.",
+        "bounded_followup": "In a separate retrieval change, retain this query and a second unrelated general-knowledge control; validate that both abstain or reduce false positives without lowering positive Recall@5 on this profile.",
+        "status": "unfixed"
+      },
+      {
+        "id": "name-token-translation-negative-match",
+        "evidence": "The translation request containing the phrase \"find docs\" returned developer-documentation and other candidates.",
+        "bounded_followup": "Assess task-intent gating for exact skill-name/token overlap; preserve this negative beside the frozen developer-documentation positive and require no loss of its top-five relevant result.",
+        "status": "unfixed"
+      }
+    ],
+    "blocked_completion": {
+      "reason": "The intended automatic eligible corpus remains blocked by the production Ponytail manifest version mismatch.",
+      "missing_targets_are_ranking_misses": false,
+      "full_issue_46_close_supported": false
+    },
+    "measurement_boundary": "Relevance labels and ranking metrics only; no agent selection, complete reads, instruction use, or task outcome was measured.",
+    "backend_evaluation": "No additional or hosted backend was run; lexical pool size 20, one deterministic sample per query.",
+    "historical_additional_replays": [
+      {
+        "id": "historical-orchestration",
+        "query": "orchestrate delegated implementation from a release spec",
+        "query_source": "sanitized historical audit",
+        "status": "unscored",
+        "candidate_limit": 20,
+        "result_count": 5,
+        "top_candidates": [
+          "gke-productionize",
+          "astra-orchestrator",
+          "gke-upgrades",
+          "cloud-monitoring-list-time-series-request",
+          "agent-platform-deploy"
+        ],
+        "reason": "Broad task-shaped alternatives are observations, not evidence that only Astra is relevant. No retrospective relevance label is assigned."
+      },
+      {
+        "id": "historical-compound-known-names",
+        "query": "grilling domain-modeling astra-orchestrator",
+        "query_source": "sanitized historical audit",
+        "status": "unscored",
+        "candidate_limit": 20,
+        "result_count": 0,
+        "top_candidates": [],
+        "reason": "A compound list of known names is misuse rather than a coherent task query; excluded from relevance metrics."
+      }
+    ]
+  }
+}

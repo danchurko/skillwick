@@ -162,10 +162,20 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
     second_content = long_content.replace("name: example", "name: long-other", 1)
     (second / "SKILL.md").write_text(second_content)
     expected = {"example": long_content, "long-other": second_content}
+    expected_bases = {"example": moved.resolve(), "long-other": second.resolve()}
+    expected_ids = {
+        row["name"]: row["id"]
+        for row in json.loads(run("list", "--json").stdout)["results"]
+        if row["name"] in expected
+    }
+    assert set(expected_ids) == set(expected)
+    assert len(set(expected_ids.values())) == 2
     assert run("read", "--raw", "example").stdout == long_content
     complete = json.loads(run("read", "--json", "example", "long-other").stdout)
-    assert len(complete["results"]) == 2
+    assert [row["name"] for row in complete["results"]] == ["example", "long-other"]
     for selected in complete["results"]:
+        assert selected["id"] == expected_ids[selected["name"]]
+        assert Path(selected["base"]) == expected_bases[selected["name"]]
         assert selected["content"] == expected[selected["name"]]
         assert selected["hash"] == hashlib.sha256(expected[selected["name"]].encode()).hexdigest()
         assert (Path(selected["base"]) / "references/guide.md").read_text() == "Complete supporting reference.\n"
