@@ -451,10 +451,14 @@ fn resolve_read(
     }
     let mut rows = search::find_name(db, target, roots)?;
     match rows.len() {
-        0 => Err(Failure(
-            "skill not found; use `skillwick search` to find candidates".into(),
-            3,
-        )),
+        0 => {
+            let message = if search::policy_denied(db, target, roots)? {
+                "skill is denied by invocation policy; review the applicable package policy with its owner"
+            } else {
+                "skill not found in the applicable sources; check the exact name or use `skillwick search` to find candidates"
+            };
+            Err(Failure(message.into(), 3))
+        }
         1 => Ok((rows.remove(0), true)),
         _ => {
             let mut error = String::from("skill name is ambiguous; use an exact ID:\n");

@@ -186,6 +186,22 @@ def codex_contract(binary: str, temporary: Path) -> None:
     conflict = assert_failed_preserving_cache(binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list")
     assert "multiple active Codex plugin versions" in conflict.stderr
 
+    # Unknown formats and a bounded provider timeout never publish a partial inventory.
+    write_json(output, {"future_installed": [active]})
+    unknown = assert_failed_preserving_cache(binary, env, cache, "--config", str(config), "list")
+    assert "unsupported Codex plugin list schema" in unknown.stderr
+    healthy_script = fake_codex.read_text()
+    fake_codex.write_text("#!/bin/sh\nexec /bin/sleep 30\n")
+    try:
+        timed_out = assert_failed_preserving_cache(binary, env, cache, "--config", str(config), "read", "fixture:release")
+        assert "timed out" in timed_out.stderr and "read" in timed_out.stderr
+    finally:
+        fake_codex.write_text(healthy_script)
+    write_json(output, {"installed": [active]})
+    recovered = json.loads(run(binary, env, "--config", str(config), "list", "--json").stdout)
+    assert recovered["results"][0]["id"] == row["id"]
+    assert run(binary, env, "--config", str(config), "read", "--raw", "fixture:release").stdout.endswith("Provider fixture body.\n")
+
     # Explicit discovery has no provider command or cache dependency.
     explicit_args = temporary / "explicit-codex-args"
     explicit_env = dict(env, CODEX_ARGS_FILE=str(explicit_args))

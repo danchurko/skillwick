@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import fcntl
 import os
 from pathlib import Path
 import pty
@@ -325,12 +326,10 @@ def reranker_recovery(binary: str) -> None:
             assert dry_run.returncode == 0, dry_run.stderr
             assert config.read_bytes() == config_before
             assert pending.read_bytes() == pending_before
-            lock_path = pending.parent / "setup.lock"
-            assert not lock_path.exists()
-
-            # A reader waits briefly for an active setup lock, then recovers the
+            # A reader waits briefly for an active state-directory lock, then recovers the
             # pending transaction before interpreting the config pointer.
-            lock_path.write_text(str(os.getpid()))
+            lock_fd = os.open(pending.parent, os.O_RDONLY)
+            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             process = subprocess.Popen(
                 [binary, "--config", str(config), "--json", "search", "Setup recovery fixture"],
                 env=env,
@@ -341,7 +340,7 @@ def reranker_recovery(binary: str) -> None:
             )
             time.sleep(0.25)
             assert process.poll() is None, "config reader should wait for the active setup lock"
-            lock_path.unlink()
+            os.close(lock_fd)
             stdout, stderr = process.communicate(timeout=30)
             assert process.returncode == 0, stderr
             assert json.loads(stdout)["results"]
@@ -618,6 +617,63 @@ def user_edit_during_preparation(binary: str) -> None:
         assert search.returncode == 0, search.stderr
         assert json.loads(search.stdout)["results"]
 
+def sandbox_cache_contract(binary: str) -> None:
+    with tempfile.TemporaryDirectory(prefix="skillwick-sandbox-cache-") as directory:
+        temporary = Path(directory).resolve()
+        home = temporary / "home"
+        skills = temporary / "skills"
+        skills.mkdir()
+        body = "---\nname: cache-example\ndescription: Sandbox cache fixture.\n---\nComplete café body.\n"
+        (skills / "SKILL.md").write_text(body)
+        env = {key: value for key, value in os.environ.items()
+               if key not in {"XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"}}
+        env.update(HOME=str(home), CODEX_HOME=str(temporary / "no-codex"),
+                   CLAUDE_CONFIG_DIR=str(temporary / "no-claude"))
+
+        def run(*args, environment=env, code=0):
+            result = subprocess.run([binary, *args], env=environment, capture_output=True,
+                                    text=True, stdin=subprocess.DEVNULL, timeout=30)
+            assert result.returncode == code, (args, result.returncode, result.stderr)
+            return result
+
+        # Fresh default paths work. Once setup is stable, instruction reads need
+        # only a writable derived cache, not writes to authoritative setup state.
+        run("init", "--yes", "--agent", "none", "--discovery", "explicit", "--root", str(skills))
+        assert run("read", "--raw", "cache-example").stdout == body
+        state = home / ".local/state/skillwick"
+        cache = home / ".cache/skillwick"
+        previous = (cache / "index-v4.sqlite").read_bytes()
+        state_before = {path.name: path.read_bytes() for path in state.iterdir() if path.is_file()}
+        state.chmod(0o500)
+        cache.chmod(0o500)
+        try:
+            failed = run("read", "--raw", "cache-example", code=3)
+            assert failed.stdout == "" and "cache lock failed" in failed.stderr
+            assert (cache / "index-v4.sqlite").read_bytes() == previous
+            writable_env = dict(env, XDG_CACHE_HOME=str(temporary / "writable-cache"))
+            assert run("read", "--raw", "cache-example", environment=writable_env).stdout == body
+            assert state_before == {path.name: path.read_bytes() for path in state.iterdir() if path.is_file()}
+            cache.chmod(0o700)
+            assert run("read", "--raw", "cache-example").stdout == body
+        finally:
+            state.chmod(0o700)
+            cache.chmod(0o700)
+        # A real pending journal cannot be hidden by changing the cache. When
+        # recovery is forbidden, fail without discarding authoritative state.
+        pending = state / "integration.pending.json"
+        pending.write_text(json.dumps({"version": 1, "committed": True, "changes": []}))
+        pending_before = pending.read_bytes()
+        state.chmod(0o500)
+        try:
+            failed = run("read", "--raw", "cache-example", environment=writable_env, code=1)
+            assert failed.stdout == "" and "integration.pending.json" in failed.stderr
+            assert pending.read_bytes() == pending_before
+        finally:
+            state.chmod(0o700)
+        assert run("read", "--raw", "cache-example", environment=writable_env).stdout == body
+        assert not pending.exists()
+
+
 if __name__ == "__main__":
     main()
     reranker_recovery(str(Path(sys.argv[1]).resolve()))
@@ -625,4 +681,5 @@ if __name__ == "__main__":
     search_during_interactive_picker(str(Path(sys.argv[1]).resolve()))
     user_edit_during_preparation(str(Path(sys.argv[1]).resolve()))
     relative_destinations(str(Path(sys.argv[1]).resolve()))
+    sandbox_cache_contract(str(Path(sys.argv[1]).resolve()))
     print("Setup contract passed")

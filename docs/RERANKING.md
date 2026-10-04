@@ -1,5 +1,10 @@
 # Optional search reranking
 
+Generated rankings, receipts, audits, and request traces are local artifacts in
+Git-ignored `benchmarks/results/` (or an external output directory). The measured
+findings and limitations are summarized here; raw files are not distributed
+with the repository. See [benchmark instructions](../benchmarks/README.md) to generate and validate new results.
+
 Setup saves the backend choice. Ordinary searches use it automatically:
 
 ```sh
@@ -106,7 +111,7 @@ The behavior spec is [issue #33](https://github.com/danchurko/skillwick/issues/3
 
 ### October 4 validation
 
-The [installed-CLI and library receipt](../benchmarks/results/configured-reranker-live-2026-10-04.json)
+The installed-CLI and library receipt (`configured-reranker-live-2026-10-04.json`, local artifact)
 records 105 ordinary searches for each backend on frozen V1 metadata. All three
 runs completed without fallback. Both optional backends passed the explicit live
 library test with the key environment cleared.
@@ -122,32 +127,32 @@ each search. These reused, correlated relevance fixtures do not establish agent
 task success or independent generalization. Production TinyBERT uses the newer
 pinned runtime; historical benchmark timings and scores are separate controls.
 
-The [live failure receipt](../benchmarks/results/configured-reranker-failures-2026-10-04.json)
+The live failure receipt (`configured-reranker-failures-2026-10-04.json`, local artifact)
 records lexical fallback for missing credentials, missing model artifacts, and
 provider rejection, followed by successful searches after restoration. Offline
 contracts additionally cover bounded subprocess timeouts, invalid mappings,
 model mismatches, failed preparation, dry-run, and transaction recovery.
 
-The [workstation receipt](../benchmarks/results/configured-reranker-workstation-2026-10-04.json)
+The workstation receipt (`configured-reranker-workstation-2026-10-04.json`, local artifact)
 records initialization and ordinary searches for both backends, with JEV left
 selected. The existing roots and canonical agent contexts were preserved, legacy
 configuration and executable were backed up, and strict doctor passed. Installation
 uses the managed agent-state source-checkout override; this capability has not
 been published as a release. Full agent-state apply was not needed or run.
 
-The [initial validation summary](../benchmarks/results/configured-reranker-validation-2026-10-04.json)
+The initial validation summary (`configured-reranker-validation-2026-10-04.json`, local artifact)
 records the earlier checks. The broader source-install automatic native-inventory
 acceptance remains failed on a pre-existing Ponytail plugin manifest version
 mismatch; the reranker tests and workstation explicit-root health checks passed.
 
-The [reviewed source-installed receipt](../benchmarks/results/configured-reranker-live-reviewed-2026-10-04.json)
+The reviewed source-installed receipt (`configured-reranker-live-reviewed-2026-10-04.json`, local artifact)
 extends the library proof to all 105 queries for each optional backend, with
 complete result-row preservation checks. The
-[independent proof](../benchmarks/results/configured-reranker-reviewed-proof-2026-10-04.json)
+independent proof (`configured-reranker-reviewed-proof-2026-10-04.json`, local artifact)
 checks receipt identities, mappings, recomputed CLI/library metrics, and restored
 searches after controlled missing-credential, missing-artifact, and provider
 rejection failures. The
-[reviewed validation summary](../benchmarks/results/configured-reranker-reviewed-validation-2026-10-04.json)
+reviewed validation summary (`configured-reranker-reviewed-validation-2026-10-04.json`, local artifact)
 records the final code reviews and checks, including setup concurrency and
 interrupted-publication recovery. Source-install validation with private provider
 homes uses the real configured skill roots; the broader native-inventory failure

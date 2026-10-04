@@ -53,7 +53,11 @@ jobs:
           cargo install --locked --version 0.19.0 cargo-outdated
       - name: Check dependency assurance
         if: matrix.target == 'aarch64-apple-darwin'
-        run: make dependency-assurance
+        run: |
+          # Do not reuse advisory Git state from a restored build cache.
+          # Fetch fresh advisory state; keep policy failures mandatory.
+          rm -rf target/cargo-deny/advisory-dbs
+          make dependency-assurance
       - name: Verify current published formula
         if: matrix.target == 'aarch64-apple-darwin'
         run: |
