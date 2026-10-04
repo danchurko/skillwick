@@ -1,5 +1,10 @@
 # Semantic retrieval adoption decision
 
+Generated rankings, receipts, audits, and request traces are local artifacts in
+Git-ignored `benchmarks/results/` (or an external output directory). The measured
+findings and limitations are summarized here; raw files are not distributed
+with the repository. See [benchmark instructions](../../benchmarks/README.md) to generate and validate new results.
+
 Status: historical decision from 14 September 2026. Optional reranking was later
 approved in [issue #33](https://github.com/danchurko/skillwick/issues/33); see the
 [current reranking guide](../RERANKING.md). The dated measurements and quality
@@ -70,8 +75,8 @@ lexical search deterministic when the model is absent or corrupt.
 
 ## Evidence
 
-- [Lexical baseline](../../benchmarks/results/lexical-baseline-2026-09-13.json)
-- [Arctic XS](../../benchmarks/results/embedding-arctic-xs-2026-09-13.json)
-- [TinyBERT over lexical candidates](../../benchmarks/results/reranker-tinybert-lexical-2026-09-13.json)
-- [TinyBERT over Arctic candidates](../../benchmarks/results/reranker-tinybert-embedding-2026-09-13.json)
+- Lexical baseline (`lexical-baseline-2026-09-13.json`, local artifact)
+- Arctic XS (`embedding-arctic-xs-2026-09-13.json`, local artifact)
+- TinyBERT over lexical candidates (`reranker-tinybert-lexical-2026-09-13.json`, local artifact)
+- TinyBERT over Arctic candidates (`reranker-tinybert-embedding-2026-09-13.json`, local artifact)
 - [Reproduction commands and pre-run shortlist](../../benchmarks/README.md)

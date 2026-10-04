@@ -3,3 +3,6 @@
 /.vscode/
 __pycache__/
 .env
+
+# Generated benchmark rankings, receipts, audits, and raw request traces.
+/benchmarks/results/

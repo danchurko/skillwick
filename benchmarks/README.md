@@ -1,5 +1,14 @@
 # Retrieval evidence
 
+Generated rankings, receipts, audits, and request traces are local artifacts in
+Git-ignored `benchmarks/results/` (or an external output directory). The measured
+findings and limitations are summarized here; raw files are not distributed
+with the repository. See the reproduction commands below to generate and validate new results.
+
+Keep raw captures, logs, and run work directories under `benchmarks/results/` or
+outside the checkout. Use fresh output paths to preserve previous runs. Frozen
+profiles and contract fixtures remain tracked as reproducible test inputs.
+
 These fixtures measure the shipped lexical product and keep optional model
 experiments outside the Rust binary. `profile-v1.json` freezes 531 sanitized
 model-discoverable records and 35 held-out cases (105 query perspectives).
@@ -20,8 +29,8 @@ names without conflating labels. No session archives were read.
 V2 reports positive Recall@5 and @20, MRR@5, standard nDCG@5 (ideal ranking uses
 `min(5, relevant_count)`), and negative false-positive rate separately. It is a
 small engineering regression corpus, not representative user traffic. Labels
-and corpus identities are frozen before running both binaries. Historical v1
-results retain their original metric definition and files.
+and corpus identities are frozen before running both binaries. Historical V1
+summaries retain their original metric definition; raw result files stay local.
 
 ```sh
 python3 scripts/benchmark-lexical.py run --binary /path/to/installed/skillwick \
@@ -107,12 +116,13 @@ the discovery and interface changes, not evidence of improved semantic retrieval
 or task success. Latency and memory are recorded in the JSON but single-machine
 runs with concurrent development activity do not establish a performance claim.
 
-- [0.3 V1](results/lexical-0.3.0-profile-v1.json) and [0.4 V1](results/lexical-0.4.0-profile-v1.json)
-- [0.3 V2](results/lexical-0.3.0-profile-v2.json) and [0.4 V2](results/lexical-0.4.0-profile-v2.json)
+- 0.3 V1 (`lexical-0.3.0-profile-v1.json`, local artifact) and 0.4 V1 (`lexical-0.4.0-profile-v1.json`, local artifact)
+- 0.3 V2 (`lexical-0.3.0-profile-v2.json`, local artifact) and 0.4 V2 (`lexical-0.4.0-profile-v2.json`, local artifact)
 
 ## Reproduce historical experiments
 
 ```sh
+mkdir -p benchmarks/results
 cargo build --release --locked
 python3 scripts/benchmark-lexical.py run \
   --binary target/release/skillwick \
@@ -122,14 +132,14 @@ python3 scripts/benchmark-lexical.py run \
 UV_CACHE_DIR=/private/tmp/skillwick-uv-cache \
 uv run --with fastembed==0.8.0 python scripts/benchmark-semantic.py embedding \
   --profile benchmarks/profile-v1.json \
-  --output benchmarks/results/embedding-arctic-xs-2026-09-13.json \
+  --output benchmarks/results/embedding-arctic-xs-current.json \
   --cache /private/tmp/skillwick-models
 
 UV_CACHE_DIR=/private/tmp/skillwick-uv-cache \
 uv run --with fastembed==0.8.0 python scripts/benchmark-semantic.py rerank \
   --profile benchmarks/profile-v1.json \
-  --candidates benchmarks/results/lexical-baseline-2026-09-13.json \
-  --output benchmarks/results/reranker-tinybert-lexical-2026-09-13.json \
+  --candidates /tmp/lexical-current.json \
+  --output benchmarks/results/reranker-tinybert-lexical-current.json \
   --cache /private/tmp/skillwick-models
 ```
 
@@ -180,6 +190,9 @@ scores are selection context, never Skillwick evidence.
 
 ### Reproduce the historical TinyBERT runtime control
 
+First generate `/tmp/lexical-jev-v1.json` with the hosted experiment’s lexical
+command above. The following control consumes that new candidate file.
+
 The historical quality control uses Python 3.10 and ONNX Runtime 1.23.2; the
 SDK experiment uses Python 3.14. Runtime sensitivity is recorded in the report.
 
@@ -188,12 +201,16 @@ UV_CACHE_DIR=/private/tmp/skillwick-uv-cache \
 uv run --python 3.10 --with fastembed==0.8.0 --with onnxruntime==1.23.2 \
   python scripts/benchmark-semantic.py rerank \
   --profile benchmarks/profile-v1.json \
-  --candidates benchmarks/results/lexical-jev-profile-v1-pool20-2026-10-03.json \
+  --candidates /tmp/lexical-jev-v1.json \
   --output /tmp/tinybert-historical-runtime.json \
   --cache /private/tmp/skillwick-models
 ```
 
 ### Audit ranking and request processing
+
+First run the complete hosted evaluation above to produce the lexical candidate
+file and `/tmp/jev-v1-pool20.json`. The audit consumes those newly generated
+files; historical receipts are not required.
 
 Repeat hosted runs now store whitelisted request state/questions, their digest,
 question-to-fixture mappings, raw provider order, and fallback-trigger candidates.
@@ -203,8 +220,8 @@ credentials, HTTP headers, raw errors, and full SDK responses are excluded.
 ```sh
 python3 scripts/audit_jev_evals.py \
   --profile benchmarks/profile-v1.json \
-  --candidates benchmarks/results/lexical-jev-profile-v1-pool20-2026-10-04.json \
-  --result benchmarks/results/jev-profile-v1-pool20-live-2026-10-04.json \
+  --candidates /tmp/lexical-jev-v1.json \
+  --result /tmp/jev-v1-pool20.json \
   --output /tmp/jev-v1-audit.json
 ```
 

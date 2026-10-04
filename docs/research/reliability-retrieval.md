@@ -1,5 +1,10 @@
 # Managed retrieval qualification
 
+Generated rankings, receipts, audits, and request traces are local artifacts in
+Git-ignored `benchmarks/results/` (or an external output directory). The measured
+findings and limitations are summarized here; raw files are not distributed
+with the repository. See [benchmark instructions](../../benchmarks/README.md) to generate and validate new results.
+
 **Status: partial and blocked; this does not close #46.** The replay qualifies
 only the current explicit eligible subset. The intended automatic corpus is
 still blocked by the production Ponytail manifest version mismatch, so absent
@@ -84,7 +89,7 @@ negative or a retrieval defect.
 The [frozen profile](../../benchmarks/reliability-profile.json) records the
 eligible corpus, content fingerprints, labels, source policy, inventory digest,
 CLI identity, and evaluator source hashes. The
-[lexical result](../../benchmarks/results/reliability-lexical-2026-10-04.json)
+lexical result (`reliability-lexical-2026-10-04.json`, local artifact)
 records per-query rankings, metrics, the eligibility-blocked replays, and the
 unfixed negative cases. The installed CLI identity is Skillwick 0.4.0 with SHA-256
 `b6e4b9532d44ed561527a4676c92c87c9438d2da62f412dfc3c223f2d249b754`.
@@ -110,13 +115,14 @@ regression controls for any separately proposed retrieval change.
 ## Reproduction
 
 ```sh
+mkdir -p benchmarks/results
 python3 scripts/benchmark-lexical.py run \
   --binary /path/to/installed/skillwick \
   --profile benchmarks/reliability-profile.json \
   --pool-size 20 --samples 1 \
-  --output benchmarks/results/reliability-lexical-2026-10-04.json
+  --output benchmarks/results/reliability-lexical-current.json
 
 python3 scripts/benchmark-lexical.py validate \
   --profile benchmarks/reliability-profile.json \
-  --result benchmarks/results/reliability-lexical-2026-10-04.json
+  --result benchmarks/results/reliability-lexical-current.json
 ```

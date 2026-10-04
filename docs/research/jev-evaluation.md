@@ -1,5 +1,10 @@
 # Hosted JEV reranking experiment
 
+Generated rankings, receipts, audits, and request traces are local artifacts in
+Git-ignored `benchmarks/results/` (or an external output directory). The measured
+findings and limitations are summarized here; raw files are not distributed
+with the repository. See [benchmark instructions](../../benchmarks/README.md) to generate and validate new results.
+
 Status: experimental evaluation. Production candidate retrieval and reads remain
 local. Setup can opt into hosted JEV reranking; see [reranking](../RERANKING.md).
 
@@ -160,17 +165,17 @@ was not tuned after observing these labels.
 ### Evidence and verification
 
 The initial smoke falsely classified independent confidence as malformed. Its
-[failed receipt](../../benchmarks/results/jev-smoke-profile-v1-2026-10-03.json),
-[sanitized diagnostic](../../benchmarks/results/jev-diagnostic-profile-v1-2026-10-03.json),
-and [corrected smoke](../../benchmarks/results/jev-smoke-corrected-profile-v1-2026-10-03.json)
+failed receipt (`jev-smoke-profile-v1-2026-10-03.json`, local artifact),
+sanitized diagnostic (`jev-diagnostic-profile-v1-2026-10-03.json`, local artifact),
+and corrected smoke (`jev-smoke-corrected-profile-v1-2026-10-03.json`, local artifact)
 are retained as non-comparable preflight evidence. This was a parser defect,
 not evidence of provider downtime. The corrected parser has offline regression
 coverage; partial smoke metrics are suppressed.
 
 Final artifacts:
 
-- V1: [lexical](../../benchmarks/results/lexical-jev-profile-v1-pool20-2026-10-03.json), [TinyBERT historical runtime](../../benchmarks/results/tinybert-jev-profile-v1-pool20-legacy-runtime-2026-10-03.json), [TinyBERT latest runtime](../../benchmarks/results/tinybert-jev-profile-v1-pool20-2026-10-03.json), [JEV 20](../../benchmarks/results/jev-profile-v1-pool20-2026-10-03.json), [JEV 10](../../benchmarks/results/jev-profile-v1-pool10-2026-10-03.json).
-- V2: [lexical](../../benchmarks/results/lexical-jev-profile-v2-pool20-2026-10-03.json), [TinyBERT](../../benchmarks/results/tinybert-jev-profile-v2-pool20-legacy-runtime-2026-10-03.json), [JEV 20](../../benchmarks/results/jev-profile-v2-pool20-2026-10-03.json), [JEV 10](../../benchmarks/results/jev-profile-v2-pool10-2026-10-03.json).
+- V1: lexical (`lexical-jev-profile-v1-pool20-2026-10-03.json`, local artifact), TinyBERT historical runtime (`tinybert-jev-profile-v1-pool20-legacy-runtime-2026-10-03.json`, local artifact), TinyBERT latest runtime (`tinybert-jev-profile-v1-pool20-2026-10-03.json`, local artifact), JEV 20 (`jev-profile-v1-pool20-2026-10-03.json`, local artifact), JEV 10 (`jev-profile-v1-pool10-2026-10-03.json`, local artifact).
+- V2: lexical (`lexical-jev-profile-v2-pool20-2026-10-03.json`, local artifact), TinyBERT (`tinybert-jev-profile-v2-pool20-legacy-runtime-2026-10-03.json`, local artifact), JEV 20 (`jev-profile-v2-pool20-2026-10-03.json`, local artifact), JEV 10 (`jev-profile-v2-pool10-2026-10-03.json`, local artifact).
 
 Rust formatting, Clippy, 52 unit tests, CLI, documentation, trust, filesystem,
 benchmark contracts, SDK mock transport contracts, inference tests, and dependency
@@ -253,9 +258,9 @@ post-hoc diagnostic on reused fixtures, even though the fresh calls reproduce it
 This is evidence that the gate caused the original quality loss, not independent
 validation of a replacement deployment policy.
 
-Stored independent audit receipts: [V1 pool 20](../../benchmarks/results/jev-audit-v1-pool20-2026-10-04.json),
-[V1 pool 10](../../benchmarks/results/jev-audit-v1-pool10-2026-10-04.json),
-[V2 pool 20](../../benchmarks/results/jev-audit-v2-pool20-2026-10-04.json),
-and [V2 pool 10](../../benchmarks/results/jev-audit-v2-pool10-2026-10-04.json).
-The [repeat verification index](../../benchmarks/results/jev-repeat-verification-2026-10-04.json)
+Stored independent audit receipts: V1 pool 20 (`jev-audit-v1-pool20-2026-10-04.json`, local artifact),
+V1 pool 10 (`jev-audit-v1-pool10-2026-10-04.json`, local artifact),
+V2 pool 20 (`jev-audit-v2-pool20-2026-10-04.json`, local artifact),
+and V2 pool 10 (`jev-audit-v2-pool10-2026-10-04.json`, local artifact).
+The repeat verification index (`jev-repeat-verification-2026-10-04.json`, local artifact)
 records result hashes, explicit failed preflight status, and verification limits.

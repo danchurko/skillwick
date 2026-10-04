@@ -1,5 +1,10 @@
 # Research record
 
+Generated rankings, receipts, audits, and request traces are local artifacts in
+Git-ignored `benchmarks/results/` (or an external output directory). The measured
+findings and limitations are summarized here; raw files are not distributed
+with the repository. See [benchmark instructions](../benchmarks/README.md) to generate and validate new results.
+
 This page records dated source review and experiments that informed the shipped
 local lookup boundary. It is not a promise of current model quality, a
 security audit, or a production dependency list. The supported path is
@@ -57,9 +62,9 @@ safety.
 
 | Path | Recall@5 | MRR@5 | nDCG@5 | Resource observation |
 | --- | ---: | ---: | ---: | --- |
-| [Lexical](../benchmarks/results/lexical-baseline-2026-09-13.json) | 0.886 | 0.837 | 0.850 | warm p95 116.2 ms; index 1.20 MB |
-| [Arctic XS](../benchmarks/results/embedding-arctic-xs-2026-09-13.json) | 0.743 | 0.630 | 0.659 | 90.4 MB artifact; peak RSS 812 MiB |
-| [TinyBERT over lexical](../benchmarks/results/reranker-tinybert-lexical-2026-09-13.json) | 0.952 | 0.929 | 0.935 | 4.52 MB artifact; warm p95 136.6 ms; peak RSS 184 MiB |
+| Lexical (`lexical-baseline-2026-09-13.json`, local artifact) | 0.886 | 0.837 | 0.850 | warm p95 116.2 ms; index 1.20 MB |
+| Arctic XS (`embedding-arctic-xs-2026-09-13.json`, local artifact) | 0.743 | 0.630 | 0.659 | 90.4 MB artifact; peak RSS 812 MiB |
+| TinyBERT over lexical (`reranker-tinybert-lexical-2026-09-13.json`, local artifact) | 0.952 | 0.929 | 0.935 | 4.52 MB artifact; warm p95 136.6 ms; peak RSS 184 MiB |
 
 The embedding candidate was `Snowflake/snowflake-arctic-embed-xs`, revision
 `d8c86521100d3556476a063fc2342036d45c106f`, with the measured ONNX SHA-256
