@@ -1,0 +1,316 @@
+{
+  "date": "2026-10-04",
+  "scope": "repeat comparisons and sanitized tracing; original receipts preserved",
+  "artifacts": [
+    {
+      "file": "jev-profile-v1-pool10-live-2026-10-04.json",
+      "sha256": "fec4e1e3fbd6c3698d5630b9b474be564a2a0aadc6171e17727cb4408aaabe1f",
+      "status": "completed",
+      "kind": "skillwick-jev-reranker-experiment",
+      "quality": {
+        "queries": 105,
+        "recall_at_5": 0.9142857142857143,
+        "mrr_at_5": 0.8841269841269841,
+        "ndcg_at_5": 0.891949035884355
+      },
+      "request_counts": {
+        "attempted": 104,
+        "valid_responses": 104,
+        "failed_requests": 0,
+        "single_request_per_query": true
+      },
+      "model": {
+        "requested": "jev-latest",
+        "expected_resolved": "jev-1.13.0",
+        "resolved_counts": {
+          "jev-1.13.0": 104
+        },
+        "changed_from_requested": true,
+        "sdk_version": "0.7.2"
+      },
+      "outcomes": {
+        "lexical_fallback_low_confidence": 55,
+        "reranked": 49,
+        "skipped_no_candidates": 1
+      }
+    },
+    {
+      "file": "jev-profile-v1-pool20-2026-10-04.json",
+      "sha256": "ec56cdd99b027ea34f71f822cb189b7d369281ed2098b208dd04cea7bd974ece",
+      "status": "completed_with_failures",
+      "kind": "skillwick-jev-reranker-experiment",
+      "quality": {
+        "queries": 105,
+        "recall_at_5": 0.8857142857142857,
+        "mrr_at_5": 0.8373015873015873,
+        "ndcg_at_5": 0.8496786198047822
+      },
+      "request_counts": {
+        "attempted": 104,
+        "valid_responses": 0,
+        "failed_requests": 104,
+        "single_request_per_query": true
+      },
+      "model": {
+        "requested": "jev-latest",
+        "expected_resolved": "jev-1.13.0",
+        "resolved_counts": {},
+        "changed_from_requested": false,
+        "sdk_version": "0.7.2"
+      },
+      "outcomes": {
+        "lexical_fallback_provider_failure": 104,
+        "skipped_no_candidates": 1
+      }
+    },
+    {
+      "file": "jev-profile-v1-pool20-live-2026-10-04.json",
+      "sha256": "ae652b22c0b21f1275bf4d74ec294f01f3c398e8f8f5104be81d8b7f6f62b5df",
+      "status": "completed",
+      "kind": "skillwick-jev-reranker-experiment",
+      "quality": {
+        "queries": 105,
+        "recall_at_5": 0.9142857142857143,
+        "mrr_at_5": 0.8904761904761904,
+        "ndcg_at_5": 0.8967109406462598
+      },
+      "request_counts": {
+        "attempted": 104,
+        "valid_responses": 104,
+        "failed_requests": 0,
+        "single_request_per_query": true
+      },
+      "model": {
+        "requested": "jev-latest",
+        "expected_resolved": "jev-1.13.0",
+        "resolved_counts": {
+          "jev-1.13.0": 104
+        },
+        "changed_from_requested": true,
+        "sdk_version": "0.7.2"
+      },
+      "outcomes": {
+        "lexical_fallback_low_confidence": 64,
+        "reranked": 40,
+        "skipped_no_candidates": 1
+      }
+    },
+    {
+      "file": "jev-profile-v2-pool10-live-2026-10-04.json",
+      "sha256": "9c3b6a0ccc6985f87a9b314f61d67afe113cd5587839478e66a661d230c0b567",
+      "status": "completed",
+      "kind": "skillwick-jev-reranker-experiment",
+      "quality": {
+        "queries": 20,
+        "positive_queries": 16,
+        "negative_queries": 4,
+        "positive_recall_at_5": 0.8125,
+        "positive_recall_at_20": 0.8125,
+        "positive_mrr_at_5": 0.875,
+        "positive_ndcg_at_5": 0.8281143519686431,
+        "negative_false_positive_rate": 0.0
+      },
+      "request_counts": {
+        "attempted": 14,
+        "valid_responses": 14,
+        "failed_requests": 0,
+        "single_request_per_query": true
+      },
+      "model": {
+        "requested": "jev-latest",
+        "expected_resolved": "jev-1.13.0",
+        "resolved_counts": {
+          "jev-1.13.0": 14
+        },
+        "changed_from_requested": true,
+        "sdk_version": "0.7.2"
+      },
+      "outcomes": {
+        "reranked": 14,
+        "skipped_no_candidates": 6
+      }
+    },
+    {
+      "file": "jev-profile-v2-pool20-live-2026-10-04.json",
+      "sha256": "b551382bc732efee8b33be8382a3048fde06807a38b876e66b2103286007fefa",
+      "status": "completed",
+      "kind": "skillwick-jev-reranker-experiment",
+      "quality": {
+        "queries": 20,
+        "positive_queries": 16,
+        "negative_queries": 4,
+        "positive_recall_at_5": 0.8125,
+        "positive_recall_at_20": 0.8125,
+        "positive_mrr_at_5": 0.875,
+        "positive_ndcg_at_5": 0.8281143519686431,
+        "negative_false_positive_rate": 0.0
+      },
+      "request_counts": {
+        "attempted": 14,
+        "valid_responses": 14,
+        "failed_requests": 0,
+        "single_request_per_query": true
+      },
+      "model": {
+        "requested": "jev-latest",
+        "expected_resolved": "jev-1.13.0",
+        "resolved_counts": {
+          "jev-1.13.0": 14
+        },
+        "changed_from_requested": true,
+        "sdk_version": "0.7.2"
+      },
+      "outcomes": {
+        "reranked": 14,
+        "skipped_no_candidates": 6
+      }
+    },
+    {
+      "file": "lexical-jev-profile-v1-pool20-2026-10-04.json",
+      "sha256": "ce34a43939028e8959e2f6b7065db7682ef74a93490158537056bd6b2b35fa83",
+      "status": "completed",
+      "kind": "skillwick-lexical-baseline",
+      "quality": {
+        "queries": 105,
+        "recall_at_5": 0.8857142857142857,
+        "mrr_at_5": 0.8373015873015873,
+        "ndcg_at_5": 0.8496786198047822
+      },
+      "request_counts": null,
+      "model": null,
+      "outcomes": null
+    },
+    {
+      "file": "lexical-jev-profile-v2-pool20-2026-10-04.json",
+      "sha256": "eebb0b8fe56cb2c0d6c6c04a41f3b589ee69470493a790bf3ededcea778e78e3",
+      "status": "completed",
+      "kind": "skillwick-lexical-baseline",
+      "quality": {
+        "queries": 20,
+        "positive_queries": 16,
+        "negative_queries": 4,
+        "positive_recall_at_5": 0.8125,
+        "positive_recall_at_20": 0.8125,
+        "positive_mrr_at_5": 0.875,
+        "positive_ndcg_at_5": 0.8281143519686431,
+        "negative_false_positive_rate": 0.0
+      },
+      "request_counts": null,
+      "model": null,
+      "outcomes": null
+    },
+    {
+      "file": "tinybert-jev-profile-v1-pool20-2026-10-04.json",
+      "sha256": "44787b3878af98edece3e0dc646158fe5c4654dbd6f63658f33cef48e6039786",
+      "status": "research-only; no production behavior changed",
+      "kind": "skillwick-reranker-experiment",
+      "quality": {
+        "queries": 105,
+        "recall_at_5": 0.9523809523809523,
+        "mrr_at_5": 0.9288888888888889,
+        "ndcg_at_5": 0.9347496410893091
+      },
+      "request_counts": null,
+      "model": {
+        "name": "cross-encoder/ms-marco-TinyBERT-L2-v2",
+        "revision": "81d1926f67cb8eee2c2be17ca9f793c7c3bd20cc",
+        "file": "onnx/model_qint8_arm64.onnx",
+        "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
+        "bytes": 4518071,
+        "license": "Apache-2.0",
+        "required_files": {
+          "tokenizer.json": {
+            "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+            "bytes": 711396
+          },
+          "onnx/model_qint8_arm64.onnx": {
+            "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
+            "bytes": 4518071
+          }
+        }
+      },
+      "outcomes": null
+    },
+    {
+      "file": "tinybert-jev-profile-v2-pool20-2026-10-04.json",
+      "sha256": "d543f9623533714c074d4950c8b34da3e5c051212a215dfca8df4a4dd3168982",
+      "status": "research-only; no production behavior changed",
+      "kind": "skillwick-reranker-experiment",
+      "quality": {
+        "queries": 20,
+        "positive_queries": 16,
+        "negative_queries": 4,
+        "positive_recall_at_5": 0.8125,
+        "positive_recall_at_20": 0.8125,
+        "positive_mrr_at_5": 0.875,
+        "positive_ndcg_at_5": 0.8281143519686431,
+        "negative_false_positive_rate": 0.0
+      },
+      "request_counts": null,
+      "model": {
+        "name": "cross-encoder/ms-marco-TinyBERT-L2-v2",
+        "revision": "81d1926f67cb8eee2c2be17ca9f793c7c3bd20cc",
+        "file": "onnx/model_qint8_arm64.onnx",
+        "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
+        "bytes": 4518071,
+        "license": "Apache-2.0",
+        "required_files": {
+          "tokenizer.json": {
+            "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+            "bytes": 711396
+          },
+          "onnx/model_qint8_arm64.onnx": {
+            "sha256": "7497b40504d425ef6482693039690106dca4f1f8d88fb5c4aedd63e73ed6ef68",
+            "bytes": 4518071
+          }
+        }
+      },
+      "outcomes": null
+    }
+  ],
+  "checks": {
+    "benchmark_contracts": "passed",
+    "sdk_mock_wire_trace_equality": "passed",
+    "docs_check": "passed",
+    "ruff": "passed",
+    "secret_scan": "passed",
+    "rust_tests": "not rerun; Rust unchanged, prior 52 passed",
+    "source_install": "not rerun; prior live inventory failure from existing Ponytail manifest mismatch",
+    "independent_audits": "passed: eight original/repeat receipts; zero failures"
+  },
+  "diagnostic_limit": "Raw rankings are post-hoc diagnostic evaluation on reused fixtures, not independent validation of a new fallback policy.",
+  "audits": [
+    {
+      "file": "jev-audit-v1-pool10-2026-10-03.json",
+      "sha256": "c19f6b3778ae739614c52ce72bdf728b20d191b6dd3a424d1c6e29a697829ce9"
+    },
+    {
+      "file": "jev-audit-v1-pool10-2026-10-04.json",
+      "sha256": "b9e1a22103941f2480a0ee683bfbbab6c306167c7fa42de6e60d0b59db758489"
+    },
+    {
+      "file": "jev-audit-v1-pool20-2026-10-03.json",
+      "sha256": "00d869fed61e34eb8abb908e1da6c6d86acf1c1e0736dce01b63c473cddf15af"
+    },
+    {
+      "file": "jev-audit-v1-pool20-2026-10-04.json",
+      "sha256": "3351f150bf31d4023cdf56c0f63162ae3b0eb4ce420448dbb8e5cebf1de91f29"
+    },
+    {
+      "file": "jev-audit-v2-pool10-2026-10-03.json",
+      "sha256": "8ad8e80e6f2860f16b63cf1c707cb18172c505a4d13c0714202b712e04865cbb"
+    },
+    {
+      "file": "jev-audit-v2-pool10-2026-10-04.json",
+      "sha256": "3b65403601edd71a29361d7d29a94986b8ff3dc0ac7ab6e3a5fd7dcac7a76807"
+    },
+    {
+      "file": "jev-audit-v2-pool20-2026-10-03.json",
+      "sha256": "2c82e86c530271be59276826140c0154a10607de9823d23ab2a65d5a7ab730e9"
+    },
+    {
+      "file": "jev-audit-v2-pool20-2026-10-04.json",
+      "sha256": "f320c103f47ca229bcc25aa9e4d83e76d4abf03bee7ce7c97b112915697b8797"
+    }
+  ]
+}

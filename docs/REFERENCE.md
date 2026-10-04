@@ -117,3 +117,10 @@ must be backed up and explicitly recreated; they are not silently converted.
 | 1 | Operational, configuration, or database failure |
 | 2 | Invalid invocation, unsupported format, or noninteractive setup without required choices |
 | 3 | Incomplete source, unavailable/ambiguous/denied selection, or failed health requirement |
+
+## Optional reranker setup
+
+`skillwick init --reranker none|tinybert|jev` selects the backend during setup.
+Ordinary `skillwick search "task"` automatically uses the saved choice; no
+backend flags are required for search. See [reranking](RERANKING.md) for
+preparation, credentials, limits, and fallback behavior.

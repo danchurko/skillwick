@@ -2,6 +2,9 @@
 
 Status: decided 14 September 2026. Skillwick remains lexical-only.
 
+The separate [hosted JEV experiment](jev-evaluation.md) adds new evaluation
+evidence without changing this historical decision or the production path.
+
 This decision uses the frozen 531-record profile and 105 held-out query
 perspectives in [`benchmarks/profile-v1.json`](../../benchmarks/profile-v1.json).
 The labels were frozen before these runs. They are reviewable

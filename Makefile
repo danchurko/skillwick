@@ -1,6 +1,6 @@
 TEST_BINARY = $(if $(CARGO_TARGET_DIR),$(CARGO_TARGET_DIR),target)/debug/skillwick
 
-.PHONY: build check dependency-assurance docs-check fmt hooks lint release-preflight test test-benchmark test-cli test-filesystem test-inference test-source-install test-trust dist
+.PHONY: build check dependency-assurance docs-check fmt hooks lint release-preflight test test-benchmark test-reranker test-cli test-filesystem test-inference test-source-install test-trust dist
 
 build:
 	cargo build --locked
@@ -27,6 +27,12 @@ test-cli: build
 test-benchmark:
 	python3 tests/benchmark_contract.py
 	python3 tests/local_corpus_contract.py
+	python3 tests/jev_contract.py
+	python3 tests/jev_audit_contract.py
+
+test-reranker: build
+	python3 tests/reranker_runtime_contract.py
+	python3 tests/reranker_cli_contract.py "$(TEST_BINARY)"
 
 test-filesystem: build
 	sh tests/filesystem_integration.sh "$(TEST_BINARY)"
@@ -43,7 +49,7 @@ docs-check: build
 test-trust: build
 	sh tests/trust_boundary.sh "$(TEST_BINARY)"
 
-check: fmt lint test test-benchmark test-cli docs-check test-trust
+check: fmt lint test test-benchmark test-reranker test-cli docs-check test-trust
 
 dependency-assurance:
 	./scripts/dependency-assurance.sh

@@ -8,5 +8,6 @@ pub mod inventory;
 pub mod metadata;
 pub mod output;
 pub mod package;
+pub mod reranker;
 pub mod search;
 pub mod sources;

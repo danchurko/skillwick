@@ -78,6 +78,14 @@ reviewable corpus.
 The full comparison and adoption rationale are in the
 [semantic adoption decision](research/semantic-adoption.md).
 
+## Hosted JEV evaluation
+
+The separate [JEV SDK experiment](research/jev-evaluation.md) compares hosted
+reranking with fresh lexical and pinned TinyBERT runs on the frozen V1 and V2
+profiles. It records ranking, selection-oriented measures, confidence, hosted
+latency, failures, usage, estimated cost, and model identity. It remains outside
+the Rust runtime; production retrieval is unchanged.
+
 ## Durable lessons
 
 - Metadata search and instruction-body loading remain separate.

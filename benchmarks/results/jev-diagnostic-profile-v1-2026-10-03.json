@@ -1,0 +1,146 @@
+{
+  "model": "jev-1.13.0",
+  "expected_keys_match": true,
+  "choice_count": 15,
+  "usage": {
+    "input_tokens": 5050,
+    "output_tokens": 602
+  },
+  "choices": [
+    {
+      "label": "candidate_c000",
+      "relevant_selected": true,
+      "not_relevant_selected": false,
+      "confidence": 1.0,
+      "probability_relevant": 1.0,
+      "probability_not_relevant": 0.0
+    },
+    {
+      "label": "candidate_c001",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 0.34,
+      "probability_relevant": 0.33,
+      "probability_not_relevant": 0.67
+    },
+    {
+      "label": "candidate_c002",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 0.71,
+      "probability_relevant": 0.15,
+      "probability_not_relevant": 0.85
+    },
+    {
+      "label": "candidate_c003",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 0.98,
+      "probability_relevant": 0.01,
+      "probability_not_relevant": 0.99
+    },
+    {
+      "label": "candidate_c004",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 0.99,
+      "probability_relevant": 0.01,
+      "probability_not_relevant": 0.99
+    },
+    {
+      "label": "candidate_c005",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 0.99,
+      "probability_relevant": 0.0,
+      "probability_not_relevant": 1.0
+    },
+    {
+      "label": "candidate_c006",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 1.0,
+      "probability_relevant": 0.0,
+      "probability_not_relevant": 1.0
+    },
+    {
+      "label": "candidate_c007",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 1.0,
+      "probability_relevant": 0.0,
+      "probability_not_relevant": 1.0
+    },
+    {
+      "label": "candidate_c008",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 1.0,
+      "probability_relevant": 0.0,
+      "probability_not_relevant": 1.0
+    },
+    {
+      "label": "candidate_c009",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 0.99,
+      "probability_relevant": 0.01,
+      "probability_not_relevant": 0.99
+    },
+    {
+      "label": "candidate_c010",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 0.27,
+      "probability_relevant": 0.37,
+      "probability_not_relevant": 0.63
+    },
+    {
+      "label": "candidate_c011",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 1.0,
+      "probability_relevant": 0.0,
+      "probability_not_relevant": 1.0
+    },
+    {
+      "label": "candidate_c012",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 0.99,
+      "probability_relevant": 0.0,
+      "probability_not_relevant": 1.0
+    },
+    {
+      "label": "candidate_c013",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 1.0,
+      "probability_relevant": 0.0,
+      "probability_not_relevant": 1.0
+    },
+    {
+      "label": "candidate_c014",
+      "relevant_selected": false,
+      "not_relevant_selected": true,
+      "confidence": 1.0,
+      "probability_relevant": 0.0,
+      "probability_not_relevant": 1.0
+    }
+  ],
+  "kind": "skillwick-jev-contract-diagnostic",
+  "status": "valid_typed_response; parser assumption diagnosed",
+  "measured_at": "2026-10-03T19:08:16.523170+00:00",
+  "profile_sha256": "f398dcba56af7f64061ab13a95cd12cfdd35ce96a643165a0ba4b1ecea10f959",
+  "candidate_source_sha256": "bbbe23969e2162dde12436c16ba58bdcd88727f1e64f5c8b81169eed7735113b",
+  "query_id": "positive-004:1",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "requests": 1,
+  "latency_ms": null,
+  "latency_note": "diagnostic command did not time the SDK call independently",
+  "diagnostic_source_sha256": "f9d30a121789ba8e3890908e87509575860aed7a729a777cee051add09c376c4",
+  "finding": "provider confidence is independent of selected option probability; never equate them",
+  "estimated_cost_usd": 0.00021210000000000003,
+  "actual_cost_usd": null,
+  "comparable_benchmark": false
+}

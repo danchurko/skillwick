@@ -1,5 +1,5 @@
 use crate::{
-    config::{self, Agent, Config, Discovery},
+    config::{self, Agent, Config, Discovery, RerankerBackend},
     inventory,
 };
 use serde::{Deserialize, Serialize};
@@ -31,6 +31,7 @@ pub struct InitRequest {
     pub project_roots: Vec<PathBuf>,
     pub instructions_file: Option<PathBuf>,
     pub discovery: Option<Discovery>,
+    pub reranker: Option<RerankerBackend>,
     pub project: bool,
 }
 
@@ -164,6 +165,7 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, Error> {
     let _lock = acquire_lock()?;
     recover_pending()?;
     let settings = config::load(config_path).map_err(Error::Operational)?;
+    let previous_reranker = settings.reranker.clone();
     let selected = select_agents(&settings, &request)?;
     let settings = merge_settings(settings, &request, &selected)?;
     let journal = read_journal()?.unwrap_or(Journal {
@@ -179,6 +181,8 @@ pub fn init(config_path: &Path, request: InitRequest) -> Result<Config, Error> {
     // Setup owns reconciliation so an applied configuration is immediately usable.
     inventory::prime(&plan.settings, &request.cwd)
         .map_err(|error| Error::Operational(error.to_string()))?;
+    crate::reranker::prepare(&plan.settings.reranker, Some(&previous_reranker))
+        .map_err(Error::Operational)?;
     apply_plan(&plan)
 }
 
@@ -228,6 +232,33 @@ fn merge_settings(
     request: &InitRequest,
     agents: &[Agent],
 ) -> Result<Config, Error> {
+    if let Some(backend) = request.reranker {
+        settings.reranker = crate::reranker::planned(backend);
+    } else if !request.yes && !request.dry_run && interactive() {
+        let current = settings.reranker.backend;
+        let starting_cursor = match current {
+            RerankerBackend::None => 0,
+            RerankerBackend::Tinybert => 1,
+            RerankerBackend::Jev => 2,
+        };
+        let options = vec!["none", "tinybert", "jev"];
+        let selected = inquire::Select::new("Reranking backend", options)
+            .with_starting_cursor(starting_cursor)
+            .prompt()
+            .map_err(|error| Error::Operational(error.to_string()))?;
+        let backend = match selected {
+            "none" => RerankerBackend::None,
+            "tinybert" => RerankerBackend::Tinybert,
+            "jev" => RerankerBackend::Jev,
+            _ => unreachable!("selection came from the fixed reranker options"),
+        };
+        if backend != current {
+            settings.reranker = crate::reranker::planned(backend);
+        }
+    }
+    if settings.reranker.backend == RerankerBackend::Jev {
+        settings.reranker = crate::reranker::planned(RerankerBackend::Jev);
+    }
     settings.agents = agents
         .iter()
         .copied()
@@ -340,6 +371,12 @@ fn build_plan(
     let mut summary = Vec::new();
     summary.push(format!("config: {}", config_path.display()));
     append_source_summary(&mut summary, &settings, request);
+    summary.push(format!("reranker: {}", settings.reranker.backend.as_str()));
+    if settings.reranker.backend == RerankerBackend::Jev {
+        summary.push(
+            "reranker: hosted API receives the query and candidate skill names/descriptions; credentials are stored separately".into(),
+        );
+    }
 
     for agent in agents {
         if agent == Agent::None {
@@ -460,6 +497,7 @@ fn build_plan(
         }
     }
 
+    config::validate_reranker(&settings.reranker).map_err(Error::Operational)?;
     let config_bytes = toml_edit::ser::to_string_pretty(&settings)
         .map_err(|error| Error::Operational(error.to_string()))?
         .into_bytes();

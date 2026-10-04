@@ -270,7 +270,40 @@ def relative_destinations(binary: str) -> None:
         assert not config.exists() and not pending.exists()
         assert (second / "AGENTS.md").read_bytes() == untouched
 
+def reranker_recovery(binary: str) -> None:
+    # Recover at the installed CLI seam without invoking a provider.
+    for committed in (False, True):
+        with tempfile.TemporaryDirectory(prefix="skillwick-key-recovery-") as directory:
+            temporary = Path(directory).resolve()
+            state = temporary / "state"
+            config = temporary / "config.toml"
+            old, new = temporary / "old-runtime", temporary / "new-runtime"
+            for runtime, key in ((old, "previous-key"), (new, "prepared-key")):
+                runtime.mkdir(mode=0o700)
+                (runtime / "api-key").write_text(key)
+                (runtime / "api-key").chmod(0o600)
+            def contents(runtime: Path) -> bytes:
+                return (f'version = 1\ndiscovery = "explicit"\n[reranker]\nbackend = "jev"\nruntime = "{runtime}"\n').encode()
+            before, after = contents(old), contents(new)
+            config.write_bytes(after)
+            pending = state / "skillwick/integration.pending.json"
+            pending.parent.mkdir(parents=True)
+            pending.write_text(json.dumps({"version": 1, "committed": committed, "changes": [
+                {"path": str(config), "before": list(before), "after": list(after)}
+            ]}))
+            env = os.environ.copy()
+            env.update(HOME=str(temporary / "home"), XDG_STATE_HOME=str(state),
+                       XDG_CONFIG_HOME=str(temporary / "config"), XDG_CACHE_HOME=str(temporary / "cache"))
+            result = subprocess.run([binary, "--config", str(config), "uninstall"],
+                                    env=env, capture_output=True, text=True, timeout=30)
+            assert result.returncode == 0, result.stderr
+            assert config.read_bytes() == (after if committed else before)
+            assert not pending.exists()
+            assert (old / "api-key").read_text() == "previous-key"
+            assert (new / "api-key").read_text() == "prepared-key"
+
 if __name__ == "__main__":
     main()
+    reranker_recovery(str(Path(sys.argv[1]).resolve()))
     relative_destinations(str(Path(sys.argv[1]).resolve()))
     print("Setup contract passed")

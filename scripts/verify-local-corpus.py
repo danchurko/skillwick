@@ -29,6 +29,7 @@ CONFIG_FIELDS = {
     "projects",
     "agents",
     "instructions_file",
+    "reranker",
 }
 PROJECT_FIELDS = {"path", "roots", "discovery"}
 AGENT_VALUES = {"codex", "claude", "none"}
@@ -202,6 +203,19 @@ def normalize_config(document: dict[str, Any], path: Path) -> dict[str, Any]:
     instructions_file = document.get("instructions_file")
     if instructions_file is not None and not isinstance(instructions_file, str):
         error("configuration instructions_file must be a string")
+    reranker = document.get("reranker", {})
+    if not isinstance(reranker, dict) or set(reranker) - {"backend", "runtime"}:
+        error("configuration reranker must be a table with backend and runtime only")
+    backend = reranker.get("backend", "none")
+    runtime = reranker.get("runtime")
+    if not isinstance(backend, str) or backend not in {"none", "tinybert", "jev"}:
+        error("configuration reranker contains an unsupported backend")
+    if backend == "none" and runtime is not None:
+        error("configuration disabled reranker cannot specify a runtime")
+    if backend != "none" and (not isinstance(runtime, str) or not Path(runtime).is_absolute()):
+        error("configuration enabled reranker requires an absolute runtime path")
+    # Corpus verification builds its own lexical-only temporary configs. Validate
+    # the selected backend without copying private runtime state into fixtures.
     return {
         "version": CONFIG_VERSION,
         "discovery": discovery,

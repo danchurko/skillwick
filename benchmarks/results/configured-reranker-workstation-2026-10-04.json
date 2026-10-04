@@ -1,0 +1,32 @@
+{
+  "kind": "skillwick-workstation-reranker-verification",
+  "status": "passed",
+  "backends": {
+    "tinybert": {
+      "setup": "passed",
+      "ordinary_cli_search": "passed",
+      "search_json_version": 3,
+      "fallback": false
+    },
+    "jev": {
+      "setup": "passed",
+      "ordinary_cli_search": "passed",
+      "search_json_version": 3,
+      "fallback": false
+    }
+  },
+  "final_backend": "jev",
+  "ordinary_search_without_config_or_backend_flags": "passed",
+  "api_key_environment_cleared_for_search": true,
+  "doctor_strict": "passed",
+  "canonical_contexts_unchanged": true,
+  "legacy_roots_preserved": true,
+  "legacy_binary_and_config_backed_up": true,
+  "managed_source_install": "passed",
+  "binary_sha256": "0990eadca0e724261b60845b3a8aea54e52dd7d043cda5d1888c0de6b1456110",
+  "credential_mode": "0600",
+  "omitted_backend_preserves_jev_and_reuses_key": "passed",
+  "runtime_generations_independent": true,
+  "failed_replacement_setup_preserves_config_and_key": "passed",
+  "ordinary_search_after_failed_setup": "passed"
+}

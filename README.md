@@ -48,7 +48,9 @@ exact values and paths, including read content and all grouped origins.
 Every lookup reconciles applicable sources. Codex plugin discovery uses its
 bounded installed-plugin CLI listing; shared and explicit roots work without a
 host executable. Invalid required sources fail and retain the prior cache without
-silently returning stale results. Production retrieval remains local SQLite FTS5.
+silently returning stale results. Lexical SQLite FTS5 retrieval remains the default. Setup can optionally prepare
+local TinyBERT or hosted JEV to rerank ordinary searches; see
+[optional reranking](docs/RERANKING.md).
 
 ## Setup
 

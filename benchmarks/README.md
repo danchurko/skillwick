@@ -34,6 +34,60 @@ No pre-commit gate performs model inference or downloads model artifacts.
 Optional-model adoption still requires independent task outcomes and supported
 machine budgets; improving a ranking score alone is insufficient.
 
+## Hosted JEV experiment
+
+JEV is an external, explicitly opted-in SDK experiment. Rust search and read
+remain unchanged. Copy [`.env.example`](../.env.example) to `.env` and put
+`TYPESAFE_API_KEY` in that ignored local file. Never put a real key in the example
+or a command argument. `uv` loads `.env` for the benchmark process.
+
+```sh
+cargo build --release --locked
+python3 scripts/benchmark-lexical.py run --binary target/release/skillwick \
+  --profile benchmarks/profile-v1.json --pool-size 20 --samples 3 \
+  --output /tmp/lexical-jev-v1.json
+
+# Explicit live smoke: partial hosted metrics are suppressed.
+UV_CACHE_DIR=/private/tmp/skillwick-uv-cache \
+uv run --python 3.14 --env-file .env --with typesafe-sdk==0.7.2 \
+  python scripts/benchmark-semantic.py jev --live --max-queries 1 \
+  --profile benchmarks/profile-v1.json --candidates /tmp/lexical-jev-v1.json \
+  --pool-size 20 --output /tmp/jev-smoke.json
+
+# Complete held-out evaluation. Set --expected-model to the returned version
+# when the service exposes a versioned model, to detect subsequent drift.
+UV_CACHE_DIR=/private/tmp/skillwick-uv-cache \
+uv run --python 3.14 --env-file .env --with typesafe-sdk==0.7.2 \
+  python scripts/benchmark-semantic.py jev --live \
+  --profile benchmarks/profile-v1.json --candidates /tmp/lexical-jev-v1.json \
+  --pool-size 20 --output /tmp/jev-v1-pool20.json
+
+# Local comparison uses the same candidates and pinned historical artifacts.
+UV_CACHE_DIR=/private/tmp/skillwick-uv-cache \
+uv run --python 3.14 --with fastembed==0.8.0 \
+  python scripts/benchmark-semantic.py rerank \
+  --profile benchmarks/profile-v1.json --candidates /tmp/lexical-jev-v1.json \
+  --output /tmp/tinybert-jev-v1.json --cache /private/tmp/skillwick-models
+
+# Deterministic checks: no SDK installation, account, or network required.
+make test-benchmark
+
+# Optional real SDK serialization/error check; HTTP transport stays mocked.
+UV_CACHE_DIR=/private/tmp/skillwick-uv-cache \
+uv run --python 3.14 --with typesafe-sdk==0.7.2 python tests/jev_sdk_contract.py
+```
+
+Run V2 separately by substituting `profile-v2.json` throughout, and compare JEV
+pool 10 by changing `--pool-size` while retaining the same lexical candidate
+file. The production CLI cap is 20; pool 30 is not supported by this experiment.
+`--base-url`, `--model`, `--timeout`, and `--confidence-threshold` configure the
+hosted decision boundary. Do not tune thresholds using held-out labels.
+
+Outputs retain lexical fallback rankings with explicit failure categories and
+the process fails on provider/contract failures. A successful HTTP response or a
+fallback ranking is not proof of a successful rerank. See
+[methodology, measured results, and recommendation](../docs/research/jev-evaluation.md).
+
 ## 0.3 versus 0.4 installed candidates
 
 The recorded 2026-09-16 runs use the same profiles and three timed samples per
@@ -123,3 +177,56 @@ scores are selection context, never Skillwick evidence.
 | Reranker | MiniLM-L2/L6-v2, 15.6M/22.7M | Hold: larger quality fallbacks if TinyBERT misses the gate. |
 | Reranker | Jina reranker v1 turbo, 37.8M | Hold: convenient but substantially larger. |
 | Reranker | BGE reranker base, 278M | Reject for this experiment: multilingual footprint is disproportionate. |
+
+### Reproduce the historical TinyBERT runtime control
+
+The historical quality control uses Python 3.10 and ONNX Runtime 1.23.2; the
+SDK experiment uses Python 3.14. Runtime sensitivity is recorded in the report.
+
+```sh
+UV_CACHE_DIR=/private/tmp/skillwick-uv-cache \
+uv run --python 3.10 --with fastembed==0.8.0 --with onnxruntime==1.23.2 \
+  python scripts/benchmark-semantic.py rerank \
+  --profile benchmarks/profile-v1.json \
+  --candidates benchmarks/results/lexical-jev-profile-v1-pool20-2026-10-03.json \
+  --output /tmp/tinybert-historical-runtime.json \
+  --cache /private/tmp/skillwick-models
+```
+
+### Audit ranking and request processing
+
+Repeat hosted runs now store whitelisted request state/questions, their digest,
+question-to-fixture mappings, raw provider order, and fallback-trigger candidates.
+SDK debug logging stays disabled. Trace files contain public fixture text only;
+credentials, HTTP headers, raw errors, and full SDK responses are excluded.
+
+```sh
+python3 scripts/audit_jev_evals.py \
+  --profile benchmarks/profile-v1.json \
+  --candidates benchmarks/results/lexical-jev-profile-v1-pool20-2026-10-04.json \
+  --result benchmarks/results/jev-profile-v1-pool20-live-2026-10-04.json \
+  --output /tmp/jev-v1-audit.json
+```
+
+The independent audit recomputes final metrics and raw probability ranking,
+checks mappings and fallback policy, and reports candidate-oracle coverage and
+dataset limitations. Repeat for V2 and pool 10. Raw ranking is diagnostic evidence
+on reused fixtures, not independent acceptance of a replacement confidence policy.
+See the October 4 correction in the [report](../docs/research/jev-evaluation.md).
+
+### Setup-selected production verification
+
+The [reranking guide](../docs/RERANKING.md) records installed CLI, library,
+failure, and workstation validation. To repeat the frozen V1 live run explicitly:
+
+```sh
+cargo build --release --locked
+uv run --python 3.14 --env-file .env python scripts/verify-reranker-live.py \
+  --binary target/release/skillwick \
+  --output /tmp/configured-reranker-live.json \
+  --workdir /private/tmp/skillwick-live-new-run
+```
+
+Use new output and work-directory paths. The verifier prepares both real backends,
+clears the key environment for ordinary search and library tests, and stores
+sanitized provider/model/fixture/source identities with the measured rankings.
