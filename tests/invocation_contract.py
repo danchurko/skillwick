@@ -70,6 +70,53 @@ with tempfile.TemporaryDirectory(prefix="skillwick-invocation-") as directory:
         direct = run("read", "example")
         wrapped = subprocess.run([rtk, binary, "read", "example"], env=env, capture_output=True, text=True)
         assert (wrapped.returncode, wrapped.stdout) == (0, direct.stdout)
+    # Selection uses current eligible packages, including copies, conflicts and moves.
+    original_id = row["id"]
+    copied = root / "verified copy"
+    shutil.copytree(unusual, copied)
+    grouped = json.loads(run("list", "--json").stdout)
+    assert grouped["total"] == 1 and len(grouped["results"][0]["origins"]) == 2
+    assert run("read", "--raw", "example").stdout == content
+    copied_body = copied / "SKILL.md"
+    copied_body.write_text(content + "Different package obligation.\n")
+    ambiguous = run("read", "example", code=3)
+    assert ambiguous.stdout == "" and "ambiguous" in ambiguous.stderr
+    assert str(unusual).replace("\n", "\\n") in ambiguous.stderr and str(copied) in ambiguous.stderr
+    assert run("read", "--raw", original_id).stdout == content
+    run("read", original_id, "example", code=3)
+    shutil.rmtree(copied)
+    moved = root / "moved package"
+    unusual.rename(moved)
+    run("read", original_id, code=3)
+    current = json.loads(run("list", "--json").stdout)["results"][0]
+    assert current["id"] != original_id and Path(current["base"]).resolve() == moved.resolve()
+    assert run("read", "--raw", current["id"]).stdout == content
+    body = moved / "SKILL.md"
+    changed_content = content + "New live obligation.\n"
+    body.write_text(changed_content)
+    assert run("read", "--raw", "example").stdout == changed_content
+    policy = moved / "agents/openai.yaml"
+    policy.parent.mkdir()
+    policy.write_text("policy:\n  allow_implicit_invocation: false\n")
+    assert json.loads(run("list", "--json").stdout)["results"] == []
+    assert run("read", current["id"], "example", code=3).stdout == ""
+    policy.unlink()
+    assert run("read", "--raw", "example").stdout == changed_content
+    before_failure = (temporary / "cache/skillwick/index-v4.sqlite").read_bytes()
+    body.chmod(0)
+    try:
+        if os.access(body, os.R_OK):
+            raise AssertionError("unreadable fixture requires an unprivileged test process")
+        assert run("read", "example", code=3).stdout == ""
+        assert (temporary / "cache/skillwick/index-v4.sqlite").read_bytes() == before_failure
+    finally:
+        body.chmod(0o600)
+    assert run("read", "--raw", "example").stdout == changed_content
+    body.unlink()
+    assert json.loads(run("list", "--json").stdout)["results"] == []
+    assert run("read", current["id"], code=3).stdout == ""
+    body.write_text(content)
+    assert run("read", "--raw", "example").stdout == content
     # Unsupported path encodings fail explicitly instead of manufacturing another path.
     if os.name == "posix":
         bad = os.fsencode(root) + b"/invalid-\xff"
