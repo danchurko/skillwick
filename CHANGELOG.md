@@ -3,8 +3,15 @@
 User-visible changes are recorded here. Release artifacts and verification
 evidence live in [implementation history](docs/IMPLEMENTATION.md).
 
-## Unreleased
+## [0.5.0] - 2026-10-05
 
+- Add optional setup-selected TinyBERT and hosted JEV rerankers with persisted
+  configuration, bounded lexical pools, validated candidate identities, and
+  lexical fallback on backend failure. Lexical search remains the default.
+- Correct lexical BM25 column weights and native token coverage, retaining
+  meaningful package-name evidence in multi-term tasks.
+- Ignore ordinary query function words and distinguish quoted context from
+  task intent so unrelated questions and quoted-name translations abstain.
 - Follow Codex's native Agent Plugins 1.0 root manifest and cache-version
   semantics, restoring automatic Ponytail discovery while retaining legacy
   version and source-containment checks.

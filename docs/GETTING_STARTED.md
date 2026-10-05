@@ -1,7 +1,7 @@
 # Getting started
 
-This tree prepares Skillwick 0.4.0. Build it from source until that version is
-published; an existing Homebrew installation may still contain an older release.
+Build Skillwick 0.5.0 from source or use a published installer below. An existing
+installation may contain an older release; check `skillwick --version`.
 
 ```sh
 cargo install --locked --path . --root "$HOME/.local"

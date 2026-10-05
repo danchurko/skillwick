@@ -23,6 +23,9 @@ summarizes the current offline comparison and the post-merge real-test boundary.
 The subsequent [real installed-source qualification](../docs/research/real-source-qualification.md)
 uses automatic native discovery and the tracked `real-source-cases.json` input;
 its generated full corpus and receipts remain local ignored artifacts.
+[The 0.5 retrieval corrections](../docs/research/retrieval-corrections.md) add
+paraphrased and quoted-context regression controls while preserving those
+historical measurements and reproduction commands.
 
 ## Current task evaluation
 

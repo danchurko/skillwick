@@ -139,7 +139,7 @@ median model scoring at 20 ms, and cold model load at 196 ms. These measure
 different stages, are not end-to-end alternatives, and are not statistical
 performance or task-success guarantees.
 
-## Remaining defects and validation
+## Follow-up defects and validation at qualification time
 
 [#50](https://github.com/danchurko/skillwick/issues/50) requires recovering the
 eligible Bedrock target in the TypeScript query's lexical pool, preserving
@@ -149,7 +149,8 @@ abstention for the three exact negatives and additional paraphrased controls,
 while preserving the developer-documentation positive and real positive
 Recall@5/MRR. Both require fresh installed-source replay, frozen source/policy
 fingerprints, candidate identity conservation for optional comparisons,
-independent review, and ignored raw outputs. Neither defect is repaired here.
+independent review, and ignored raw outputs. Neither defect is repaired by this historical qualification. Subsequent
+[retrieval corrections](retrieval-corrections.md) record their separate evidence.
 
 No backend/default change is justified by this small relevance qualification.
 The native manifest correction and reproducible qualification are the scoped
