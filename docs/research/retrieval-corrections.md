@@ -65,12 +65,48 @@ Earlier failed candidates remain in separate directories. Keep the frozen inputs
 and this summary in Git, and keep regenerated profiles, raw rankings and traces
 outside Git.
 
+## Published release after workstation apply
+
+The published 0.5.0 ARM64 archive was installed by agent-state's normal
+unpinned `/latest` path after `make apply AI_AGENT=all` from the canonical
+`~/.local/share/agent-state` checkout. The installed executable matches the
+published archive bytes; executable SHA-256 is
+`487108d3774567e0f94658e562833c19f686e6d074d7f171a20268d6284b2a66`.
+The source-build override was retired with a private rollback backup. A second
+latest-release installer run completed without replacing the verified binary.
+
+Apply refreshed upstream skills, so a new actual-source profile was frozen
+instead of reusing the reviewed candidate receipt. The unrestricted native
+terminal replay, repeated from an external empty workspace, contains 579 eligible
+complete groups, inventory SHA-256
+`903101664eb5e6994bcfa6b77fd72b01d2bc6d300385ba49bda689bc3caac8e6`.
+All fourteen positives remain within five (MRR@5 0.8952); all eight negatives
+abstain. All 105 V1 and twenty V2 queries also replayed and their receipts
+validated. Installed CLI, provider, batch invocation, reranker, documentation,
+trust and filesystem contracts passed against the published executable.
+An independent sandboxed applied-state check passed Codex and Claude integration health,
+the complete three-skill AWS metadata/body/hash batch, and all twenty-two search
+controls. Configured local TinyBERT ran all twenty-two queries without fallback;
+candidate identities were conserved and negative results remained empty.
+The sandboxed native inventory exposes 560 groups: nineteen connected-plugin
+skills available to the unrestricted terminal are absent. The same config and
+external workspace reproduce this difference with fresh caches; it is a provider
+visibility boundary, not a changed label or a stale receipt. Both environments
+pass the twenty-two search controls.
+
+Generated receipts remain ignored under
+`benchmarks/results/release-0.5.0/published-applied/` and the external-workspace
+repeat in `published-applied-global/`. The live reranker choice
+was preserved; these lexical replays use a temporary AUTO config without that
+backend and make no hosted JEV or AWS inference requests.
+
 ## Reproduction
 
 Use the [installed-source reproduction commands](real-source-qualification.md#reproduction)
 with the released executable and substitute
 `benchmarks/retrieval-regression-cases.json` for the historical case input.
-Preserve actual home/provider state, use an empty workspace, and copy the live
+Use an unrestricted native terminal, preserve actual home/provider state, use
+an external empty workspace, and copy the live
 config to a temporary file with automatic discovery and its reranker removed.
 This measures lexical behavior without a hosted request. Freeze again after any
 source, policy, config or executable change; never reuse an incompatible receipt.

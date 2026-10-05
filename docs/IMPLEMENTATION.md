@@ -76,6 +76,29 @@ plan, a debug binary, a partial probe, or a test-only result as release
 evidence. Published artifact verification additionally checks archive layout,
 checksums, executable versions, installer behavior, and package metadata.
 
+## 0.5.0 source verification - 2026-10-05
+
+Before creating the release tag, `make release-preflight` passed on clean commit
+`7f2696f1e23fc2ceb52d52e02e527122d94355f8`, the exact commit tagged `v0.5.0`.
+The gate included formatting, Clippy, all Rust and CLI contracts, filesystem and
+trust boundaries, local inference, dependency assurance, and a fresh source
+installation against actual automatic and configured sources. Both retrieval
+tickets received independent standards and specification reviews. PR
+[#53](https://github.com/danchurko/skillwick/pull/53) passed native checks on all
+four supported targets before merge and automatically closed #50 and #51.
+
+The actual-source regression replay retains all original inputs and extends the
+negative and quoted-name controls. See [retrieval corrections](research/retrieval-corrections.md)
+for measurements, reproduction, backend limits and ignored receipt locations.
+
+Published [v0.5.0](https://github.com/danchurko/skillwick/releases/tag/v0.5.0)
+archives passed native staged and published installer verification on all four
+targets in [the release workflow](https://github.com/danchurko/skillwick/actions/runs/37278751116).
+Independent local verification checked all four published archive layouts and
+checksums, the ARM64 executable, isolated installation, and Homebrew metadata.
+Local Intel execution was unavailable because Rosetta is absent; native Intel
+CI passed. The formula digests come from those downloaded published archives.
+
 ## 0.4 source verification — 2026-09-16
 
 Verified locally on macOS ARM64, with an offline source-installed candidate in a
