@@ -1,5 +1,9 @@
 # Managed retrieval qualification
 
+This page preserves the pre-merge explicit-subset findings. The subsequent
+automatic-source qualification is recorded in
+[real installed-source qualification](real-source-qualification.md).
+
 Generated rankings, receipts, audits, and request traces are local artifacts in
 Git-ignored `benchmarks/results/` (or an external output directory). The measured
 findings and limitations are summarized here; raw files are not distributed

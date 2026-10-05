@@ -34,6 +34,17 @@ def write_plugin_package(path: Path, provider: str, name: str, version: str) -> 
     write_skill(path / "skills", "release", f"{provider} plugin release fixture.")
 
 
+def write_agent_plugin_package(path: Path, name: str, version: str | None = None) -> None:
+    manifest = {
+        "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+        "name": name,
+    }
+    if version is not None:
+        manifest["version"] = version
+    write_json(path / "plugin.json", manifest)
+    write_skill(path / "skills", "release", "Codex Agent Plugin release fixture.")
+
+
 def toml_string(path: Path) -> str:
     return json.dumps(str(path))
 
@@ -234,6 +245,221 @@ def codex_contract(binary: str, temporary: Path) -> None:
     assert explicit["total"] == 1
     assert explicit["results"][0]["name"] == "explicit"
     assert not explicit_args.exists()
+
+    agent_plugin_contract(binary, root, output, env, config, workspace, cache)
+
+
+def agent_plugin_contract(
+    binary: str,
+    codex_home: Path,
+    output: Path,
+    env: dict[str, str],
+    config: Path,
+    workspace: Path,
+    cache: Path,
+) -> None:
+    package = codex_home / "plugins/cache/market/ponytail/1.0.0"
+    outside = codex_home / "outside-skills"
+    active = {
+        "pluginId": "ponytail@market",
+        "name": "ponytail",
+        "marketplaceName": "market",
+        "version": "1.0.0",
+        "installed": True,
+        "enabled": True,
+    }
+    write_agent_plugin_package(package, "ponytail")
+    # Codex treats this legacy file as an extension overlay for the root manifest.
+    # Its identity, version, and skill path must not replace the Agent Plugins root.
+    write_json(
+        package / ".codex-plugin/plugin.json",
+        {"name": "overlay-name", "version": "4.10.3", "skills": "../outside-skills"},
+    )
+    write_json(output, {"installed": [active]})
+    listed = json.loads(
+        run(binary, env, "--config", str(config), "--cwd", str(workspace), "list", "--json").stdout
+    )
+    assert listed["total"] == 1
+    row = listed["results"][0]
+    assert row["name"] == "ponytail:release"
+    assert row["plugin_id"] == "ponytail@market"
+    assert Path(row["source"]).resolve() == (package / "skills").resolve()
+
+    # Root package version describes the package; the CLI version selects the cache directory.
+    write_agent_plugin_package(package, "ponytail", version="4.10.3")
+    write_json(
+        package / ".codex-plugin/plugin.json",
+        {"name": "ponytail", "version": "4.10.3", "skills": "../outside-skills"},
+    )
+    listed = json.loads(
+        run(binary, env, "--config", str(config), "--cwd", str(workspace), "list", "--json").stdout
+    )
+    assert listed["total"] == 1
+    assert listed["results"][0]["name"] == "ponytail:release"
+
+    # A root plugin.json without an Agent Plugins schema falls back to the Codex overlay.
+    write_json(package / "plugin.json", {"name": "unrelated-root-manifest"})
+    write_json(
+        package / ".codex-plugin/plugin.json",
+        {"name": "ponytail", "version": "1.0.0", "skills": "skills"},
+    )
+    listed = json.loads(
+        run(binary, env, "--config", str(config), "--cwd", str(workspace), "list", "--json").stdout
+    )
+    assert listed["total"] == 1
+    assert listed["results"][0]["name"] == "ponytail:release"
+
+    (package / "plugin.json").write_text("{malformed\n")
+    listed = json.loads(
+        run(binary, env, "--config", str(config), "--cwd", str(workspace), "list", "--json").stdout
+    )
+    assert listed["total"] == 1
+    assert listed["results"][0]["name"] == "ponytail:release"
+
+    write_json(
+        package / "plugin.json",
+        {
+            "$schema": "https://agent-plugins.org/schemas/2.0.0/plugin.schema.json",
+            "name": "ponytail",
+        },
+    )
+    unsupported = assert_failed_preserving_cache(
+        binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list"
+    )
+    assert "unsupported Agent Plugins schema" in unsupported.stderr
+
+    write_json(
+        package / "plugin.json",
+        {"$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"},
+    )
+    missing_name = assert_failed_preserving_cache(
+        binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list"
+    )
+    assert "root manifest name must be a string" in missing_name.stderr
+
+    write_json(
+        package / "plugin.json",
+        {
+            "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+            "name": 4,
+        },
+    )
+    invalid_name = assert_failed_preserving_cache(
+        binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list"
+    )
+    assert "root manifest name must be a string" in invalid_name.stderr
+
+    write_json(
+        package / "plugin.json",
+        {
+            "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+            "name": "Ponytail",
+        },
+    )
+    invalid_name_format = assert_failed_preserving_cache(
+        binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list"
+    )
+    assert "invalid Agent Plugins name" in invalid_name_format.stderr
+
+    write_agent_plugin_package(package, "different-name")
+    mismatch = assert_failed_preserving_cache(
+        binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list"
+    )
+    assert "plugin manifest name mismatch" in mismatch.stderr
+
+    write_agent_plugin_package(package, "ponytail")
+    write_json(
+        package / "plugin.json",
+        {
+            "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+            "name": "ponytail",
+            "version": 4,
+        },
+    )
+    malformed = assert_failed_preserving_cache(
+        binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list"
+    )
+    assert "`version` must be a string" in malformed.stderr
+
+    malformed_metadata = [
+        ({"version": None}, "`version` must be a string"),
+        ({"description": 42}, "`description` must be a string"),
+        ({"homepage": False}, "`homepage` must be a string"),
+        ({"repository": None}, "`repository` must be a string"),
+        ({"license": []}, "`license` must be a string"),
+        ({"author": None}, "`author` must be an object"),
+        ({"author": 42}, "`author` must be an object"),
+        ({"author": {"unknown": "value"}}, "unknown Agent Plugins author field"),
+        ({"author": {"name": None}}, "`author.name` must be a string"),
+        ({"author": {"email": 42}}, "`author.email` must be a string"),
+        ({"author": {"url": False}}, "`author.url` must be a string"),
+        ({"keywords": None}, "`keywords` must be an array of strings"),
+        ({"keywords": "skill"}, "`keywords` must be an array of strings"),
+        ({"keywords": ["skill", 42]}, "`keywords` entries must be strings"),
+    ]
+    for fields, expected_error in malformed_metadata:
+        write_json(
+            package / "plugin.json",
+            {
+                "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+                "name": "ponytail",
+                **fields,
+            },
+        )
+        invalid_metadata = assert_failed_preserving_cache(
+            binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list"
+        )
+        assert expected_error in invalid_metadata.stderr, invalid_metadata.stderr
+
+    write_json(
+        package / "plugin.json",
+        {
+            "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+            "name": "ponytail",
+            "description": "Valid metadata.",
+            "author": {"name": "Author", "email": "author@example.com", "url": "https://example.com"},
+            "homepage": "https://example.com",
+            "repository": "https://example.com/repo",
+            "license": "MIT",
+            "keywords": ["portable", "skills"],
+            "extensions": [],
+            "unknownRootField": 42,
+        },
+    )
+    valid_metadata = json.loads(
+        run(binary, env, "--config", str(config), "--cwd", str(workspace), "list", "--json").stdout
+    )
+    assert valid_metadata["total"] == 1
+    assert valid_metadata["results"][0]["name"] == "ponytail:release"
+
+    write_agent_plugin_package(package, "ponytail")
+    outside.mkdir(parents=True, exist_ok=True)
+    write_skill(outside, "escaped", "Outside package fixture.")
+    (package / "skills/release/SKILL.md").unlink()
+    (package / "skills/release").rmdir()
+    (package / "skills").rmdir()
+    (package / "skills").symlink_to(outside, target_is_directory=True)
+    escaped = assert_failed_preserving_cache(
+        binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list"
+    )
+    assert "active plugin skill path escapes package" in escaped.stderr
+
+    # Legacy Codex manifests keep their manifest/cache version equality check.
+    legacy = codex_home / "plugins/cache/market/legacy/1.0.0"
+    write_plugin_package(legacy, "codex", "legacy", "4.10.3")
+    legacy_active = {
+        "pluginId": "legacy@market",
+        "name": "legacy",
+        "marketplaceName": "market",
+        "version": "1.0.0",
+        "installed": True,
+        "enabled": True,
+    }
+    write_json(output, {"installed": [legacy_active]})
+    legacy_mismatch = assert_failed_preserving_cache(
+        binary, env, cache, "--config", str(config), "--cwd", str(workspace), "list"
+    )
+    assert "plugin manifest version mismatch" in legacy_mismatch.stderr
 
 
 def claude_contract(binary: str, temporary: Path) -> None:

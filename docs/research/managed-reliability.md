@@ -85,6 +85,10 @@ bypass recovery or redirect authoritative state.
 
 ## Workstation baseline and remaining qualification
 
+This section preserves the pre-merge baseline. See
+[real installed-source qualification](real-source-qualification.md) for the
+subsequent #49 evidence.
+
 The read-only workstation baseline reports Skillwick 0.4.0 from a source
 installation whose existing receipt identifies revision
 `d02972512774cb4b8ad983fd95e543132fa8adda` and a dirty

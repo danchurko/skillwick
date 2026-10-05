@@ -3,6 +3,14 @@
 User-visible changes are recorded here. Release artifacts and verification
 evidence live in [implementation history](docs/IMPLEMENTATION.md).
 
+## Unreleased
+
+- Follow Codex's native Agent Plugins 1.0 root manifest and cache-version
+  semantics, restoring automatic Ponytail discovery while retaining legacy
+  version and source-containment checks.
+- Add actual installed-source benchmark freeze/replay and validated offline
+  candidate comparisons, with raw artifacts kept outside Git.
+
 ## [0.4.0] - 2026-09-16
 
 - Discover supported shared, Codex, and Claude sources automatically, with explicit
