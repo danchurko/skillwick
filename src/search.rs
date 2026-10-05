@@ -98,22 +98,29 @@ struct Candidate {
 }
 
 pub fn tokens(query: &str) -> Vec<String> {
+    lexical_tokens(query)
+        .into_iter()
+        .filter(|token| {
+            !matches!(
+                token.as_str(),
+                "a" | "an" | "and" | "about" | "for" | "in" | "of" | "on" | "the" | "to" | "with"
+            )
+        })
+        .collect()
+}
+
+fn lexical_tokens(query: &str) -> Vec<String> {
     query
         .split_whitespace()
         .filter_map(|raw| {
             let clean = raw.trim_matches(|character: char| {
                 !character.is_alphanumeric() && !"+#.-".contains(character)
             });
-            if clean.is_empty() {
+            let clean = clean.trim_end_matches('.');
+            if !clean.chars().any(char::is_alphanumeric) {
                 return None;
             }
             let lower = clean.to_lowercase();
-            if matches!(
-                lower.as_str(),
-                "a" | "an" | "and" | "about" | "for" | "in" | "of" | "on" | "the" | "to" | "with"
-            ) {
-                return None;
-            }
             Some(match lower.as_str() {
                 "c++" => "cpp".into(),
                 "c#" => "csharp".into(),
@@ -123,6 +130,349 @@ pub fn tokens(query: &str) -> Vec<String> {
             })
         })
         .collect()
+}
+
+fn task_stopword(token: &str) -> bool {
+    matches!(
+        token,
+        "a" | "an"
+            | "about"
+            | "after"
+            | "all"
+            | "also"
+            | "am"
+            | "and"
+            | "another"
+            | "any"
+            | "are"
+            | "as"
+            | "at"
+            | "be"
+            | "because"
+            | "been"
+            | "before"
+            | "being"
+            | "between"
+            | "both"
+            | "but"
+            | "by"
+            | "can"
+            | "could"
+            | "did"
+            | "do"
+            | "does"
+            | "doing"
+            | "down"
+            | "during"
+            | "each"
+            | "either"
+            | "few"
+            | "for"
+            | "from"
+            | "further"
+            | "had"
+            | "has"
+            | "have"
+            | "having"
+            | "he"
+            | "her"
+            | "here"
+            | "hers"
+            | "herself"
+            | "him"
+            | "himself"
+            | "his"
+            | "how"
+            | "i"
+            | "if"
+            | "in"
+            | "into"
+            | "is"
+            | "it"
+            | "its"
+            | "itself"
+            | "just"
+            | "me"
+            | "more"
+            | "most"
+            | "might"
+            | "must"
+            | "my"
+            | "myself"
+            | "neither"
+            | "nor"
+            | "of"
+            | "off"
+            | "on"
+            | "once"
+            | "or"
+            | "other"
+            | "our"
+            | "ours"
+            | "ourselves"
+            | "out"
+            | "over"
+            | "own"
+            | "please"
+            | "same"
+            | "she"
+            | "shall"
+            | "should"
+            | "so"
+            | "some"
+            | "such"
+            | "than"
+            | "that"
+            | "the"
+            | "their"
+            | "theirs"
+            | "them"
+            | "themselves"
+            | "then"
+            | "there"
+            | "these"
+            | "they"
+            | "this"
+            | "those"
+            | "through"
+            | "to"
+            | "too"
+            | "under"
+            | "until"
+            | "up"
+            | "very"
+            | "was"
+            | "we"
+            | "were"
+            | "what"
+            | "when"
+            | "where"
+            | "which"
+            | "while"
+            | "who"
+            | "whom"
+            | "why"
+            | "will"
+            | "with"
+            | "would"
+            | "you"
+            | "your"
+            | "yours"
+            | "yourself"
+            | "yourselves"
+    )
+}
+
+fn task_operator(token: &str) -> bool {
+    matches!(
+        token,
+        "add"
+            | "apply"
+            | "build"
+            | "change"
+            | "create"
+            | "debug"
+            | "deploy"
+            | "describe"
+            | "develop"
+            | "discover"
+            | "edit"
+            | "explain"
+            | "fetch"
+            | "find"
+            | "fix"
+            | "generate"
+            | "get"
+            | "help"
+            | "implement"
+            | "inspect"
+            | "install"
+            | "list"
+            | "load"
+            | "locate"
+            | "lookup"
+            | "make"
+            | "migrate"
+            | "modify"
+            | "open"
+            | "plan"
+            | "read"
+            | "remove"
+            | "repair"
+            | "replace"
+            | "retrieve"
+            | "review"
+            | "run"
+            | "search"
+            | "select"
+            | "show"
+            | "summarize"
+            | "test"
+            | "translate"
+            | "update"
+            | "use"
+            | "verify"
+            | "write"
+    )
+}
+
+fn retrieval_operator(token: &str) -> bool {
+    matches!(
+        token,
+        "discover"
+            | "fetch"
+            | "find"
+            | "get"
+            | "inspect"
+            | "list"
+            | "load"
+            | "locate"
+            | "lookup"
+            | "open"
+            | "read"
+            | "retrieve"
+            | "search"
+            | "select"
+            | "show"
+            | "use"
+    )
+}
+
+fn balanced_quote_parts(query: &str) -> (String, String, bool) {
+    let mut quotes = Vec::new();
+    for (index, character) in query.char_indices() {
+        if character != '"' {
+            continue;
+        }
+        let preceding_backslashes = query.as_bytes()[..index]
+            .iter()
+            .rev()
+            .take_while(|byte| **byte == b'\\')
+            .count();
+        if preceding_backslashes % 2 == 0 {
+            quotes.push(index);
+        }
+    }
+
+    let mut unquoted = String::new();
+    let mut quoted = String::new();
+    let mut cursor = 0;
+    for &[start, end] in quotes.as_chunks::<2>().0 {
+        unquoted.push_str(&query[cursor..start]);
+        unquoted.push(' ');
+        quoted.push_str(&query[start + 1..end]);
+        quoted.push(' ');
+        cursor = end + 1;
+    }
+    if quotes.len() % 2 == 1 {
+        let unmatched = *quotes.last().expect("odd quote count has a final quote");
+        unquoted.push_str(&query[cursor..unmatched]);
+        unquoted.push(' ');
+        unquoted.push_str(&query[unmatched + 1..]);
+    } else {
+        unquoted.push_str(&query[cursor..]);
+    }
+    let has_balanced_quote = quotes.len() >= 2;
+    (unquoted, quoted, has_balanced_quote)
+}
+
+fn unique_tokens(tokens: impl IntoIterator<Item = String>) -> Vec<String> {
+    let mut seen = HashSet::new();
+    tokens
+        .into_iter()
+        .filter(|token| seen.insert(token.clone()))
+        .collect()
+}
+
+fn query_terms(query: &str) -> (Vec<String>, Vec<String>, bool, String) {
+    let (unquoted, quoted, has_balanced_quote) = balanced_quote_parts(query);
+    let raw_unquoted = lexical_tokens(&unquoted);
+    let has_unquoted_context = !raw_unquoted.is_empty();
+    let context_terms = raw_unquoted
+        .iter()
+        .filter(|token| !task_stopword(token))
+        .cloned()
+        .collect::<Vec<_>>();
+    let operators = context_terms
+        .iter()
+        .filter(|token| task_operator(token))
+        .collect::<Vec<_>>();
+    let retrieval_context = has_balanced_quote
+        && operators.iter().any(|token| retrieval_operator(token))
+        && operators.iter().all(|token| retrieval_operator(token));
+    let quoted_terms = lexical_tokens(&quoted)
+        .into_iter()
+        .filter(|token| !task_stopword(token))
+        .collect::<Vec<_>>();
+
+    if has_unquoted_context {
+        // Count context before removing task operators so an action such as
+        // "translate" cannot make adjacent quoted text searchable by itself.
+        let remove_operators = has_balanced_quote || raw_unquoted.len() > 1;
+        let mut task_terms = context_terms
+            .iter()
+            .filter(|token| !remove_operators || !task_operator(token))
+            .cloned()
+            .collect::<Vec<_>>();
+        if retrieval_context {
+            // Explicit lookup can select a quoted entity even when accompanying
+            // words (such as documentation) are absent from its metadata.
+            task_terms.extend(quoted_terms.iter().cloned());
+        }
+        if !task_terms.is_empty() {
+            let task_terms = unique_tokens(task_terms);
+            // Operators remain useful ranking/coverage context, but they do
+            // not supply primary object evidence or a package-name anchor.
+            let mut retrieval_terms = context_terms
+                .into_iter()
+                .filter(|token| !retrieval_context || !retrieval_operator(token))
+                .collect::<Vec<_>>();
+            retrieval_terms.extend(quoted_terms);
+            let exact_name = if retrieval_context {
+                quoted.trim()
+            } else {
+                query.trim()
+            };
+            return (
+                unique_tokens(retrieval_terms),
+                task_terms,
+                false,
+                exact_name.to_lowercase(),
+            );
+        }
+
+        // Preserve exact-name lookup for queries made only of task operators.
+        return (
+            unique_tokens(lexical_tokens(query)),
+            Vec::new(),
+            true,
+            query.trim().to_lowercase(),
+        );
+    }
+
+    let pure_query = if has_balanced_quote { quoted } else { unquoted };
+    let pure_terms = lexical_tokens(&pure_query)
+        .into_iter()
+        .filter(|token| !task_stopword(token))
+        .collect::<Vec<_>>();
+    if !pure_terms.is_empty() {
+        let pure_terms = unique_tokens(pure_terms);
+        return (
+            pure_terms.clone(),
+            pure_terms,
+            false,
+            pure_query.trim().to_lowercase(),
+        );
+    }
+
+    // Stopword-only and unmatched-quote inputs can still select a complete
+    // exact name, but cannot use lexical matches as a retrieval fallback.
+    (
+        unique_tokens(lexical_tokens(query)),
+        Vec::new(),
+        true,
+        query.trim().to_lowercase(),
+    )
 }
 
 fn expression(tokens: &[String]) -> String {
@@ -165,26 +515,22 @@ pub fn query(
     limit: usize,
     roots: Option<&[String]>,
 ) -> rusqlite::Result<Vec<ResultRow>> {
-    let mut seen_tokens = HashSet::new();
-    let query_tokens = tokens(query)
-        .into_iter()
-        .filter(|token| seen_tokens.insert(token.clone()))
-        .collect::<Vec<_>>();
+    let (query_tokens, task_tokens, exact_only, exact_name) = query_terms(query);
     if query_tokens.is_empty() {
         return Ok(Vec::new());
     }
-    let expression = expression(&query_tokens);
+    let query_expression = expression(&query_tokens);
     let mapped = {
         let mut sql = "SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash,bm25(skills_fts,0.0,8.0,3.0,1.0) FROM skills_fts JOIN skills s ON s.id=skills_fts.id WHERE skills_fts MATCH ?1 AND s.enabled=1 AND s.model_discoverable=1 AND s.source_kind='filesystem'".to_owned();
         sql.push_str(&root_filter("s", roots, 2));
-        let mut values = vec![Value::Text(expression.clone())];
+        let mut values = vec![Value::Text(query_expression.clone())];
         append_root_values(&mut values, roots);
         let mut statement = db.prepare(&sql)?;
         let candidates = statement
             .query_map(params_from_iter(values), |row| {
                 let result = row_from(row)?;
                 Ok(Candidate {
-                    exact: result.name.to_lowercase() == query.trim().to_lowercase(),
+                    exact: result.name.to_lowercase() == exact_name,
                     score: row.get(13)?,
                     row: result,
                     coverage: 0,
@@ -194,8 +540,17 @@ pub fn query(
         candidates
     };
     let coverage_by_id = term_coverage(db, &query_tokens)?;
-    let name_matches = name_matches(db, &expression)?;
-    let minimum_coverage = if query_tokens.len() >= 3 { 2 } else { 1 };
+    let task_coverage_by_id = if task_tokens.is_empty() {
+        HashMap::new()
+    } else {
+        term_coverage(db, &task_tokens)?
+    };
+    let task_name_matches = if task_tokens.is_empty() {
+        HashSet::new()
+    } else {
+        name_matches(db, &expression(&task_tokens))?
+    };
+    let minimum_coverage = if query_tokens.len() >= 2 { 2 } else { 1 };
     let mut candidates: Vec<_> = mapped
         .into_iter()
         .map(|mut candidate| {
@@ -207,8 +562,15 @@ pub fn query(
         })
         .filter(|candidate| {
             candidate.exact
-                || candidate.coverage >= minimum_coverage
-                || name_matches.contains(&candidate.row.id)
+                || (!exact_only
+                    && !task_tokens.is_empty()
+                    && ((task_coverage_by_id
+                        .get(&candidate.row.id)
+                        .copied()
+                        .unwrap_or_default()
+                        > 0
+                        && candidate.coverage >= minimum_coverage)
+                        || task_name_matches.contains(&candidate.row.id)))
         })
         .collect();
     candidates.sort_by(|left, right| {
@@ -566,7 +928,16 @@ mod tests {
         )
         .unwrap();
 
-        assert!(query(&db, "retrieval is runtime", 5, None)
+        let search_guide_id = db
+            .query_row(
+                "SELECT id FROM skills WHERE name='search-guide'",
+                [],
+                |row| row.get::<_, String>(0),
+            )
+            .unwrap();
+        let coverage = term_coverage(&db, &["is".into()]).unwrap();
+        assert!(!coverage.contains_key(&search_guide_id));
+        assert!(query(&db, "retrieval is runtime pipeline", 5, None)
             .unwrap()
             .is_empty());
         assert!(query(&db, "dynamodb dynamodb service runtime", 5, None)
@@ -599,6 +970,210 @@ mod tests {
 
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].name, "acme-cobalt");
+
+        let two_term_rows = query(&db, "Cobalt compiler", 5, None).unwrap();
+        assert_eq!(two_term_rows.len(), 1);
+        assert_eq!(two_term_rows[0].name, "acme-cobalt");
+    }
+
+    #[test]
+    fn balanced_quotes_are_context_when_unquoted_task_text_exists() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[fixture_skill(
+                "find-docs",
+                "Find and retrieve local documentation",
+            )],
+            true,
+        )
+        .unwrap();
+
+        assert!(query(&db, "Translate \"find docs\"", 5, None)
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            query(&db, "\"find docs\"", 5, None).unwrap()[0].name,
+            "find-docs"
+        );
+        assert!(query(&db, "What is \"find docs\"", 5, None)
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            query(&db, "\"find docs", 5, None).unwrap()[0].name,
+            "find-docs"
+        );
+    }
+
+    #[test]
+    fn retrieval_intent_uses_quoted_terms_as_task_evidence() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[
+                fixture_skill("aws-bedrock", "AWS Bedrock service"),
+                fixture_skill("amazon-bedrock", "Amazon Bedrock integration"),
+                fixture_skill("C++", "Native tools"),
+                fixture_skill("find-docs", "Find local documentation"),
+                fixture_skill("cobalt-sdk", "Cobalt software development patterns"),
+                fixture_skill("ponytail:ponytail", "Local orchestration"),
+                fixture_skill("other-ponytail", "ponytail ponytail ponytail guidance"),
+            ],
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(
+            query(&db, "Use \"ponytail:ponytail\".", 5, None).unwrap()[0].name,
+            "ponytail:ponytail"
+        );
+
+        for lookup in ["Find", "Search", "Lookup", "Read", "Inspect", "Load", "Use"] {
+            let rows = query(&db, &format!("{lookup} \"amazon-bedrock\"."), 5, None).unwrap();
+            assert!(
+                rows.iter().any(|row| row.name == "amazon-bedrock"),
+                "{lookup}"
+            );
+        }
+        assert!(query(&db, "Find \"AWS Bedrock\"", 5, None)
+            .unwrap()
+            .iter()
+            .any(|row| row.name == "aws-bedrock"));
+        assert!(query(&db, "Search \"C++\".", 5, None)
+            .unwrap()
+            .iter()
+            .any(|row| row.name == "C++"));
+        assert!(query(&db, "Please find \"C++\"", 5, None)
+            .unwrap()
+            .iter()
+            .any(|row| row.name == "C++"));
+        assert!(
+            query(&db, "Find documentation for \"Cobalt SDK\" API.", 5, None)
+                .unwrap()
+                .iter()
+                .any(|row| row.name == "cobalt-sdk")
+        );
+
+        assert!(query(&db, "Translate \"find docs\"", 5, None)
+            .unwrap()
+            .is_empty());
+        assert!(query(&db, "Find and translate \"find docs\"", 5, None)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn action_context_supports_coverage_without_qualifying_unrelated_objects() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[fixture_skill("code-review", "Detect security defects")],
+            true,
+        )
+        .unwrap();
+        assert_eq!(
+            query(&db, "Review this patch for security problems.", 5, None).unwrap()[0].name,
+            "code-review"
+        );
+        assert!(query(&db, "Review my holiday photographs.", 5, None)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn quoted_entities_help_scoring_but_cannot_qualify_candidates() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[
+                fixture_skill("cobalt-connector-api", "Package API"),
+                fixture_skill("assistant", "API"),
+                fixture_skill("cobalt-connector", "Package connector"),
+            ],
+            true,
+        )
+        .unwrap();
+
+        let positive = query(&db, "Explain API details for \"Cobalt connector\"", 5, None).unwrap();
+        assert_eq!(positive.len(), 1);
+        assert_eq!(positive[0].name, "cobalt-connector-api");
+        assert!(query(&db, "Translate \"Cobalt connector\"", 5, None)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn quote_parts_keep_adjacent_terms_separate_and_unmatched_text_literal() {
+        let (unquoted, quoted, balanced) = balanced_quote_parts("foo\"bar\"\"baz\"");
+        assert!(balanced);
+        assert_eq!(lexical_tokens(&unquoted), vec!["foo"]);
+        assert_eq!(lexical_tokens(&quoted), vec!["bar", "baz"]);
+
+        let (unquoted, quoted, balanced) = balanced_quote_parts("foo\"unfinished");
+        assert!(!balanced);
+        assert!(quoted.is_empty());
+        assert_eq!(lexical_tokens(&unquoted), vec!["foo", "unfinished"]);
+
+        let (unquoted, _, balanced) = balanced_quote_parts(r#"say \"hello\""#);
+        assert!(!balanced);
+        assert_eq!(lexical_tokens(&unquoted), vec!["say", "hello"]);
+    }
+
+    #[test]
+    fn contextual_action_words_do_not_retrieve_unrelated_named_skills() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[
+                fixture_skill("architecture-review", "Architecture migration guidance"),
+                fixture_skill("orch-add-feature", "Feature package orchestration"),
+                fixture_skill("rust-cli", "Rust command line support"),
+            ],
+            true,
+        )
+        .unwrap();
+
+        assert!(query(&db, "Review my holiday photographs.", 5, None)
+            .unwrap()
+            .is_empty());
+        assert!(query(&db, "Add nineteen and twenty-seven.", 5, None)
+            .unwrap()
+            .is_empty());
+        let technical = query(&db, "Add Rust CLI support", 5, None).unwrap();
+        assert_eq!(technical[0].name, "rust-cli");
+        assert_eq!(
+            query(&db, "review", 5, None).unwrap()[0].name,
+            "architecture-review"
+        );
+        assert_eq!(
+            query(&db, "orch-add-feature", 5, None).unwrap()[0].name,
+            "orch-add-feature"
+        );
+    }
+
+    #[test]
+    fn technical_aliases_survive_quotes_escapes_and_unmatched_quotes() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[fixture_skill("C++", "Native tools")],
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(query(&db, "\"C++\"", 5, None).unwrap()[0].name, "C++");
+        assert_eq!(
+            query(&db, r#"Search \"C++\" tools"#, 5, None).unwrap()[0].name,
+            "C++"
+        );
+        assert_eq!(query(&db, "\"C++", 5, None).unwrap()[0].name, "C++");
+        assert_eq!(tokens("What is C++"), vec!["what", "is", "cpp"]);
     }
 
     #[test]

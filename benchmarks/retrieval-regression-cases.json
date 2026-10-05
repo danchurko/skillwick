@@ -176,6 +176,37 @@
         "find-docs",
         "aws-sdk-js-v3-usage"
       ]
+    },
+    {
+      "id": "quoted-bedrock-lookup",
+      "kind": "positive",
+      "queries": [
+        "Find \"amazon-bedrock\"."
+      ],
+      "relevant": [
+        "amazon-bedrock"
+      ]
+    },
+    {
+      "id": "quoted-cpp-lookup",
+      "kind": "positive",
+      "queries": [
+        "Search \"C++\"."
+      ],
+      "relevant": [
+        "ecc:cpp-coding-standards",
+        "ecc:cpp-testing"
+      ]
+    },
+    {
+      "id": "quoted-ponytail-selection",
+      "kind": "positive",
+      "queries": [
+        "Use \"ponytail:ponytail\"."
+      ],
+      "relevant": [
+        "ponytail:ponytail"
+      ]
     }
   ],
   "diagnostics": [

@@ -23,6 +23,12 @@ and deterministic ties. Coverage uses the same FTS tokenizer as matching; repeat
 query terms count once. A native name-token match can qualify a candidate even
 when a long task has only one metadata match. The ID column is unindexed and
 receives no BM25 weight.
+In multiword task queries, common function words and action verbs do not
+independently qualify candidates; action verbs can supply secondary ranking
+and coverage context. Balanced double-quoted text is context when unquoted task
+text is present. Explicit lookup requests such as `Find "AWS Bedrock"` use the
+quoted target as evidence and preserve exact-name priority; quote-only queries remain searchable. Unmatched quotes remain
+literal, and complete exact names remain supported.
 Grouping precedes result limits. A valid query with no matches exits 0.
 List returns every applicable model-discoverable group and a complete total.
 Human search descriptions are bounded per result and marked when truncated.
