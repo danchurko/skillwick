@@ -1,0 +1,198 @@
+{
+  "version": 1,
+  "label_policy": "Task-intent labels fixed before replay. The first two queries are historical; other positives and negatives are controls. Labels describe relevance, not unique selection or task success. Compound known-name queries and the ambiguous broad orchestration query are unscored diagnostics. Release regression controls extend the unchanged historical cases; all labels are frozen before candidate replay.",
+  "cases": [
+    {
+      "id": "bedrock-cli-historical",
+      "kind": "positive",
+      "queries": [
+        "AWS Bedrock model availability pricing direct inference invoke-model CLI eu-west-1"
+      ],
+      "relevant": [
+        "amazon-bedrock"
+      ]
+    },
+    {
+      "id": "bedrock-typescript-historical",
+      "kind": "positive",
+      "queries": [
+        "AWS Bedrock direct inference TypeScript tool use evaluation"
+      ],
+      "relevant": [
+        "amazon-bedrock"
+      ]
+    },
+    {
+      "id": "aws-containers",
+      "kind": "positive",
+      "queries": [
+        "Deploy and troubleshoot an ECS Fargate container service with ECR images and task definitions"
+      ],
+      "relevant": [
+        "aws-containers"
+      ]
+    },
+    {
+      "id": "aws-deployment",
+      "kind": "positive",
+      "queries": [
+        "Configure a CI/CD pipeline using AWS CodePipeline CodeBuild CodeDeploy and CodeConnections"
+      ],
+      "relevant": [
+        "aws-deployment"
+      ]
+    },
+    {
+      "id": "domain-model",
+      "kind": "positive",
+      "queries": [
+        "Build the project's domain model, clarify terminology in GLOSSARY.md and record an ADR"
+      ],
+      "relevant": [
+        "domain-modeling"
+      ]
+    },
+    {
+      "id": "developer-docs",
+      "kind": "positive",
+      "queries": [
+        "Find current API documentation and code examples for a developer library SDK"
+      ],
+      "relevant": [
+        "find-docs"
+      ]
+    },
+    {
+      "id": "codex-orchestration",
+      "kind": "positive",
+      "queries": [
+        "Orchestrate delegated Codex implementation testing and code review for a multi-file release spec"
+      ],
+      "relevant": [
+        "astra-orchestrator"
+      ]
+    },
+    {
+      "id": "gke-orchestration",
+      "kind": "positive",
+      "queries": [
+        "Orchestrate a comprehensive GKE production readiness assessment covering security reliability observability and cost"
+      ],
+      "relevant": [
+        "gke-productionize"
+      ]
+    },
+    {
+      "id": "gke-inference",
+      "kind": "positive",
+      "queries": [
+        "Deploy and optimize GPU model server inference workloads on GKE"
+      ],
+      "relevant": [
+        "gke-inference"
+      ]
+    },
+    {
+      "id": "agent-platform-inference",
+      "kind": "positive",
+      "queries": [
+        "Run chat completions with Gemini and OpenMaaS models using Google Cloud Agent Platform inference SDK"
+      ],
+      "relevant": [
+        "agent-platform-inference"
+      ]
+    },
+    {
+      "id": "negative-capital",
+      "kind": "negative",
+      "queries": [
+        "What is the capital of Portugal?"
+      ],
+      "relevant": []
+    },
+    {
+      "id": "negative-translation",
+      "kind": "negative",
+      "queries": [
+        "Translate the phrase \"find docs\" into French."
+      ],
+      "relevant": []
+    },
+    {
+      "id": "negative-arithmetic",
+      "kind": "negative",
+      "queries": [
+        "What is seventeen plus twenty-three?"
+      ],
+      "relevant": []
+    },
+    {
+      "id": "negative-capital-paraphrase",
+      "kind": "negative",
+      "queries": [
+        "Name the capital city of Portugal."
+      ],
+      "relevant": []
+    },
+    {
+      "id": "negative-translation-paraphrase",
+      "kind": "negative",
+      "queries": [
+        "Please translate \"find docs\" to Spanish."
+      ],
+      "relevant": []
+    },
+    {
+      "id": "negative-arithmetic-paraphrase",
+      "kind": "negative",
+      "queries": [
+        "Add nineteen and twenty-seven."
+      ],
+      "relevant": []
+    },
+    {
+      "id": "negative-quoted-domain",
+      "kind": "negative",
+      "queries": [
+        "What does the quoted phrase \"domain modeling\" mean in German?"
+      ],
+      "relevant": []
+    },
+    {
+      "id": "negative-quoted-inference",
+      "kind": "negative",
+      "queries": [
+        "Translate the words \"gke inference\" into Italian."
+      ],
+      "relevant": []
+    },
+    {
+      "id": "developer-docs-quoted-sdk",
+      "kind": "positive",
+      "queries": [
+        "Find documentation for the \"AWS SDK for JavaScript\" API."
+      ],
+      "relevant": [
+        "find-docs",
+        "aws-sdk-js-v3-usage"
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "id": "broad-orchestration-historical",
+      "query": "orchestrate delegated implementation from a release spec",
+      "reason": "Underspecified task; retain plausible alternatives without a unique best-skill label."
+    },
+    {
+      "id": "compound-names-historical",
+      "query": "grilling domain-modeling astra-orchestrator",
+      "reason": "Known-name compound misuse; use exact batch read for known skills."
+    },
+    {
+      "id": "compound-names-control",
+      "query": "astra-orchestrator find-docs agent-platform-inference",
+      "reason": "Known-name compound misuse; no task intent or negative-success label."
+    }
+  ]
+}

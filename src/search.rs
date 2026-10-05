@@ -1,6 +1,10 @@
 use rusqlite::{params_from_iter, types::Value, Connection};
 use serde::Serialize;
-use std::{cmp::Ordering, collections::HashMap, path::Path};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    path::Path,
+};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ResultRow {
@@ -129,53 +133,94 @@ fn expression(tokens: &[String]) -> String {
         .join(" OR ")
 }
 
+fn term_coverage(
+    db: &Connection,
+    query_tokens: &[String],
+) -> rusqlite::Result<HashMap<String, usize>> {
+    let mut statement = db.prepare("SELECT id FROM skills_fts WHERE skills_fts MATCH ?1")?;
+    let mut coverage = HashMap::new();
+    for token in query_tokens {
+        let term = expression(std::slice::from_ref(token));
+        let matching_ids = statement.query_map([term], |row| row.get::<_, String>(0))?;
+        for id in matching_ids {
+            *coverage.entry(id?).or_insert(0) += 1;
+        }
+    }
+    Ok(coverage)
+}
+
+fn name_matches(db: &Connection, expression: &str) -> rusqlite::Result<HashSet<String>> {
+    let mut statement = db.prepare("SELECT id FROM skills_fts WHERE name MATCH ?1")?;
+    let mut matches = HashSet::new();
+    let matching_ids = statement.query_map([expression], |row| row.get::<_, String>(0))?;
+    for id in matching_ids {
+        matches.insert(id?);
+    }
+    Ok(matches)
+}
+
 pub fn query(
     db: &Connection,
     query: &str,
     limit: usize,
     roots: Option<&[String]>,
 ) -> rusqlite::Result<Vec<ResultRow>> {
-    let query_tokens = tokens(query);
+    let mut seen_tokens = HashSet::new();
+    let query_tokens = tokens(query)
+        .into_iter()
+        .filter(|token| seen_tokens.insert(token.clone()))
+        .collect::<Vec<_>>();
     if query_tokens.is_empty() {
         return Ok(Vec::new());
     }
-    let mut sql = "SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash,bm25(skills_fts,8.0,3.0,1.0),lower(s.name)||' '||lower(s.description)||' '||lower(s.keywords) FROM skills_fts JOIN skills s ON s.id=skills_fts.id WHERE skills_fts MATCH ?1 AND s.enabled=1 AND s.model_discoverable=1 AND s.source_kind='filesystem'".to_owned();
-    sql.push_str(&root_filter("s", roots, 2));
-    let mut values = vec![Value::Text(expression(&query_tokens))];
-    append_root_values(&mut values, roots);
-    let mut statement = db.prepare(&sql)?;
-    let mapped = statement.query_map(params_from_iter(values), |row| {
-        let result = row_from(row)?;
-        let score = row.get(13)?;
-        let search_text: String = row.get(14)?;
-        let exact = result.name.to_lowercase() == query.trim().to_lowercase();
-        let coverage = query_tokens
-            .iter()
-            .filter(|token| search_text.contains(token.as_str()))
-            .count();
-        Ok(Candidate {
-            row: result,
-            score,
-            exact,
-            coverage,
-        })
-    })?;
+    let expression = expression(&query_tokens);
+    let mapped = {
+        let mut sql = "SELECT s.id,s.name,s.description,s.scope,s.path,s.canonical,s.base,s.source,s.source_kind,s.enabled,s.plugin_id,s.degraded,s.hash,bm25(skills_fts,0.0,8.0,3.0,1.0) FROM skills_fts JOIN skills s ON s.id=skills_fts.id WHERE skills_fts MATCH ?1 AND s.enabled=1 AND s.model_discoverable=1 AND s.source_kind='filesystem'".to_owned();
+        sql.push_str(&root_filter("s", roots, 2));
+        let mut values = vec![Value::Text(expression.clone())];
+        append_root_values(&mut values, roots);
+        let mut statement = db.prepare(&sql)?;
+        let candidates = statement
+            .query_map(params_from_iter(values), |row| {
+                let result = row_from(row)?;
+                Ok(Candidate {
+                    exact: result.name.to_lowercase() == query.trim().to_lowercase(),
+                    score: row.get(13)?,
+                    row: result,
+                    coverage: 0,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        candidates
+    };
+    let coverage_by_id = term_coverage(db, &query_tokens)?;
+    let name_matches = name_matches(db, &expression)?;
     let minimum_coverage = if query_tokens.len() >= 3 { 2 } else { 1 };
     let mut candidates: Vec<_> = mapped
-        .collect::<rusqlite::Result<Vec<_>>>()?
         .into_iter()
-        .filter(|candidate| candidate.exact || candidate.coverage >= minimum_coverage)
+        .map(|mut candidate| {
+            candidate.coverage = coverage_by_id
+                .get(&candidate.row.id)
+                .copied()
+                .unwrap_or_default();
+            candidate
+        })
+        .filter(|candidate| {
+            candidate.exact
+                || candidate.coverage >= minimum_coverage
+                || name_matches.contains(&candidate.row.id)
+        })
         .collect();
     candidates.sort_by(|left, right| {
         right
             .exact
             .cmp(&left.exact)
-            .then(right.coverage.cmp(&left.coverage))
             .then_with(|| {
                 left.score
                     .partial_cmp(&right.score)
                     .unwrap_or(Ordering::Equal)
             })
+            .then(right.coverage.cmp(&left.coverage))
             .then_with(|| {
                 left.row
                     .name
@@ -481,6 +526,141 @@ mod tests {
         );
         assert!(query(&db, "quoted \" text", 5, None).is_ok());
         assert_eq!(count(&db, None).unwrap(), 2);
+    }
+
+    #[test]
+    fn uses_native_term_coverage_and_name_weighted_bm25() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        let long_metadata = format!(
+            "{} aws dynamodb microservices",
+            "catalog guidance ".repeat(128)
+        );
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[
+                fixture_skill("aws-dynamodb", "connection"),
+                fixture_skill("catalog", &long_metadata),
+            ],
+            true,
+        )
+        .unwrap();
+
+        let rows = query(&db, "aws dynamodb service", 5, None).unwrap();
+
+        assert_eq!(rows[0].name, "aws-dynamodb");
+        assert!(rows.iter().any(|row| row.name == "catalog"));
+    }
+
+    #[test]
+    fn substring_and_duplicate_terms_do_not_inflate_coverage() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[
+                fixture_skill("search-guide", "retrieval inside"),
+                fixture_skill("database-guide", "dynamodb connector"),
+            ],
+            true,
+        )
+        .unwrap();
+
+        assert!(query(&db, "retrieval is runtime", 5, None)
+            .unwrap()
+            .is_empty());
+        assert!(query(&db, "dynamodb dynamodb service runtime", 5, None)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn native_name_anchor_admits_rare_names_without_admitting_phantoms_or_noise() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[
+                fixture_skill("acme-cobalt", "Package connector"),
+                fixture_skill("assistant", "AWS"),
+                fixture_skill("cobaltic", "AWS"),
+            ],
+            true,
+        )
+        .unwrap();
+
+        let rows = query(
+            &db,
+            "Cobalt AWS direct inference TypeScript tool use evaluation",
+            5,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].name, "acme-cobalt");
+    }
+
+    #[test]
+    fn technical_aliases_and_unicode_still_match() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        index::refresh_kind(
+            &mut db,
+            "filesystem",
+            &[
+                fixture_skill("C++", "Native tools"),
+                fixture_skill("C#", "Managed tools"),
+                fixture_skill(".NET", "Web tools"),
+                fixture_skill("node.js", "JavaScript tools"),
+                fixture_skill("café", "Unicode tools"),
+            ],
+            true,
+        )
+        .unwrap();
+
+        for name in ["C++", "C#", ".NET", "node.js", "café"] {
+            assert_eq!(query(&db, name, 5, None).unwrap()[0].name, name);
+        }
+    }
+
+    #[test]
+    fn keeps_query_eligibility_root_and_scope_filters() {
+        let mut db = index::open(Path::new(":memory:")).unwrap();
+        let project_root = PathBuf::from("/roots/project");
+        let global_root = PathBuf::from("/roots/global");
+        let mut eligible = fixture_skill("acme-cobalt", "Package connector");
+        eligible.roots = vec![(project_root.clone(), "project".into())];
+        let mut other_root = fixture_skill("global-cobalt", "Package connector");
+        other_root.roots = vec![(global_root.clone(), "global".into())];
+        let mut disabled = fixture_skill("disabled-cobalt", "Package connector");
+        disabled.enabled = false;
+        disabled.roots = vec![(project_root.clone(), "project".into())];
+        let mut denied = fixture_skill("denied-cobalt", "Package connector");
+        denied.metadata.invocation_policy = crate::metadata::InvocationPolicy::Denied;
+        denied.roots = vec![(project_root.clone(), "project".into())];
+        index::refresh_filesystem_scope(
+            &mut db,
+            &[eligible, other_root, disabled, denied],
+            &[
+                (project_root.clone(), "project".into()),
+                (global_root, "global".into()),
+            ],
+            true,
+        )
+        .unwrap();
+
+        let roots = [project_root.to_string_lossy().into_owned()];
+        let rows = query(
+            &db,
+            "Cobalt AWS direct inference TypeScript tool use evaluation",
+            5,
+            Some(&roots),
+        )
+        .unwrap();
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].name, "acme-cobalt");
+        assert_eq!(rows[0].scope, "project");
     }
 
     #[test]
