@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-DEFAULT_VERSION=0.4.0
+DEFAULT_VERSION=0.5.0
 
 usage() {
   echo "usage: $0 [--version VERSION] [--prefix PATH]" >&2

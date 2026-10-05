@@ -10,7 +10,7 @@ shared, Codex, and Claude skill sources, groups verified package copies, and
 keeps project skills within registered workspace boundaries. Existing installers
 retain package ownership. No daemon, prompt hook, telemetry, or package execution.
 
-This tree prepares **0.4.0**. Build unreleased changes from source:
+Build Skillwick **0.5.0** from source:
 
 ```sh
 cargo install --locked --path . --root "$HOME/.local"
